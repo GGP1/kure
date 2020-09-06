@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message Entry {
+    bytes Title = 1;
+    bytes Username = 2;
+    bytes Password = 3;
+    bytes URL = 4;
+    bytes Expires = 5;
+    bool Secure = 6;
+}

@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/big"
 	"strings"
-	"time"
 )
 
 // Password characters.
@@ -22,23 +21,15 @@ var (
 	extended  = "€ƒ„…†‡0ˆ‰Š‹›ŒŽ‘’“”•-+_—˜™šœžŸ¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ" // level 8
 )
 
-// Entry represents a record.
-type Entry struct {
-	Title    string    `json:",omitempty"`
-	Username string    `json:",omitempty"`
-	Password string    `json:",omitempty"`
-	URL      string    `json:",omitempty"`
-	Expires  time.Time `json:",omitempty"`
-}
-
 // New creates a new entry.
-func New(title, username, password, url string, expires time.Time) *Entry {
+func New(title, username, password, url, expires string, secure bool) *Entry {
 	return &Entry{
-		Title:    title,
-		Username: username,
-		Password: password,
-		URL:      url,
-		Expires:  expires,
+		Title:    []byte(title),
+		Username: []byte(username),
+		Password: []byte(password),
+		URL:      []byte(url),
+		Expires:  []byte(expires),
+		Secure:   secure,
 	}
 }
 
@@ -48,49 +39,44 @@ func GeneratePassword(length uint16, levels map[uint]struct{}) (string, float64,
 	b := make([]rune, length)
 
 	if length < 1 {
-		return "", 0, errors.New("Password length must be equal to or higher than 1")
+		return "", 0, errors.New("password length must be equal to or higher than 1")
 	}
 
 	// Append characters to a slice
 	for key := range levels {
 		if key > 8 {
-			return "", 0, errors.New("Password level must be equal to or lower than 8")
+			return "", 0, errors.New("password level must be equal to or lower than 8")
 		}
-		if key == 1 {
+
+		switch key {
+		case 1:
 			characters = append(characters, lowerCase)
-		}
-		if key == 2 {
+		case 2:
 			characters = append(characters, upperCase)
-		}
-		if key == 3 {
+		case 3:
 			characters = append(characters, digits)
-		}
-		if key == 4 {
+		case 4:
 			characters = append(characters, space)
-		}
-		if key == 5 {
+		case 5:
 			characters = append(characters, brackets)
-		}
-		if key == 6 {
+		case 6:
 			characters = append(characters, points)
-		}
-		if key == 7 {
+		case 7:
 			characters = append(characters, special)
-		}
-		if key == 8 {
+		case 8:
 			characters = append(characters, extended)
 		}
 	}
 
 	// Join slice parts and convert to rune
 	join := strings.Join(characters, "")
-	chunk := []rune(join)
+	pool := []rune(join)
 
-	entropy := calculateEntropy(length, len(join))
+	entropy := calculateEntropy(length, len(pool))
 
 	for i := range b {
-		randInt, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chunk))))
-		b[i] = chunk[randInt.Int64()]
+		randInt, _ := rand.Int(rand.Reader, big.NewInt(int64(len(pool))))
+		b[i] = pool[randInt.Int64()]
 	}
 
 	password := string(b)
