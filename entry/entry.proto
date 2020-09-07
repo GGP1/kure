@@ -6,5 +6,6 @@ message Entry {
     bytes Password = 3;
     bytes URL = 4;
     bytes Expires = 5;
-    bool Secure = 6;
+    bytes Notes = 6;
+    bool Secure = 7;
 }

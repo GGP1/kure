@@ -1,97 +1,156 @@
 package db
 
 import (
-	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/GGP1/kure/entry"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 
 	bolt "go.etcd.io/bbolt"
 )
 
+// CleanExpired removes the expired entries from the database.
+func CleanExpired(b *bolt.Bucket, title, expires []byte, expired chan bool, errCh chan error) {
+	if string(expires) == "Never" {
+		expired <- false
+		return
+	}
+
+	// Format expires time and time.Now to compare them
+	expiration, err := time.Parse(time.RFC3339, string(expires))
+	if err != nil {
+		errCh <- errors.Wrap(err, "expiration time parse")
+	}
+
+	now, err := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	if err != nil {
+		errCh <- errors.Wrap(err, "time now parse")
+	}
+
+	// Clean expired entries
+	if now.Sub(expiration) > 0 {
+		if err := b.Delete(title); err != nil {
+			errCh <- errors.Wrap(err, "delete entry")
+		}
+		expired <- true
+	}
+
+	expired <- false
+}
+
 // CreateEntry creates a new record.
 func CreateEntry(entry *entry.Entry) error {
-	err := db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
 
-		entry.Title = strings.Title(entry.Title)
-
-		buf, err := json.Marshal(entry)
-		if err != nil {
-			return err
+		exists := b.Get(entry.Title)
+		if exists != nil {
+			return errors.New("there is an existing entry with this title, to edit it please use <kure edit>")
 		}
 
-		title := strings.ToLower(entry.Title)
+		buf, err := proto.Marshal(entry)
+		if err != nil {
+			return errors.Wrap(err, "marshal proto")
+		}
 
-		return b.Put([]byte(title), buf)
+		if err := b.Put(entry.Title, buf); err != nil {
+			return errors.Wrap(err, "save entry")
+		}
+
+		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // DeleteEntry removes an entry from the database.
-func DeleteEntry(titles []string) error {
+func DeleteEntry(title string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
-		for _, t := range titles {
-			t = strings.ToLower(t)
-			err := b.Delete([]byte(t))
-			if err != nil {
-				return err
-			}
+		t := strings.ToLower(title)
+
+		if err := b.Delete([]byte(t)); err != nil {
+			return errors.Wrap(err, "delete entry")
 		}
+
+		return nil
+	})
+}
+
+// EditEntry edits an entry
+func EditEntry(entry *entry.Entry) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucketName)
+
+		buf, err := proto.Marshal(entry)
+		if err != nil {
+			return errors.Wrap(err, "marshal proto")
+		}
+
+		if err := b.Put(entry.Title, buf); err != nil {
+			return errors.Wrap(err, "edit entry")
+		}
+
 		return nil
 	})
 }
 
 // GetEntry retrieves all the entries stored in the database.
-func GetEntry(title string) (entry.Entry, error) {
-	var e entry.Entry
-
+func GetEntry(title string) (*entry.Entry, error) {
+	e := &entry.Entry{}
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
 		t := strings.ToLower(title)
 
-		entry := b.Get([]byte(t))
+		result := b.Get([]byte(t))
 
-		if err := json.Unmarshal(entry, &e); err != nil {
-			return err
+		if err := proto.Unmarshal(result, e); err != nil {
+			return errors.Wrap(err, "unmarshal proto")
 		}
 
 		return nil
 	})
 	if err != nil {
-		return entry.Entry{}, err
+		return nil, errors.Wrap(err, "view entry")
 	}
 
 	return e, nil
 }
 
 // ListEntries retrieves a list with all the entries.
-func ListEntries() ([]entry.Entry, error) {
-	var (
-		entries []entry.Entry
-		entry   entry.Entry
-	)
+func ListEntries() ([]*entry.Entry, error) {
+	var entries []*entry.Entry
 
-	err := db.View(func(tx *bolt.Tx) error {
+	expired := make(chan bool)
+	errCh := make(chan error)
+
+	err := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
 		c := b.Cursor()
 
 		// Place cursor in the first line of the bucket and move it to the next one
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			if err := json.Unmarshal(v, &entry); err != nil {
-				return err
+			entry := &entry.Entry{}
+			if err := proto.Unmarshal(v, entry); err != nil {
+				return errors.Wrap(err, "unmarshal proto")
 			}
 
-			entries = append(entries, entry)
+			go CleanExpired(b, entry.Title, entry.Expires, expired, errCh)
+
+			select {
+			case e := <-expired:
+				if !e {
+					entries = append(entries, entry)
+				}
+			case err := <-errCh:
+				return err
+			}
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "list entries")
 	}
 
 	return entries, nil

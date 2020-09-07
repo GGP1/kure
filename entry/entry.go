@@ -22,13 +22,14 @@ var (
 )
 
 // New creates a new entry.
-func New(title, username, password, url, expires string, secure bool) *Entry {
+func New(title, username, password, url, notes, expires string, secure bool) *Entry {
 	return &Entry{
 		Title:    []byte(title),
 		Username: []byte(username),
 		Password: []byte(password),
 		URL:      []byte(url),
 		Expires:  []byte(expires),
+		Notes:    []byte(notes),
 		Secure:   secure,
 	}
 }
@@ -68,7 +69,7 @@ func GeneratePassword(length uint16, levels map[uint]struct{}) (string, float64,
 		}
 	}
 
-	// Join slice parts and convert to rune
+	// Join elements and convert to rune
 	join := strings.Join(characters, "")
 	pool := []rune(join)
 

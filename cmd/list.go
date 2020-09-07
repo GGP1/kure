@@ -3,22 +3,22 @@ package cmd
 import (
 	"fmt"
 	"strings"
-	"syscall"
 
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/entry"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 var (
 	hide    bool
 	listCmd = &cobra.Command{
-		Use:   "list",
+		Use:   "list [-h hide] [-S secure]",
 		Short: "List entries",
 		Run: func(cmd *cobra.Command, args []string) {
+			title := strings.Join(args, " ")
+
 			if title != "" {
 				entry, err := db.GetEntry(title)
 				if err != nil {
@@ -27,8 +27,7 @@ var (
 				}
 
 				if secure && entry.Secure {
-					fmt.Print("Enter Password: ")
-					pwd, err := terminal.ReadPassword(int(syscall.Stdin))
+					pwd, err := passInput()
 					if err != nil {
 						fmt.Println("error:", err)
 						return
@@ -61,7 +60,6 @@ var (
 
 func init() {
 	RootCmd.AddCommand(listCmd)
-	listCmd.Flags().StringVarP(&title, "title", "t", "", "entry title")
 	listCmd.Flags().BoolVarP(&hide, "hide", "H", false, "hide entries passwords")
 	listCmd.Flags().BoolVarP(&secure, "secure", "S", false, "decrypt password before listing")
 }
@@ -83,12 +81,15 @@ func printResult(e *entry.Entry) {
 	t := strings.Title(string(e.Title))
 
 	s := fmt.Sprintf(
-		`%s:
+		`
+%s:
 	Username: %s
 	Password: %s
 	     URL: %s
+	   Notes: %s
 	 Expires: %s
+	 
 ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬`,
-		t, e.Username, password, e.URL, e.Expires)
+		t, e.Username, password, e.URL, e.Notes, e.Expires)
 	fmt.Println(s)
 }
