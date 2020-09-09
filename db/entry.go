@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -8,12 +9,11 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
-
 	bolt "go.etcd.io/bbolt"
 )
 
-// CleanExpired removes the expired entries from the database.
-func CleanExpired(b *bolt.Bucket, title, expires []byte, expired chan bool, errCh chan error) {
+// cleanExpired removes the expired entries from the database.
+func cleanExpired(b *bolt.Bucket, title, expires []byte, expired chan bool, errCh chan error) {
 	if string(expires) == "Never" {
 		expired <- false
 		return
@@ -44,7 +44,10 @@ func CleanExpired(b *bolt.Bucket, title, expires []byte, expired chan bool, errC
 // CreateEntry creates a new record.
 func CreateEntry(entry *entry.Entry) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
+		b := tx.Bucket(defaultBucket)
+		if b == nil {
+			return fmt.Errorf("%s folder does not exist", defaultBucket)
+		}
 
 		exists := b.Get(entry.Title)
 		if exists != nil {
@@ -67,7 +70,11 @@ func CreateEntry(entry *entry.Entry) error {
 // DeleteEntry removes an entry from the database.
 func DeleteEntry(title string) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
+		b := tx.Bucket(defaultBucket)
+		if b == nil {
+			return fmt.Errorf("%s folder does not exist", defaultBucket)
+		}
+
 		t := strings.ToLower(title)
 
 		if err := b.Delete([]byte(t)); err != nil {
@@ -81,7 +88,10 @@ func DeleteEntry(title string) error {
 // EditEntry edits an entry
 func EditEntry(entry *entry.Entry) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
+		b := tx.Bucket(defaultBucket)
+		if b == nil {
+			return fmt.Errorf("%s folder does not exist", defaultBucket)
+		}
 
 		buf, err := proto.Marshal(entry)
 		if err != nil {
@@ -100,13 +110,21 @@ func EditEntry(entry *entry.Entry) error {
 func GetEntry(title string) (*entry.Entry, error) {
 	e := &entry.Entry{}
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
+		b := tx.Bucket(defaultBucket)
+		if b == nil {
+			return fmt.Errorf("%s folder does not exist", defaultBucket)
+		}
+
 		t := strings.ToLower(title)
 
 		result := b.Get([]byte(t))
 
 		if err := proto.Unmarshal(result, e); err != nil {
 			return errors.Wrap(err, "unmarshal proto")
+		}
+
+		if string(e.Title) == "" {
+			return fmt.Errorf("%s does not exist", title)
 		}
 
 		return nil
@@ -126,7 +144,11 @@ func ListEntries() ([]*entry.Entry, error) {
 	errCh := make(chan error)
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
+		b := tx.Bucket(defaultBucket)
+		if b == nil {
+			return fmt.Errorf("%s folder does not exist", defaultBucket)
+		}
+
 		c := b.Cursor()
 
 		// Place cursor in the first line of the bucket and move it to the next one
@@ -136,7 +158,7 @@ func ListEntries() ([]*entry.Entry, error) {
 				return errors.Wrap(err, "unmarshal proto")
 			}
 
-			go CleanExpired(b, entry.Title, entry.Expires, expired, errCh)
+			go cleanExpired(b, entry.Title, entry.Expires, expired, errCh)
 
 			select {
 			case e := <-expired:
