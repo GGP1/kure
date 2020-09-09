@@ -8,27 +8,42 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var genCmd = &cobra.Command{
-	Use:   "gen",
-	Short: "Generate a random password.",
-	Run: func(cmd *cobra.Command, args []string) {
-		levels := make(map[uint]struct{})
+var (
+	phrase    bool
+	separator string
+	include   string
+	genCmd    = &cobra.Command{
+		Use:   "gen [-l length] [-f format] [-p phrase] [-s separator] [-i include]",
+		Short: "Generate a random password",
+		Run: func(cmd *cobra.Command, args []string) {
+			if phrase {
+				passphrase, entropy := entry.GeneratePassphrase(int(length), separator)
+				fmt.Printf("Passphrase: %s\nBits of entropy: %.2f\n", passphrase, entropy)
+				return
+			}
 
-		for _, v := range format {
-			levels[v] = struct{}{}
-		}
+			levels := make(map[uint]struct{})
 
-		password, entropy, err := entry.GeneratePassword(length, levels)
-		if err != nil {
-			fmt.Println(err)
-		}
+			for _, v := range format {
+				levels[v] = struct{}{}
+			}
 
-		fmt.Printf("Password: %s\nBits of entropy: %.2f", password, entropy)
-	},
-}
+			password, entropy, err := entry.GeneratePassword(length, levels, include)
+			if err != nil {
+				fmt.Println("error:", err)
+				return
+			}
+
+			fmt.Printf("Password: %s\nBits of entropy: %.2f\n", password, entropy)
+		},
+	}
+)
 
 func init() {
 	RootCmd.AddCommand(genCmd)
 	genCmd.Flags().Uint16VarP(&length, "length", "l", 1, "password length")
 	genCmd.Flags().UintSliceVarP(&format, "format", "f", []uint{1, 2, 3}, "password format")
+	genCmd.Flags().BoolVarP(&phrase, "phrase", "p", false, "generate a passphrase")
+	genCmd.Flags().StringVarP(&separator, "separator", "s", " ", "set the character that separates each word")
+	genCmd.Flags().StringVarP(&include, "include", "i", "", "characters to include in pool of the password")
 }

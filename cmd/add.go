@@ -19,10 +19,10 @@ var (
 	custom bool
 	length uint16
 	format []uint
-	secure bool
+	safe   bool
 
 	addCmd = &cobra.Command{
-		Use:   "add [-c custom] [-l length] [-f format] [-S secure]",
+		Use:   "add [-c custom] [-p phrase] [-s separator] [-l length] [-f format] [-i include] [-S safe]",
 		Short: "Adds a new entry to the database",
 		Run: func(cmd *cobra.Command, args []string) {
 			var (
@@ -35,19 +35,23 @@ var (
 			title, username, password, url, notes, expiration := entryInput()
 
 			if !custom {
-				levels := make(map[uint]struct{})
+				if phrase {
+					password, entropy = entry.GeneratePassphrase(int(length), separator)
+				} else {
+					levels := make(map[uint]struct{})
 
-				for _, v := range format {
-					levels[v] = struct{}{}
-				}
-				password, entropy, err = entry.GeneratePassword(length, levels)
-				if err != nil {
-					fmt.Println("error:", err)
-					return
+					for _, v := range format {
+						levels[v] = struct{}{}
+					}
+					password, entropy, err = entry.GeneratePassword(length, levels, include)
+					if err != nil {
+						fmt.Println("error:", err)
+						return
+					}
 				}
 			}
 
-			if secure {
+			if safe {
 				pwd, err := passInput()
 				if err != nil {
 					fmt.Println("error:", err)
@@ -68,7 +72,7 @@ var (
 				return
 			}
 
-			entry := entry.New(title, username, password, url, notes, expiration, secure)
+			entry := entry.New(title, username, password, url, notes, expiration, safe)
 
 			if err := db.CreateEntry(entry); err != nil {
 				fmt.Println("error:", err)
@@ -83,9 +87,12 @@ var (
 func init() {
 	RootCmd.AddCommand(addCmd)
 	addCmd.Flags().BoolVarP(&custom, "custom", "c", false, "custom password")
+	addCmd.Flags().BoolVarP(&phrase, "phrase", "p", false, "generate a passphrase instead of a password")
+	addCmd.Flags().StringVarP(&separator, "separator", "s", " ", "set the character that separates each word")
 	addCmd.Flags().Uint16VarP(&length, "length", "l", 1, "password length")
 	addCmd.Flags().UintSliceVarP(&format, "format", "f", []uint{1, 2, 3, 4}, "password format")
-	addCmd.Flags().BoolVarP(&secure, "secure", "S", false, "security mode")
+	addCmd.Flags().StringVarP(&include, "include", "i", "", "characters to include in pool of the password")
+	addCmd.Flags().BoolVarP(&safe, "safe", "S", false, "safe mode")
 
 	addCmd.MarkFlagRequired("title")
 	if !custom {
@@ -107,14 +114,6 @@ func entryInput() (title, username, password, url, notes, expiration string) {
 	}
 
 	return title, username, password, url, notes, expiration
-}
-
-func scan(scanner *bufio.Scanner, field string, value string) string {
-	fmt.Printf("%s: ", field)
-	scanner.Scan()
-	value = scanner.Text()
-
-	return value
 }
 
 func formatFields(title, expiration string) (string, string, error) {
