@@ -1,41 +1,57 @@
 package crypt
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"strings"
+	"syscall"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
+	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/crypto/twofish"
 )
 
-func createHash(key []byte) ([]byte, error) {
-	hasher := md5.New()
-
-	_, err := hasher.Write(key)
+// Encrypt ciphers data with the given passphrase.
+func Encrypt(data []byte) ([]byte, error) {
+	passphrase, err := getMasterPassword()
 	if err != nil {
-		return nil, errors.Wrap(err, "create hash")
+		return nil, err
 	}
 
-	return hasher.Sum(nil), nil
-}
+	if string(passphrase) == "" {
+		fmt.Print("Enter Passphrase: ")
+		passphrase, err = terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			return nil, errors.Wrap(err, "reading password")
+		}
+		fmt.Print("\nConfirm Passphrase: ")
+		passphrase2, err := terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			return nil, errors.Wrap(err, "reading password")
+		}
 
-// Encrypt ciphers data with the given passphrase.
-func Encrypt(data []byte, passphrase []byte) ([]byte, error) {
+		if bytes.Compare(passphrase, passphrase2) != 0 {
+			fmt.Println("")
+			return nil, errors.New("passphrases must be equal")
+		}
+	}
+
 	hash, err := createHash(passphrase)
 	if err != nil {
 		return nil, err
 	}
 
-	block, err := aes.NewCipher(hash)
+	gcm, err := chooseAlgorithm(hash)
 	if err != nil {
-		return nil, errors.Wrap(err, "create cipher")
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, errors.Wrap(err, "create GCM")
+		return nil, err
 	}
 
 	nonce := make([]byte, gcm.NonceSize())
@@ -51,20 +67,28 @@ func Encrypt(data []byte, passphrase []byte) ([]byte, error) {
 }
 
 // Decrypt deciphers data with the given passphrase.
-func Decrypt(data []byte, passphrase []byte) ([]byte, error) {
+func Decrypt(data []byte) ([]byte, error) {
+	passphrase, err := getMasterPassword()
+	if err != nil {
+		return nil, err
+	}
+
+	if string(passphrase) == "" {
+		fmt.Print("Enter Passphrase: ")
+		passphrase, err = terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			return nil, errors.Wrap(err, "reading password")
+		}
+	}
+
 	hash, err := createHash(passphrase)
 	if err != nil {
 		return nil, err
 	}
 
-	block, err := aes.NewCipher(hash)
+	gcm, err := chooseAlgorithm(hash)
 	if err != nil {
-		return nil, errors.Wrap(err, "create cipher")
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, errors.Wrap(err, "create GCM")
+		return nil, err
 	}
 
 	nonceSize := gcm.NonceSize()
@@ -73,8 +97,65 @@ func Decrypt(data []byte, passphrase []byte) ([]byte, error) {
 
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid password")
+		return nil, errors.New("invalid password")
 	}
 
 	return plaintext, nil
+}
+
+// Create a HMAC-SHA256 hash (32 bytes) with the key provided.
+func createHash(key []byte) ([]byte, error) {
+	hasher := hmac.New(sha256.New, key)
+
+	_, err := hasher.Write(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "create hmac sha-256 hash")
+	}
+
+	return hasher.Sum(nil), nil
+}
+
+func getMasterPassword() ([]byte, error) {
+	masterPwd := viper.GetString("user.password")
+	passphrase := []byte(masterPwd)
+
+	if masterPwd == "" {
+		filename := viper.GetString("user.password_path")
+
+		mPassword, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return nil, errors.Wrap(err, "reading file")
+		}
+
+		passphrase = mPassword
+	}
+
+	return passphrase, nil
+}
+
+func chooseAlgorithm(hash []byte) (cipher.AEAD, error) {
+	var block cipher.Block
+	var err error
+
+	algorithm := strings.ToLower(viper.GetString("algorithm"))
+
+	switch algorithm {
+	case "aes":
+		block, err = aes.NewCipher(hash)
+		if err != nil {
+			return nil, errors.Wrap(err, "create cipher")
+		}
+	case "twofish":
+		block, err = twofish.NewCipher(hash)
+		if err != nil {
+			return nil, errors.Wrap(err, "create cipher")
+		}
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, errors.Wrap(err, "create GCM")
+	}
+
+	return gcm, nil
 }

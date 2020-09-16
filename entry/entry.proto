@@ -1,11 +1,10 @@
 syntax = "proto3";
 
 message Entry {
-    bytes Title = 1;
-    bytes Username = 2;
-    bytes Password = 3;
-    bytes URL = 4;
-    bytes Expires = 5;
-    bytes Notes = 6;
-    bool Secure = 7;
+    string Title = 1;
+    string Username = 2;
+    string Password = 3;
+    string URL = 4;
+    string Notes = 5;
+    string Expires = 6;
 }

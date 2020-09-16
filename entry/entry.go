@@ -10,34 +10,38 @@ import (
 
 // Password characters.
 var (
-	def       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"                                                            // default
-	lowerCase = "abcdefghijklmnopqrstuvwxyz"                                                                                                // level 1
-	upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"                                                                                                // level 2
-	digits    = "0123456789"                                                                                                                // level 3
-	space     = " "                                                                                                                         // level 4
-	brackets  = "(){}[]<>"                                                                                                                  // level 5
-	points    = "_.¿?!¡,;:"                                                                                                                 // level 6
-	special   = "$%&|/=*#@=~€^"                                                                                                             // level 7
-	extended  = "€ƒ„…†‡0ˆ‰Š‹›ŒŽ‘’“”•-+_—˜™šœžŸ¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ" // level 8
+	lowerCase = "abcdefghijklmnopqrstuvwxyz"                                                                                               // level 1
+	upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"                                                                                               // level 2
+	digits    = "0123456789"                                                                                                               // level 3
+	space     = " "                                                                                                                        // level 4
+	brackets  = "(){}[]<>"                                                                                                                 // level 5
+	points    = ".¿?!¡,;:"                                                                                                                 // level 6
+	special   = "$%&|/=*#@=~€^"                                                                                                            // level 7
+	extended  = "ƒ„…†‡0ˆ‰Š‹›ŒŽ‘’“”•-+_—˜™šœžŸ¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ" // level 8
 )
 
 // New creates a new entry.
-func New(title, username, password, url, notes, expires string, safe bool) *Entry {
+func New(title, username, password, url, notes, expires string) *Entry {
 	return &Entry{
-		Title:    []byte(title),
-		Username: []byte(username),
-		Password: []byte(password),
-		URL:      []byte(url),
-		Expires:  []byte(expires),
-		Notes:    []byte(notes),
-		Safe:     safe,
+		Title:    title,
+		Username: username,
+		Password: password,
+		URL:      url,
+		Notes:    notes,
+		Expires:  expires,
 	}
 }
 
 // GeneratePassword generates a random password with the length and format given.
-func GeneratePassword(length uint16, levels map[uint]struct{}, include string) (string, float64, error) {
+func GeneratePassword(length uint16, format []int, include string) (string, float64, error) {
 	var characters []string
-	b := make([]rune, length)
+
+	password := make([]rune, length)
+	levels := make(map[int]struct{}, len(format))
+
+	for _, v := range format {
+		levels[v] = struct{}{}
+	}
 
 	if length < 1 {
 		return "", 0, errors.New("password length must be equal to or higher than 1")
@@ -73,22 +77,21 @@ func GeneratePassword(length uint16, levels map[uint]struct{}, include string) (
 		}
 	}
 
-	// Join elements and convert to rune
-	join := strings.Join(characters, "")
-	pool := []rune(join)
+	// Create the pool by joining all the characeters
+	pool := []rune(strings.Join(characters, ""))
 
 	entropy := calculateEntropy(length, len(pool))
 
-	for i := range b {
-		// Generate a random number to take a word from the pool and put it into b
+	for i := range password {
+		// Generate a random number to take a character from the pool and put it into the password
 		randInt, _ := rand.Int(rand.Reader, big.NewInt(int64(len(pool))))
 
-		b[i] = pool[randInt.Int64()]
+		password[i] = pool[randInt.Int64()]
 	}
 
-	password := string(b)
+	pwd := string(password)
 
-	return password, entropy, nil
+	return pwd, entropy, nil
 }
 
 // GeneratePassphrase generates a random passphrase with the length given.
@@ -98,18 +101,19 @@ func GeneratePassphrase(length int, separator string) (string, float64) {
 	var (
 		j         int64
 		vowels    = []string{"a", "e", "i", "o", "u"}
-		constants = []string{
-			"b", "c", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "t", "v", "w", "x", "y", "z",
-		}
-		passphrase []string
+		constants = []string{"b", "c", "f", "g", "h", "j", "k", "l", "m", "n",
+			"p", "q", "r", "s", "t", "v", "w", "x", "y", "z"}
 	)
+
+	passphrase := make([]string, 0, length)
 
 	// Running goroutines with a waitgroup on each word/syllable doesn't have a significant improvement
 	for i := 0; i < length; i++ {
-		var syllables []string
 		// 3 (min), 12 (max) length of a word in this algorithm
 		wL, _ := rand.Int(rand.Reader, big.NewInt(10))
 		wordLength := wL.Add(wL, big.NewInt(3))
+
+		syllables := make([]string, 0, wordLength.Int64())
 
 		for j = 0; j < wordLength.Int64(); j++ {
 			// randInt: take a number from 0 to 10, 4/10 is a vowel

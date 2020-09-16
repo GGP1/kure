@@ -3,12 +3,15 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/entry"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -16,28 +19,23 @@ var editCmd = &cobra.Command{
 	Use:   "edit <title>",
 	Short: "Edit an entry",
 	Run: func(cmd *cobra.Command, args []string) {
-		var err error
 		title := strings.Join(args, " ")
 
 		oldEntry, err := db.GetEntry(title)
 		if err != nil {
-			fmt.Println("error:", err)
-			return
+			log.Fatal("error: ", err)
 		}
 
-		username, url, notes, expiration := editEntryInput()
-
-		title, expiration, err = formatFields(title, expiration)
+		username, url, notes, expiration, err := editEntryInput()
 		if err != nil {
-			fmt.Println("error:", err)
-			return
+			log.Fatal("error: ", err)
 		}
 
-		e := entry.New(title, username, string(oldEntry.Password), url, notes, expiration, oldEntry.Safe)
+		e := entry.New(title, username, oldEntry.Password, url, notes, expiration)
 
 		err = db.EditEntry(e)
 		if err != nil {
-			fmt.Println("error:", err)
+			log.Fatal("error: ", err)
 		}
 
 		fmt.Printf("\nSuccessfully edited %s entry.", title)
@@ -48,7 +46,7 @@ func init() {
 	RootCmd.AddCommand(editCmd)
 }
 
-func editEntryInput() (username, url, notes, expiration string) {
+func editEntryInput() (username, url, notes, expiration string, err error) {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	username = scan(scanner, "Username", username)
@@ -56,5 +54,16 @@ func editEntryInput() (username, url, notes, expiration string) {
 	notes = scan(scanner, "Notes", notes)
 	expiration = scan(scanner, "Expiration", expiration)
 
-	return username, url, notes, expiration
+	if expiration == "0s" || expiration == "0" || expiration == "" {
+		expiration = "Never"
+	} else {
+		expTime, err := time.ParseDuration(expiration)
+		if err != nil {
+			return "", "", "", "", errors.Wrap(err, "duration parse")
+		}
+		// Add duration and format
+		expiration = time.Now().Add(expTime).Format(time.RFC3339)
+	}
+
+	return username, url, notes, expiration, nil
 }

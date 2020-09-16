@@ -2,13 +2,13 @@ package db
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/GGP1/kure/crypt"
+
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 )
@@ -27,8 +27,8 @@ func HTTPBackup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// EncryptedBackup creates a file with AES encryption in the path specified.
-func EncryptedBackup(filename string, passphrase []byte) error {
+// EncryptedFile creates a file with AES encryption in the path specified.
+func EncryptedFile(filename string) error {
 	return db.View(func(tx *bolt.Tx) error {
 		var buf bytes.Buffer
 
@@ -37,14 +37,12 @@ func EncryptedBackup(filename string, passphrase []byte) error {
 			return err
 		}
 
-		encrypted, err := crypt.Encrypt(buf.Bytes(), passphrase)
+		encrypted, err := crypt.Encrypt(buf.Bytes())
 		if err != nil {
 			return err
 		}
 
-		path := fmt.Sprintf("%s.db", filename)
-
-		f, err := os.Create(path)
+		f, err := os.Create(filename)
 		if err != nil {
 			return errors.Wrap(err, "create encrypted file")
 		}
@@ -59,14 +57,12 @@ func EncryptedBackup(filename string, passphrase []byte) error {
 	})
 }
 
-// DecryptBackup takes the database backup and decrypts it
-func DecryptBackup(filename string, passphrase []byte) ([]byte, error) {
-	path := fmt.Sprintf("%s.db", filename)
-
-	data, err := ioutil.ReadFile(path)
+// DecryptFile takes the database backup and decrypts it.
+func DecryptFile(filename string) ([]byte, error) {
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, errors.Wrap(err, "read database file")
 	}
 
-	return crypt.Decrypt(data, passphrase)
+	return crypt.Decrypt(data)
 }
