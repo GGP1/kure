@@ -6,7 +6,8 @@
 
 Add new entries to the database.
 
-## Flags 
+## Flags
+
 |  Name     | Shorthand |     Type      |    Default    |                           Usage                                   |
 |-----------|-----------|---------------|---------------|-------------------------------------------------------------------|
 | custom    | c         | bool          | false         | Create an entry with a custom password                            |

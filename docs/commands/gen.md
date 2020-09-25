@@ -7,6 +7,7 @@
 Generate a random password.
 
 ## Flags 
+
 |  Name     | Shorthand |     Type      |    Default    |                           Usage                                   |
 |-----------|-----------|---------------|---------------|-------------------------------------------------------------------|
 | phrase    | p         | bool          | false         | Generate a passphrase                                             |

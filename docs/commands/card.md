@@ -6,7 +6,8 @@
 
 Cards operations.
 
-## Flags 
+## Flags
+
 |  Name     |  Shorthand    |     Type      |    Default    |            Usage                  |
 |-----------|---------------|---------------|---------------|-----------------------------------|
 | add       | a             | bool          | false         | Add a card                        |
