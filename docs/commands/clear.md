@@ -7,7 +7,6 @@
 Manually clean the clipboard, terminal or both of them.
 
 ## Flags 
-
 |  Name     |  Shorthand    |     Type      |    Default    |            Usage                  |
 |-----------|---------------|---------------|---------------|-----------------------------------|
 | both      | b             | bool          | true          | Clear both clipboard and terminal |

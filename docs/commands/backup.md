@@ -7,7 +7,6 @@
 Create database backups, serve the database file on a local http server.
 
 ## Flags 
-
 |  Name     |     Type      |    Default    |                  Usage                         |
 |-----------|---------------|---------------|------------------------------------------------|
 | http      | bool          | false         | Serve the database file on a http server       |
