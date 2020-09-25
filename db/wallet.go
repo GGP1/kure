@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/GGP1/kure/crypt"
-	"github.com/GGP1/kure/wallet"
+	"github.com/GGP1/kure/model/wallet"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -66,7 +66,7 @@ func GetWallet(name string) (*wallet.Wallet, error) {
 
 		decWallet, err := crypt.Decrypt(result)
 		if err != nil {
-			return errors.Wrap(err, "decrypt wallet")
+			return errors.Wrapf(err, "\"%s\" wallet does not exist", name)
 		}
 
 		if err := proto.Unmarshal(decWallet, c); err != nil {
@@ -80,7 +80,7 @@ func GetWallet(name string) (*wallet.Wallet, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "view wallet")
+		return nil, err
 	}
 
 	return c, nil
@@ -113,7 +113,7 @@ func ListWallets() ([]*wallet.Wallet, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "list wallets")
+		return nil, err
 	}
 
 	return wallets, nil

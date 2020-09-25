@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/GGP1/kure/crypt"
-	"github.com/GGP1/kure/entry"
+	"github.com/GGP1/kure/model/entry"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -114,7 +114,7 @@ func GetEntry(title string) (*entry.Entry, error) {
 
 		decEntry, err := crypt.Decrypt(result)
 		if err != nil {
-			return errors.Wrap(err, "decrypt entry")
+			return errors.Wrapf(err, "\"%s\" entry does not exist", title)
 		}
 
 		if err := proto.Unmarshal(decEntry, e); err != nil {
@@ -128,7 +128,7 @@ func GetEntry(title string) (*entry.Entry, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "view entry")
+		return nil, err
 	}
 
 	return e, nil
@@ -138,7 +138,7 @@ func GetEntry(title string) (*entry.Entry, error) {
 func ListEntries() ([]*entry.Entry, error) {
 	var entries []*entry.Entry
 
-	expired := make(chan bool)
+	expired := make(chan bool, 1)
 	errCh := make(chan error, 1)
 
 	err := db.Update(func(tx *bolt.Tx) error {
@@ -173,7 +173,7 @@ func ListEntries() ([]*entry.Entry, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "list entries")
+		return nil, err
 	}
 
 	return entries, nil

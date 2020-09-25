@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -20,7 +19,7 @@ var deleteCmd = &cobra.Command{
 
 		_, err := db.GetEntry(title)
 		if err != nil {
-			log.Fatal("error: this entry does not exist")
+			must(err)
 		}
 
 		scanner := bufio.NewScanner(os.Stdin)
@@ -32,7 +31,7 @@ var deleteCmd = &cobra.Command{
 
 		if strings.Contains(input, "y") || strings.Contains(input, "yes") {
 			if err := db.DeleteEntry(title); err != nil {
-				log.Fatal("error: ", err)
+				must(err)
 			}
 
 			fmt.Printf("\nSuccessfully deleted %s entry.", title)

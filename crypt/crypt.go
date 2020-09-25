@@ -2,21 +2,17 @@ package crypt
 
 import (
 	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+	"golang.org/x/crypto/chacha20poly1305"
 	"golang.org/x/crypto/ssh/terminal"
-	"golang.org/x/crypto/twofish"
 )
 
 // Encrypt ciphers data with the given passphrase.
@@ -49,19 +45,19 @@ func Encrypt(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	gcm, err := chooseAlgorithm(hash)
+	AEAD, err := chacha20poly1305.NewX(hash)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "creating AEAD")
 	}
 
-	nonce := make([]byte, gcm.NonceSize())
+	nonce := make([]byte, AEAD.NonceSize())
 
 	_, err = io.ReadFull(rand.Reader, nonce)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading nonce")
 	}
 
-	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+	ciphertext := AEAD.Seal(nonce, nonce, data, nil)
 
 	return ciphertext, nil
 }
@@ -86,16 +82,20 @@ func Decrypt(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	gcm, err := chooseAlgorithm(hash)
+	AEAD, err := chacha20poly1305.NewX(hash)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "creating AEAD")
 	}
 
-	nonceSize := gcm.NonceSize()
+	nonceSize := AEAD.NonceSize()
+
+	if len(data) < nonceSize {
+		return nil, errors.New("encrypted data is too short")
+	}
 
 	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
 
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	plaintext, err := AEAD.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return nil, errors.New("invalid password")
 	}
@@ -103,13 +103,13 @@ func Decrypt(data []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-// Create a HMAC-SHA256 hash (32 bytes) with the key provided.
+// Create a SHA256 hash (32 bytes) with the key provided.
 func createHash(key []byte) ([]byte, error) {
-	hasher := hmac.New(sha256.New, key)
+	hasher := sha256.New()
 
 	_, err := hasher.Write(key)
 	if err != nil {
-		return nil, errors.Wrap(err, "create hmac sha-256 hash")
+		return nil, errors.Wrap(err, "create sha-256 hash")
 	}
 
 	return hasher.Sum(nil), nil
@@ -131,31 +131,4 @@ func getMasterPassword() ([]byte, error) {
 	}
 
 	return passphrase, nil
-}
-
-func chooseAlgorithm(hash []byte) (cipher.AEAD, error) {
-	var block cipher.Block
-	var err error
-
-	algorithm := strings.ToLower(viper.GetString("algorithm"))
-
-	switch algorithm {
-	case "aes":
-		block, err = aes.NewCipher(hash)
-		if err != nil {
-			return nil, errors.Wrap(err, "create cipher")
-		}
-	case "twofish":
-		block, err = twofish.NewCipher(hash)
-		if err != nil {
-			return nil, errors.Wrap(err, "create cipher")
-		}
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, errors.Wrap(err, "create GCM")
-	}
-
-	return gcm, nil
 }

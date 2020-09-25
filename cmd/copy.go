@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -13,7 +12,6 @@ import (
 )
 
 var timeout time.Duration
-var bCard string
 
 var copyCmd = &cobra.Command{
 	Use:   "copy <title> [-t timeout]",
@@ -23,11 +21,11 @@ var copyCmd = &cobra.Command{
 
 		entry, err := db.GetEntry(title)
 		if err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
 
 		if err := clipboard.WriteAll(entry.Password); err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
 
 		if timeout > 0 {

@@ -3,52 +3,61 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/GGP1/kure/card"
 	"github.com/GGP1/kure/db"
+	"github.com/GGP1/kure/model/card"
 
 	"github.com/atotto/clipboard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-var add, copy, delete, list bool
+var add, copy, delete, list, view bool
+var field string
 
 var cardCmd = &cobra.Command{
-	Use:   "card <name> [-a add | -c copy | -d delete | -l list] [-t timeout]",
+	Use:   "card <name> [-a add | -c copy | -d delete | -l list | -v view] [-t timeout] [-f field]",
 	Short: "Add, copy, delete or list cards",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := strings.Join(args, " ")
 
 		if add {
 			if err := addCard(); err != nil {
-				log.Fatal("error: ", err)
+				must(err)
 			}
 			return
 		}
 
 		if copy {
 			if err := copyCard(name, timeout); err != nil {
-				log.Fatal("error: ", err)
+				must(err)
 			}
+			return
 		}
 
 		if delete {
 			if err := deleteCard(name); err != nil {
-				log.Fatal("error: ", err)
+				must(err)
+			}
+			return
+		}
+
+		if view {
+			if err := viewCards(); err != nil {
+				must(err)
 			}
 			return
 		}
 
 		if err := listCard(name); err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
-
 	},
 }
 
@@ -58,7 +67,9 @@ func init() {
 	cardCmd.Flags().BoolVarP(&copy, "copy", "c", false, "copy card number")
 	cardCmd.Flags().BoolVarP(&delete, "delete", "d", false, "delete a card")
 	cardCmd.Flags().BoolVarP(&list, "list", "l", true, "list card/cards")
+	cardCmd.Flags().BoolVarP(&view, "view", "v", false, "view cards")
 	cardCmd.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
+	cardCmd.Flags().StringVarP(&field, "field", "f", "number", "choose which field to copy")
 }
 
 func addCard() error {
@@ -76,12 +87,16 @@ func addCard() error {
 }
 
 func copyCard(name string, timeout time.Duration) error {
+	if name == "" {
+		return errInvalidName
+	}
+
 	card, err := db.GetCard(name)
 	if err != nil {
 		return err
 	}
 
-	field := strings.ToLower(bCard)
+	field := strings.ToLower(field)
 
 	if field == "number" {
 		number := strconv.Itoa(int(card.Number))
@@ -105,9 +120,13 @@ func copyCard(name string, timeout time.Duration) error {
 }
 
 func deleteCard(name string) error {
+	if name == "" {
+		return errInvalidName
+	}
+
 	_, err := db.GetCard(name)
 	if err != nil {
-		return errors.New("This card does not exist")
+		return errors.New("this card does not exist")
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -119,7 +138,7 @@ func deleteCard(name string) error {
 
 	if strings.Contains(input, "y") || strings.Contains(input, "yes") {
 		if err := db.DeleteCard(name); err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
 
 		fmt.Printf("\nSuccessfully deleted %s card.", name)
@@ -146,6 +165,32 @@ func listCard(name string) error {
 
 	for _, card := range cards {
 		printCard(card)
+	}
+
+	return nil
+}
+
+func viewCards() error {
+	if port := viper.GetInt("http.port"); port != 0 {
+		httpPort = uint16(port)
+	}
+
+	cards, err := db.ListCards()
+	if err != nil {
+		return err
+	}
+
+	for _, c := range cards {
+		c.Name = strings.Title(c.Name)
+	}
+
+	http.HandleFunc("/", viewTemplate(cards))
+
+	addr := fmt.Sprintf(":%d", httpPort)
+	fmt.Printf("Serving cards on port %s\n", addr)
+
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		return err
 	}
 
 	return nil
@@ -188,13 +233,13 @@ func printCard(c *card.Card) {
 
 	str := fmt.Sprintf(
 		`
-+---------------+----------------->
-| Name	        | %s
-| Type      	| %s
-| Number      	| %d
-| CVC           | %d
-| Expire Date   | %s
-+---------------+----------------->`,
++───────────────+─────────────────>
+│ Name	        │ %s
+│ Type      	│ %s
+│ Number      	│ %d
+│ CVC           │ %d
+│ Expire Date   │ %s
++───────────────+─────────────────>`,
 		c.Name, c.Type, c.Number, c.CVC, c.ExpireDate)
 	fmt.Println(str)
 }

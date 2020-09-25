@@ -1,6 +1,9 @@
 package db
 
 import (
+	"io"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -36,12 +39,26 @@ func CreateBucketIfNotExists(bucketName ...[]byte) error {
 		for _, bucket := range bucketName {
 			_, err := tx.CreateBucketIfNotExists(bucket)
 			if err != nil {
-				return errors.Wrapf(err, "create bucket %s", bucketName)
+				return errors.Wrapf(err, "create bucket %s", bucket)
 			}
 		}
 
 		return nil
 	})
+}
+
+// HTTPBackup writes a consistent view of the database to a http endpoint.
+func HTTPBackup(w http.ResponseWriter, r *http.Request) {
+	err := db.View(func(tx *bolt.Tx) error {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", `attachment; filename="kure.db"`)
+		w.Header().Set("Content-Length", strconv.Itoa(int(tx.Size())))
+		_, err := tx.WriteTo(w)
+		return err
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // ListOfBuckets returns a list of the existing buckets.
@@ -54,8 +71,39 @@ func ListOfBuckets() ([]string, error) {
 		})
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "list of buckets")
+		return nil, errors.Wrap(err, "failed listing buckets")
 	}
 
 	return buckets, nil
+}
+
+// Stats gives information about the database and its buckets.
+func Stats() (map[string]int, error) {
+	tx, err := db.Begin(false)
+	if err != nil {
+		return nil, errors.Wrap(err, "transaction failed")
+	}
+	defer tx.Rollback()
+
+	entryStats := tx.Bucket(entryBucket).Stats()
+	cardStats := tx.Bucket(cardBucket).Stats()
+	walletStats := tx.Bucket(walletBucket).Stats()
+
+	stats := make(map[string]int, 3)
+	stats["entries"] = entryStats.KeyN
+	stats["cards"] = cardStats.KeyN
+	stats["wallets"] = walletStats.KeyN
+
+	return stats, nil
+}
+
+// WriteTo writes the entire database to a writer.
+func WriteTo(w io.Writer) error {
+	return db.View(func(tx *bolt.Tx) error {
+		_, err := tx.WriteTo(w)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }

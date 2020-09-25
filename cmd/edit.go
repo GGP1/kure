@@ -3,13 +3,12 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/GGP1/kure/db"
-	"github.com/GGP1/kure/entry"
+	"github.com/GGP1/kure/model/entry"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -23,19 +22,19 @@ var editCmd = &cobra.Command{
 
 		oldEntry, err := db.GetEntry(title)
 		if err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
 
 		username, url, notes, expiration, err := editEntryInput()
 		if err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
 
 		e := entry.New(title, username, oldEntry.Password, url, notes, expiration)
 
 		err = db.EditEntry(e)
 		if err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
 
 		fmt.Printf("\nSuccessfully edited %s entry.", title)

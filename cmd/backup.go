@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
-	"log"
 	"net/http"
 
+	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/db"
 
 	"github.com/spf13/cobra"
@@ -12,15 +13,13 @@ import (
 )
 
 var (
-	httpB    bool
-	httpPort uint16
-	encrypt  bool
-	decrypt  bool
-	path     string
+	httpB, encrypt, decrypt bool
+	httpPort                uint16
+	path                    string
 )
 
 var backupCmd = &cobra.Command{
-	Use:   "backup [http] [port] [encrypt] [decrypt] [path]",
+	Use:   "backup [http | encrypt | decrypt] [port] [path]",
 	Short: "Create database backups",
 	Run: func(cmd *cobra.Command, args []string) {
 		if p := viper.GetInt("http.port"); p != 0 {
@@ -28,17 +27,22 @@ var backupCmd = &cobra.Command{
 		}
 
 		if decrypt {
-			file, err := db.DecryptFile(path)
+			file, err := crypt.DecryptFile(path)
 			if err != nil {
-				log.Fatal("error: ", err)
+				must(err)
 			}
 			fmt.Println(string(file))
 			return
 		}
 
 		if encrypt {
-			if err := db.EncryptedFile(path); err != nil {
-				log.Fatal("error: ", err)
+			buf := new(bytes.Buffer)
+			if err := db.WriteTo(buf); err != nil {
+				must(err)
+			}
+
+			if err := crypt.EncryptedFile(buf.Bytes(), path); err != nil {
+				must(err)
 			}
 			return
 		}
@@ -50,7 +54,7 @@ var backupCmd = &cobra.Command{
 
 			fmt.Printf("Serving file on port %s", addr)
 			if err := http.ListenAndServe(addr, nil); err != nil {
-				log.Fatal("error: ", err)
+				must(err)
 			}
 		}
 	},
@@ -59,7 +63,7 @@ var backupCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(backupCmd)
 	backupCmd.Flags().BoolVar(&httpB, "http", false, "run a server and write the db file")
-	backupCmd.Flags().Uint16Var(&httpPort, "port", 2727, "server port")
+	backupCmd.Flags().Uint16Var(&httpPort, "port", 4000, "server port")
 
 	backupCmd.Flags().BoolVar(&encrypt, "encrypt", false, "create encrypted backup")
 	backupCmd.Flags().BoolVar(&decrypt, "decrypt", false, "decrypt encrypted backup")

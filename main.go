@@ -5,11 +5,13 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db"
+
 	"github.com/spf13/viper"
 )
 
@@ -21,7 +23,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	path := viper.GetString("db_path")
+	dbPath := viper.GetString("database.path")
+	dbPath = strings.TrimSuffix(dbPath, "/")
+
+	dbName := viper.GetString("database.name")
+
+	path := fmt.Sprintf("%s/%s.db", dbPath, dbName)
 
 	if path == "" {
 		home, err := os.UserHomeDir()

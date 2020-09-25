@@ -3,49 +3,59 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"log"
+	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/GGP1/kure/db"
-	"github.com/GGP1/kure/wallet"
+	"github.com/GGP1/kure/model/wallet"
 
 	"github.com/atotto/clipboard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
+var errInvalidName = errors.New("please specify a name")
+
 var walletCmd = &cobra.Command{
-	Use:   "wallet <name> [-a add | -c copy | -d delete | -l list] [-t timeout]",
+	Use:   "wallet <name> [-a add | -c copy | -d delete | -l list | -v view] [-t timeout]",
 	Short: "Add, copy, delete or list wallets",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := strings.Join(args, " ")
 
 		if add {
 			if err := addWallet(); err != nil {
-				log.Fatal("error: ", err)
+				must(err)
 			}
 			return
 		}
 
 		if copy {
 			if err := copyWallet(name, timeout); err != nil {
-				log.Fatal("error: ", err)
+				must(err)
 			}
+			return
 		}
 
 		if delete {
 			if err := deleteWallet(name); err != nil {
-				log.Fatal("error: ", err)
+				must(err)
+			}
+			return
+		}
+
+		if view {
+			if err := viewWallets(); err != nil {
+				must(err)
 			}
 			return
 		}
 
 		if err := listWallet(name); err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
-
 	},
 }
 
@@ -55,6 +65,7 @@ func init() {
 	walletCmd.Flags().BoolVarP(&copy, "copy", "c", false, "copy wallet public key")
 	walletCmd.Flags().BoolVarP(&delete, "delete", "d", false, "delete a wallet")
 	walletCmd.Flags().BoolVarP(&list, "list", "l", true, "list wallet/wallets")
+	walletCmd.Flags().BoolVarP(&view, "view", "v", false, "view wallets")
 	walletCmd.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
 }
 
@@ -73,6 +84,10 @@ func addWallet() error {
 }
 
 func copyWallet(name string, timeout time.Duration) error {
+	if name == "" {
+		return errInvalidName
+	}
+
 	wallet, err := db.GetWallet(name)
 	if err != nil {
 		return err
@@ -92,6 +107,10 @@ func copyWallet(name string, timeout time.Duration) error {
 }
 
 func deleteWallet(name string) error {
+	if name == "" {
+		return errInvalidName
+	}
+
 	_, err := db.GetWallet(name)
 	if err != nil {
 		return errors.New("This wallet does not exist")
@@ -106,7 +125,7 @@ func deleteWallet(name string) error {
 
 	if strings.Contains(input, "y") || strings.Contains(input, "yes") {
 		if err := db.DeleteWallet(name); err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
 
 		fmt.Printf("\nSuccessfully deleted %s wallet.", name)
@@ -133,6 +152,32 @@ func listWallet(name string) error {
 
 	for _, wallet := range wallets {
 		printWallet(wallet)
+	}
+
+	return nil
+}
+
+func viewWallets() error {
+	if port := viper.GetInt("http.port"); port != 0 {
+		httpPort = uint16(port)
+	}
+
+	wallets, err := db.ListWallets()
+	if err != nil {
+		return err
+	}
+
+	for _, w := range wallets {
+		w.Name = strings.Title(w.Name)
+	}
+
+	http.HandleFunc("/", viewTemplate(wallets))
+
+	addr := fmt.Sprintf(":%d", httpPort)
+	fmt.Printf("Serving wallets on port %s\n", addr)
+
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		return err
 	}
 
 	return nil
@@ -168,15 +213,15 @@ func printWallet(w *wallet.Wallet) {
 
 	str := fmt.Sprintf(
 		`
-+---------------+----------------->
-| Name	        | %s
-| Type      	| %s
-| Script Type   | %s
-| Keystore Type | %s
-| Seed Phrase   | %s
-| Public Key    | %s
-| Private Key   | %s
-+---------------+----------------->`,
++────────────────+─────────────────>
+│ Name	         │ %s
+│ Type      	 │ %s
+│ Script Type    │ %s
+│ Keystore Type  │ %s
+│ Seed Phrase    │ %s
+│ Public Key     │ %s
+│ Private Key    │ %s
++────────────────+─────────────────>`,
 		w.Name, w.Type, w.ScriptType, w.KeystoreType, w.SeedPhrase, w.PublicKey, w.PrivateKey)
 	fmt.Println(str)
 }

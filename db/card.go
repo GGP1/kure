@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GGP1/kure/card"
 	"github.com/GGP1/kure/crypt"
+	"github.com/GGP1/kure/model/card"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -66,7 +66,7 @@ func GetCard(name string) (*card.Card, error) {
 
 		decCard, err := crypt.Decrypt(result)
 		if err != nil {
-			return errors.Wrap(err, "decrypt card")
+			return errors.Wrapf(err, "\"%s\" card does not exist", name)
 		}
 
 		if err := proto.Unmarshal(decCard, c); err != nil {
@@ -80,7 +80,7 @@ func GetCard(name string) (*card.Card, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "view card")
+		return nil, err
 	}
 
 	return c, nil
@@ -113,7 +113,7 @@ func ListCards() ([]*card.Card, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "list cards")
+		return nil, err
 	}
 
 	return cards, nil

@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/GGP1/kure/db"
-	"github.com/GGP1/kure/entry"
+	"github.com/GGP1/kure/model/entry"
 
 	"github.com/spf13/cobra"
 )
@@ -22,7 +21,7 @@ var listCmd = &cobra.Command{
 		if title != "" {
 			entry, err := db.GetEntry(title)
 			if err != nil {
-				log.Fatal("error: ", err)
+				must(err)
 			}
 
 			printEntry(entry)
@@ -31,7 +30,7 @@ var listCmd = &cobra.Command{
 
 		entries, err := db.ListEntries()
 		if err != nil {
-			log.Fatal("error: ", err)
+			must(err)
 		}
 
 		for _, entry := range entries {
@@ -55,14 +54,14 @@ func printEntry(e *entry.Entry) {
 
 	str := fmt.Sprintf(
 		`
-+---------------+--------------------------->
-| Title         | %s
-| Username      | %s
-| Password      | %s
-| URL           | %s
-| Notes         | %s
-| Expires       | %s
-+---------------+--------------------------->`,
++──────────────+───────────────────────────>
+│ Title        │ %s
+│ Username     │ %s
+│ Password     │ %s
+│ URL          │ %s
+│ Notes        │ %s
+│ Expires      │ %s
++──────────────+───────────────────────────>`,
 		title, e.Username, password, e.URL, e.Notes, e.Expires)
 	fmt.Println(str)
 }

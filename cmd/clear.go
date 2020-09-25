@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -10,11 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	both bool
-	clip bool
-	term bool
-)
+var both, clip, term bool
 
 var clearCmd = &cobra.Command{
 	Use:   "clear [-b both] [-c clipboard] [-t terminal]",
@@ -28,7 +23,7 @@ var clearCmd = &cobra.Command{
 
 		if clip {
 			if err := clipboard.WriteAll(""); err != nil {
-				log.Fatal("error: ", err)
+				must(err)
 			}
 		}
 
@@ -49,7 +44,7 @@ var clearCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(clearCmd)
-	clearCmd.Flags().BoolVarP(&both, "both", "b", false, "clear both clipboard and terminal")
+	clearCmd.Flags().BoolVarP(&both, "both", "b", true, "clear both clipboard and terminal")
 	clearCmd.Flags().BoolVarP(&clip, "clipboard", "c", false, "clear clipboard")
 	clearCmd.Flags().BoolVarP(&term, "terminal", "t", false, "clear terminal")
 }
