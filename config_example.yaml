@@ -1,0 +1,12 @@
+database:
+    path: path/to/file
+    name: kure
+
+user:
+  password: your-password     # OR password_path: path/to/file
+
+entry:
+  format: [1,2,3,4,5,6,7,8]
+
+http:
+    port: 4000

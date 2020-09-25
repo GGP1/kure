@@ -7,11 +7,10 @@
 Display all entries on a local http server.
 
 ## Flags 
-```
+
 |  Name     | Shorthand |     Type      |    Default    |       Usage           |
 |-----------|-----------|---------------|---------------|-----------------------|
 | port      | p         | uint16        | 4000          | Set server port       |
-```
 
 ### Examples
 

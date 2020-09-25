@@ -7,7 +7,7 @@
 Cards operations.
 
 ## Flags 
-```
+
 |  Name     |  Shorthand    |     Type      |    Default    |            Usage                  |
 |-----------|---------------|---------------|---------------|-----------------------------------|
 | add       | a             | bool          | false         | Add a card                        |
@@ -17,7 +17,6 @@ Cards operations.
 | view      | v             | bool          | false         | View wallets                      |
 | timeout   | t             | duration      | 0             | Clipboard cleaning timeout        |
 | field     | f             | string        | "number"      | Choose which card field to copy   |
-```
 
 ### Examples
 

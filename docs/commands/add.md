@@ -7,7 +7,7 @@
 Add new entries to the database.
 
 ## Flags 
-```
+
 |  Name     | Shorthand |     Type      |    Default    |                           Usage                                   |
 |-----------|-----------|---------------|---------------|-------------------------------------------------------------------|
 | custom    | c         | bool          | false         | Create an entry with a custom password                            |
@@ -15,8 +15,7 @@ Add new entries to the database.
 | separator | s         | string        | " "           | Set the character that separates each word (space as default)     |
 | length    | l         | uint16        | 1             | Pasword length                                                    |
 | format    | f         | []string      | nil           | Password format                                                   |
-| include   | i         | string        | ""            | Characters to include in the password pool                        |
-```
+| include   | i         | string        | ""            | Characters to include in the password                             |
 
 ### Format levels
 

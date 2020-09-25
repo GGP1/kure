@@ -7,7 +7,7 @@
 Wallets operations.
 
 ## Flags 
-```
+
 |  Name     |  Shorthand    |     Type      |    Default    |            Usage               |
 |-----------|---------------|---------------|---------------|--------------------------------|
 | add       | a             | bool          | false         | Add a wallet                   |
@@ -16,7 +16,6 @@ Wallets operations.
 | list      | l             | bool          | true          | List wallet/wallets            |
 | view      | v             | bool          | false         | View wallets                   |
 | timeout   | t             | duration      | 0             | Clipboard cleaning timeout     |
-```
 
 ### Examples
 

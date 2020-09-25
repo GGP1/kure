@@ -1,17 +1,16 @@
 ## Use
 
-`copy <title> [-t terminal]`
+`copy <title> [-t timeout]`
 
 ## Description
 
 Copy password to clipboard for t time (never by default).
 
 ## Flags 
-```
+
 |  Name     |  Shorthand    |     Type      |    Default    |            Usage             |
 |-----------|---------------|---------------|---------------|------------------------------|
 | timeout   | t             | duration      | 0             | Clipboard cleaning timeout   |
-```
 
 ### Examples
 

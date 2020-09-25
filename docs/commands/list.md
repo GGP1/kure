@@ -7,11 +7,10 @@
 List entry/entries.
 
 ## Flags 
-```
+
 |  Name     | Shorthand |     Type      |    Default    |          Usage           |
 |-----------|-----------|---------------|---------------|--------------------------|
 | hide      | H         | bool          | false         | Hide entries passwords   |
-```
 
 ### Examples
 
