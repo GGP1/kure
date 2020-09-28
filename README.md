@@ -1,12 +1,12 @@
 # Kure
 
 [![GoDoc](https://img.shields.io/static/v1?label=godoc&message=reference&color=blue)](https://godoc.org/github.com/GGP1/kure)
-[![Go Report Card](https://goreportcard.com/badge/github.com/helm/helm)](https://goreportcard.com/report/github.com/GGP1/kure)
+[![Go Report Card](https://goreportcard.com/badge/github.com/GGP1/kure)](https://goreportcard.com/report/github.com/GGP1/kure)
 
 Kure is a command line password manager written in pure Go.
 
 This project is not intended for production but for learning purposes.
-Although it might be secure and reliable enough, I recommend to use other managers like [1Password][https://1password.com/], [Keypass][https://keepass.info/], [gopass][https://www.gopass.pw/] and others.
+Although it might be secure and reliable enough, I recommend to use other managers like [1Password](https://1password.com/), [Keypass](https://keepass.info/), [gopass](https://www.gopass.pw/) and others.
 
 ## Table of contents
 
@@ -138,7 +138,7 @@ bucket         key         value
 #### Encryption
 
 Kure hashes user records with SHA-256 and then encrypts it with Bernstein's XChaCha20 symmetric cipher along with Poly1305 message authentication code.
-Detailed information [here][https://tools.ietf.org/html/draft-nir-cfrg-chacha20-poly1305-02].
+Detailed information [here](https://tools.ietf.org/html/draft-nir-cfrg-chacha20-poly1305-02).
 
 #### Randomness
 

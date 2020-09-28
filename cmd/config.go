@@ -96,12 +96,12 @@ func init() {
 }
 
 func configInput() *config {
-	var name, dbPath, password, format, port string
+	var name, DBPath, password, format, port string
 
 	scanner := bufio.NewScanner(os.Stdin)
 
 	name = scan(scanner, "Database name", name)
-	dbPath = scan(scanner, "Database path", dbPath)
+	DBPath = scan(scanner, "Database path", DBPath)
 	password = scan(scanner, "User password", password)
 	format = scan(scanner, "Entry format", format)
 	port = scan(scanner, "Http port", port)

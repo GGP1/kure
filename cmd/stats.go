@@ -7,10 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var entryB, cardB, walletB bool
-
 var statsCmd = &cobra.Command{
-	Use:   "stats [-e entry] [-c card] [-w wallet]",
+	Use:   "stats",
 	Short: "Show database statistics",
 	Run: func(cmd *cobra.Command, args []string) {
 		stats, err := db.Stats()
@@ -44,7 +42,4 @@ List of buckets: %v
 
 func init() {
 	RootCmd.AddCommand(statsCmd)
-	statsCmd.Flags().BoolVarP(&entryB, "entry", "e", false, "show entry bucket statistics")
-	statsCmd.Flags().BoolVarP(&cardB, "card", "c", false, "show card bucket statisctics")
-	statsCmd.Flags().BoolVarP(&walletB, "wallet", "w", false, "show wallet bucket statistics")
 }

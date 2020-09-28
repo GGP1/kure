@@ -23,7 +23,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&folder, "folder", "", "select folder")
 }
 
-// must returns the error that ocurred and exists.
+// must returns the error that occurred and exists.
 func must(err error) {
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
@@ -31,7 +31,7 @@ func must(err error) {
 	}
 }
 
-// scan takes the input of the field and retuns the value.
+// scan takes the input of the field and returns the value.
 func scan(scanner *bufio.Scanner, field string, value string) string {
 	fmt.Printf("%s: ", field)
 

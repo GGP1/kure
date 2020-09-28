@@ -24,11 +24,10 @@ type Passphrase struct {
 //
 // We don't use a word list because it would make the job easier for the potential attacker.
 func (p *Passphrase) Generate() (string, error) {
-	var i uint64
 	passphrase := make([]string, 0, p.Length)
 
 	// Running goroutines with a waitgroup on each word/syllable doesn't have a significant improvement
-	for i = 0; i < p.Length; i++ {
+	for i := 0; i < int(p.Length); i++ {
 		// 3 (min), 12 (max) length of a word in this algorithm
 		wordLength := randInt(10) + 3
 
@@ -44,10 +43,12 @@ func (p *Passphrase) Generate() (string, error) {
 			}
 		}
 
+		// Join syllables and append the word to the slice
 		word := strings.Join(syllables, "")
 		passphrase = append(passphrase, word)
 	}
 
+	// Join all words with the separator specified
 	p.Phrase = strings.Join(passphrase, p.Separator)
 
 	return p.Phrase, nil

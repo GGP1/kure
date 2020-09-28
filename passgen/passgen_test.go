@@ -20,8 +20,6 @@ func TestGeneratePassword(t *testing.T) {
 		t.Errorf("Test failed, error: %v", err)
 	}
 
-	entropy := p.Entropy()
-
 	if len(password) != 14 {
 		t.Errorf("Wrong password length, expected 14 characters, got %d", len(password))
 	}
@@ -36,7 +34,8 @@ func TestGeneratePassword(t *testing.T) {
 		t.Error("Test failed, include chars weren't added to the password")
 	}
 
-	expected := 83.68
+	entropy := p.Entropy()
+	expected := 84.93
 
 	if math.Floor(entropy) != math.Floor(expected) {
 		t.Errorf("Calculate entropy failed, expected: %f, got: %f", expected, entropy)
