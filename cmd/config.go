@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -21,7 +22,8 @@ type config struct {
 		Password string
 	}
 	Entry struct {
-		Format string
+		Format []int
+		Repeat bool
 	}
 	HTTP struct {
 		Port int
@@ -35,100 +37,86 @@ var configCmd = &cobra.Command{
 	Short: "Read or create the configuration file",
 	Run: func(cmd *cobra.Command, args []string) {
 		if !create {
-			p := os.Getenv("KURE_CONFIG")
-
-			if path != "" {
-				p = path
+			if path == "" {
+				path = os.Getenv("KURE_CONFIG")
+			} else {
+				fatal(errors.New("a path to the configuration file is required"))
 			}
 
-			filename := fmt.Sprintf("%s/config.yaml", p)
+			filename := fmt.Sprintf("%s/config.yaml", path)
 
 			data, err := ioutil.ReadFile(filename)
 			if err != nil {
-				must(err)
+				fatalf("failed reading config file: %v", err)
 			}
 
-			fmt.Println(string(data))
+			file := strings.TrimSpace(string(data))
+
+			fmt.Println(file)
 			return
 		}
 
-		config := configInput()
-
-		viper.Set("database.name", config.Database.Name)
-		viper.Set("database.path", config.Database.Path)
-		viper.Set("user.password", config.User.Password)
-		viper.Set("http.port", config.HTTP.Port)
-
-		var format []int
-
-		levels := strings.Split(config.Entry.Format, ",")
-
-		for _, v := range levels {
-			integer, _ := strconv.Atoi(v)
-			format = append(format, integer)
+		if err := setConfig(); err != nil {
+			fatal(err)
 		}
-
-		viper.Set("entry.format", format)
 
 		if path != "" {
 			if err := viper.WriteConfigAs(path); err != nil {
-				must(err)
+				fatalf("%s: %v", errCreatingConfig, err)
 			}
 		} else {
 			home, err := os.UserHomeDir()
 			if err != nil {
-				must(err)
+				fatal(err)
 			}
 
 			path = fmt.Sprintf("%s/config.yaml", home)
 
 			if err := viper.WriteConfigAs(path); err != nil {
-				must(err)
+				fatalf("%s: %v", errCreatingConfig, err)
 			}
 		}
 	},
 }
 
 func init() {
-	RootCmd.AddCommand(configCmd)
+	rootCmd.AddCommand(configCmd)
 	configCmd.Flags().StringVarP(&path, "path", "p", "", "set config file path")
 	configCmd.Flags().BoolVarP(&create, "create", "c", false, "create a config file")
 }
 
-func configInput() *config {
-	var name, DBPath, password, format, port string
+func setConfig() error {
+	var name, dbPath, password, format, repeat, port string
 
 	scanner := bufio.NewScanner(os.Stdin)
 
-	name = scan(scanner, "Database name", name)
-	DBPath = scan(scanner, "Database path", DBPath)
-	password = scan(scanner, "User password", password)
-	format = scan(scanner, "Entry format", format)
-	port = scan(scanner, "Http port", port)
+	scan(scanner, "Database name", &name)
+	scan(scanner, "Database path", &dbPath)
+	scan(scanner, "User password", &password)
+	scan(scanner, "Entry format", &format)
+	scan(scanner, "Repeat characters", &repeat)
+	scan(scanner, "Http port", &port)
 
 	httpPort, err := strconv.Atoi(port)
 	if err != nil {
-		must(err)
+		return errors.New("converting port to an integer")
 	}
 
-	config := &config{
-		Database: struct {
-			Name string
-			Path string
-		}{
-			Name: name,
-			Path: path,
-		},
-		User: struct{ Password string }{
-			Password: password,
-		},
-		Entry: struct{ Format string }{
-			Format: format,
-		},
-		HTTP: struct{ Port int }{
-			Port: httpPort,
-		},
+	viper.Set("database.name", name)
+	viper.Set("database.path", dbPath)
+	viper.Set("user.password", password)
+	viper.Set("http.port", httpPort)
+	viper.Set("entry.repeat", repeat)
+
+	levels := strings.Split(format, ",")
+
+	var f []int
+	for _, v := range levels {
+		integer, _ := strconv.Atoi(v)
+		f = append(f, integer)
 	}
 
-	return config
+	viper.Set("entry.format", f)
+
+	return nil
 }

@@ -13,15 +13,15 @@ import (
 var hide bool
 
 var listCmd = &cobra.Command{
-	Use:   "list <title> [-H hide]",
-	Short: "List entries",
+	Use:   "list <name> [-H hide]",
+	Short: "List an entry or all the entries",
 	Run: func(cmd *cobra.Command, args []string) {
-		title := strings.Join(args, " ")
+		name := strings.Join(args, " ")
 
-		if title != "" {
-			entry, err := db.GetEntry(title)
+		if name != "" {
+			entry, err := db.GetEntry(name)
 			if err != nil {
-				must(err)
+				fatal(err)
 			}
 
 			printEntry(entry)
@@ -30,38 +30,65 @@ var listCmd = &cobra.Command{
 
 		entries, err := db.ListEntries()
 		if err != nil {
-			must(err)
+			fatal(err)
 		}
 
 		for _, entry := range entries {
+			fmt.Print("\n")
 			printEntry(entry)
 		}
 	},
 }
 
 func init() {
-	RootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(listCmd)
 	listCmd.Flags().BoolVarP(&hide, "hide", "H", false, "hide entries passwords")
 }
 
 func printEntry(e *entry.Entry) {
-	password := e.Password
-	title := strings.Title(e.Title)
+	e.Name = strings.Title(e.Name)
 
 	if hide {
-		password = "•••••••••••••••"
+		e.Password = "•••••••••••••••"
 	}
 
-	str := fmt.Sprintf(
-		`
-+──────────────+───────────────────────────>
-│ Title        │ %s
-│ Username     │ %s
-│ Password     │ %s
-│ URL          │ %s
-│ Notes        │ %s
-│ Expires      │ %s
-+──────────────+───────────────────────────>`,
-		title, e.Username, password, e.URL, e.Notes, e.Expires)
-	fmt.Println(str)
+	dashes := 43
+	halfBar := ((dashes - len(e.Name)) / 2) - 1
+
+	fmt.Print("+")
+	for i := 0; i < halfBar; i++ {
+		fmt.Print("─")
+	}
+	fmt.Printf(" %s ", e.Name)
+
+	if (len(e.Name) % 2) == 0 {
+		halfBar++
+	}
+
+	for i := 0; i < halfBar; i++ {
+		fmt.Print("─")
+	}
+	fmt.Print(">\n")
+
+	if e.Username != "" {
+		fmt.Printf("│ Username    │ %s\n", e.Username)
+	}
+
+	if e.Password != "" {
+		fmt.Printf("│ Password    │ %s\n", e.Password)
+	}
+
+	if e.URL != "" {
+		fmt.Printf("│ URL         │ %s\n", e.URL)
+	}
+
+	if e.Notes != "" {
+		fmt.Printf("│ Notes       │ %s\n", e.Notes)
+	}
+
+	if e.Expires != "" {
+		fmt.Printf("│ Expires     │ %s\n", e.Expires)
+	}
+
+	fmt.Println("+─────────────+─────────────────────────────>")
 }

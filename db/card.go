@@ -54,7 +54,7 @@ func DeleteCard(name string) error {
 	})
 }
 
-// GetCard retrieves a card with the name specified,.
+// GetCard retrieves the card with the specified name.
 func GetCard(name string) (*card.Card, error) {
 	c := &card.Card{}
 
@@ -63,10 +63,13 @@ func GetCard(name string) (*card.Card, error) {
 		n := strings.ToLower(name)
 
 		result := b.Get([]byte(n))
+		if result == nil {
+			return errors.Errorf("\"%s\" does not exist", name)
+		}
 
 		decCard, err := crypt.Decrypt(result)
 		if err != nil {
-			return errors.Wrapf(err, "\"%s\" card does not exist", name)
+			return errors.Wrap(err, "decrypt card")
 		}
 
 		if err := proto.Unmarshal(decCard, c); err != nil {

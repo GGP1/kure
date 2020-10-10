@@ -5,12 +5,6 @@ import (
 	"testing"
 )
 
-// Checkboxes
-const (
-	succeed = "\u2713"
-	failed  = "\u2717"
-)
-
 func TestNewWallet(t *testing.T) {
 	expected := &Wallet{
 		Name:         "name",
@@ -25,6 +19,6 @@ func TestNewWallet(t *testing.T) {
 	got := New("name", "type", "script type", "keystore type", "seed phrase", "public key", "private key")
 
 	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("new wallet failed \nexpected: %v \ngot: %v", expected, got)
+		t.Errorf("New wallet failed \nexpected: %v \ngot: %v", expected, got)
 	}
 }

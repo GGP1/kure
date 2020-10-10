@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// EncryptedFile creates a file with Chacha20Poly1305 encryption in the path specified.
+// EncryptedFile creates a file with Chacha20Poly1305 encryption in the specified path.
 func EncryptedFile(data []byte, filename string) error {
 	encrypted, err := Encrypt(data)
 	if err != nil {
@@ -28,11 +28,11 @@ func EncryptedFile(data []byte, filename string) error {
 	return nil
 }
 
-// DecryptFile an encrypted file and decrypts it.
+// DecryptFile takes an encrypted file and decrypts it.
 func DecryptFile(filename string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return nil, errors.Wrap(err, "read database file")
+		return nil, errors.Wrapf(err, "failed reading file on path %s", filename)
 	}
 
 	return Decrypt(data)

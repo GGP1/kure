@@ -17,30 +17,12 @@ import (
 
 // Encrypt ciphers data with the given passphrase.
 func Encrypt(data []byte) ([]byte, error) {
-	passphrase, err := getMasterPassword()
+	password, err := getMasterPassword()
 	if err != nil {
 		return nil, err
 	}
 
-	if string(passphrase) == "" {
-		fmt.Print("Enter Passphrase: ")
-		passphrase, err = terminal.ReadPassword(int(syscall.Stdin))
-		if err != nil {
-			return nil, errors.Wrap(err, "reading password")
-		}
-		fmt.Print("\nConfirm Passphrase: ")
-		passphrase2, err := terminal.ReadPassword(int(syscall.Stdin))
-		if err != nil {
-			return nil, errors.Wrap(err, "reading password")
-		}
-
-		if bytes.Compare(passphrase, passphrase2) != 0 {
-			fmt.Println("")
-			return nil, errors.New("passphrases must be equal")
-		}
-	}
-
-	hash, err := createHash(passphrase)
+	hash, err := createHash(password)
 	if err != nil {
 		return nil, err
 	}
@@ -64,20 +46,12 @@ func Encrypt(data []byte) ([]byte, error) {
 
 // Decrypt deciphers data with the given passphrase.
 func Decrypt(data []byte) ([]byte, error) {
-	passphrase, err := getMasterPassword()
+	password, err := getMasterPassword()
 	if err != nil {
 		return nil, err
 	}
 
-	if string(passphrase) == "" {
-		fmt.Print("Enter Passphrase: ")
-		passphrase, err = terminal.ReadPassword(int(syscall.Stdin))
-		if err != nil {
-			return nil, errors.Wrap(err, "reading password")
-		}
-	}
-
-	hash, err := createHash(passphrase)
+	hash, err := createHash(password)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +77,7 @@ func Decrypt(data []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-// Create a SHA256 hash (32 bytes) with the key provided.
+// Create a SHA256 hash (256 bits) with the key provided.
 func createHash(key []byte) ([]byte, error) {
 	hasher := sha256.New()
 
@@ -116,19 +90,37 @@ func createHash(key []byte) ([]byte, error) {
 }
 
 func getMasterPassword() ([]byte, error) {
-	masterPwd := viper.GetString("user.password")
-	passphrase := []byte(masterPwd)
+	password := viper.GetString("user.password")
+	if password != "" {
+		return []byte(password), nil
+	}
 
-	if masterPwd == "" {
-		filename := viper.GetString("user.password_path")
-
+	filename := viper.GetString("user.password_path")
+	if filename != "" {
 		mPassword, err := ioutil.ReadFile(filename)
 		if err != nil {
 			return nil, errors.Wrap(err, "reading file")
 		}
 
-		passphrase = mPassword
+		return mPassword, nil
 	}
 
-	return passphrase, nil
+	fmt.Print("Enter master password: ")
+	masterPwd, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return nil, errors.Wrap(err, "reading password")
+	}
+
+	fmt.Print("\nConfirm master password: ")
+	masterPwd2, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return nil, errors.Wrap(err, "reading confirmation password")
+	}
+
+	if bytes.Compare(masterPwd, masterPwd2) != 0 {
+		fmt.Print("\n")
+		return nil, errors.New("passwords must be equal")
+	}
+
+	return masterPwd, nil
 }

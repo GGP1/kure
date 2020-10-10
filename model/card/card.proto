@@ -1,9 +1,11 @@
 syntax = "proto3";
 
+option go_package = "github.com/GGP1/kure/model/card";
+
 message Card {
-    string Name = 1;
-    string Type = 2;
-    int32 Number = 3;
-    int32 CVC = 4;
-    string ExpireDate = 5;
+    string name = 1;
+    string type = 2;
+    string number = 3;
+    string CVC = 4;
+    string expireDate = 5;
 }

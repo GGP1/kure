@@ -4,14 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-var cfgFile, folder string
+var cfgFile string
 
-// RootCmd is the root command
-var RootCmd = &cobra.Command{
+var rootCmd = &cobra.Command{
 	Use:   "kure",
 	Short: "CLI password manager.",
 }
@@ -19,24 +19,34 @@ var RootCmd = &cobra.Command{
 func init() {
 	cobra.OnInitialize()
 
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path")
-	RootCmd.PersistentFlags().StringVar(&folder, "folder", "", "select folder")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path")
 }
 
-// must returns the error that occurred and exists.
-func must(err error) {
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
+// Execute sets each sub command flag and adds it to the root.
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-// scan takes the input of the field and returns the value.
-func scan(scanner *bufio.Scanner, field string, value string) string {
+// fatal prints the error and exits.
+func fatal(err error) {
+	fmt.Printf("error: %v\n", err)
+	os.Exit(1)
+}
+
+// fatalf takes an error and its context, prints it and exits.
+func fatalf(format string, v ...interface{}) {
+	fmt.Println(fmt.Sprintf(format, v...))
+	os.Exit(1)
+}
+
+// scan takes the input of the field and updates the pointer.
+func scan(scanner *bufio.Scanner, field string, value *string) {
 	fmt.Printf("%s: ", field)
 
 	scanner.Scan()
-	value = scanner.Text()
-
-	return value
+	text := scanner.Text()
+	*value = strings.TrimSpace(text)
 }

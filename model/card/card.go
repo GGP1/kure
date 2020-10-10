@@ -1,7 +1,7 @@
 package card
 
-// New returns a new card struct.
-func New(name, cType, expireDate string, number, cvc int32) *Card {
+// New creates a new card.
+func New(name, cType, expireDate, number, cvc string) *Card {
 	return &Card{
 		Name:       name,
 		Type:       cType,

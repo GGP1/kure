@@ -14,18 +14,18 @@ import (
 var timeout time.Duration
 
 var copyCmd = &cobra.Command{
-	Use:   "copy <title> [-t timeout]",
+	Use:   "copy <name> [-t timeout]",
 	Short: "Copy password to clipboard",
 	Run: func(cmd *cobra.Command, args []string) {
-		title := strings.Join(args, " ")
+		name := strings.Join(args, " ")
 
-		entry, err := db.GetEntry(title)
+		entry, err := db.GetEntry(name)
 		if err != nil {
-			must(err)
+			fatal(err)
 		}
 
 		if err := clipboard.WriteAll(entry.Password); err != nil {
-			must(err)
+			fatalf("couldn't copy the password to the clipboard: %v", err)
 		}
 
 		if timeout > 0 {
@@ -37,11 +37,6 @@ var copyCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(copyCmd)
+	rootCmd.AddCommand(copyCmd)
 	copyCmd.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
-}
-
-func copyEntry(title string) error {
-
-	return nil
 }

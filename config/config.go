@@ -12,8 +12,8 @@ var defaults = map[string]interface{}{
 	"database.name": "kure",
 	"database.path": os.UserHomeDir,
 	"user.password": "",
-	"algorithm":     "",
-	"entry.format":  []int{1, 2, 3, 4},
+	"entry.format":  []int{1, 2, 3, 4, 5},
+	"entry.repeat":  false,
 	"http.port":     4000,
 }
 
@@ -24,20 +24,19 @@ func Load() error {
 	if configPath != "" {
 		viper.AddConfigPath(configPath)
 	} else {
-		setDefaults()
-
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "couldn't find user home directory")
 		}
 
-		path := fmt.Sprintf("%s/config.yaml", home)
-
+		setDefaults()
 		viper.SetConfigName("config")
 		viper.SetConfigType("yaml")
 
+		path := fmt.Sprintf("%s/config.yaml", home)
+
 		if err := viper.WriteConfigAs(path); err != nil {
-			return err
+			return errors.Wrap(err, "failed writing config")
 		}
 
 		viper.AddConfigPath(path)

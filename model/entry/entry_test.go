@@ -7,7 +7,7 @@ import (
 
 func TestNewEntry(t *testing.T) {
 	expected := &Entry{
-		Title:    "Github",
+		Name:     "Github",
 		Username: "GGP1",
 		Password: "test",
 		URL:      "https://www.github.com",

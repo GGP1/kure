@@ -1,11 +1,13 @@
 syntax = "proto3";
 
+option go_package = "github.com/GGP1/kure/model/wallet";
+
 message Wallet {
-    string Name = 1;
-    string Type = 2;
-    string ScriptType = 3;
-    string KeystoreType = 4;
-    string SeedPhrase = 5;
-    string PublicKey = 6;
-    string PrivateKey = 7;
+    string name = 1;
+    string type = 2;
+    string scriptType = 3;
+    string keystoreType = 4;
+    string seedPhrase = 5;
+    string publicKey = 6;
+    string privateKey = 7;
 }

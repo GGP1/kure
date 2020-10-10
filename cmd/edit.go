@@ -15,43 +15,42 @@ import (
 )
 
 var editCmd = &cobra.Command{
-	Use:   "edit <title>",
+	Use:   "edit <name>",
 	Short: "Edit an entry",
 	Run: func(cmd *cobra.Command, args []string) {
-		title := strings.Join(args, " ")
+		name := strings.Join(args, " ")
 
-		oldEntry, err := db.GetEntry(title)
+		oldEntry, err := db.GetEntry(name)
 		if err != nil {
-			must(err)
+			fatal(err)
 		}
 
 		username, url, notes, expiration, err := editEntryInput()
 		if err != nil {
-			must(err)
+			fatal(err)
 		}
 
-		e := entry.New(title, username, oldEntry.Password, url, notes, expiration)
+		e := entry.New(name, username, oldEntry.Password, url, notes, expiration)
 
-		err = db.EditEntry(e)
-		if err != nil {
-			must(err)
+		if err := db.EditEntry(e); err != nil {
+			fatal(err)
 		}
 
-		fmt.Printf("\nSuccessfully edited %s entry.", title)
+		fmt.Printf("\nSuccessfully edited %s entry.", name)
 	},
 }
 
 func init() {
-	RootCmd.AddCommand(editCmd)
+	rootCmd.AddCommand(editCmd)
 }
 
 func editEntryInput() (username, url, notes, expiration string, err error) {
 	scanner := bufio.NewScanner(os.Stdin)
 
-	username = scan(scanner, "Username", username)
-	url = scan(scanner, "URL", url)
-	notes = scan(scanner, "Notes", notes)
-	expiration = scan(scanner, "Expiration", expiration)
+	scan(scanner, "Username", &username)
+	scan(scanner, "URL", &url)
+	scan(scanner, "Notes", &notes)
+	scan(scanner, "Expiration", &expiration)
 
 	if expiration == "0s" || expiration == "0" || expiration == "" {
 		expiration = "Never"

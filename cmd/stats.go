@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/GGP1/kure/db"
 	"github.com/spf13/cobra"
@@ -13,33 +14,38 @@ var statsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		stats, err := db.Stats()
 		if err != nil {
-			must(err)
+			fatal(err)
 		}
 
-		nEntries := stats["entries"]
 		nCards := stats["cards"]
+		nEntries := stats["entries"]
+		nFiles := stats["files"]
 		nWallets := stats["wallets"]
-		totalRecords := nEntries + nCards + nWallets
 
+		totalRecords := nCards + nEntries + nFiles + nWallets
 		totalBuckets := len(stats)
+
 		bucketsList, err := db.ListOfBuckets()
 		if err != nil {
-			must(err)
+			fatal(err)
 		}
+
+		buckets := strings.Join(bucketsList, ", ")
 
 		fmt.Printf(`     STATISTICS
 ────────────────────
-Number of entries: %d
 Number of cards: %d
+Number of entries: %d
+Number of files: %d
 Number of wallets: %d
 
 Total records: %d
 Number of buckets: %d
-List of buckets: %v
-		`, nEntries, nCards, nWallets, totalRecords, totalBuckets, bucketsList)
+List of buckets: %s
+		`, nCards, nEntries, nFiles, nWallets, totalRecords, totalBuckets, buckets)
 	},
 }
 
 func init() {
-	RootCmd.AddCommand(statsCmd)
+	rootCmd.AddCommand(statsCmd)
 }

@@ -54,26 +54,29 @@ func DeleteWallet(name string) error {
 	})
 }
 
-// GetWallet retrieves a wallet with the name specified,.
+// GetWallet retrieves the wallet with the specified name.
 func GetWallet(name string) (*wallet.Wallet, error) {
-	c := &wallet.Wallet{}
+	wallt := &wallet.Wallet{}
 
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(walletBucket)
 		n := strings.ToLower(name)
 
 		result := b.Get([]byte(n))
+		if result == nil {
+			return errors.Errorf("\"%s\" does not exist", name)
+		}
 
 		decWallet, err := crypt.Decrypt(result)
 		if err != nil {
-			return errors.Wrapf(err, "\"%s\" wallet does not exist", name)
+			return errors.Wrap(err, "decrypt wallet")
 		}
 
-		if err := proto.Unmarshal(decWallet, c); err != nil {
+		if err := proto.Unmarshal(decWallet, wallt); err != nil {
 			return errors.Wrap(err, "unmarshal wallet")
 		}
 
-		if c.Name == "" {
+		if wallt.Name == "" {
 			return fmt.Errorf("%s does not exist", name)
 		}
 
@@ -83,7 +86,7 @@ func GetWallet(name string) (*wallet.Wallet, error) {
 		return nil, err
 	}
 
-	return c, nil
+	return wallt, nil
 }
 
 // ListWallets returns a list with all the wallets.

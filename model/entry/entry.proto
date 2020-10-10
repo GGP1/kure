@@ -1,10 +1,12 @@
 syntax = "proto3";
 
+option go_package = "github.com/GGP1/kure/model/entry";
+
 message Entry {
-    string Title = 1;
-    string Username = 2;
-    string Password = 3;
+    string name = 1;
+    string username = 2;
+    string password = 3;
     string URL = 4;
-    string Notes = 5;
-    string Expires = 6;
+    string notes = 5;
+    string expires = 6;
 }
