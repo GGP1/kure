@@ -14,6 +14,7 @@ var (
 	db           *bolt.DB
 	entryBucket  = []byte("kure_entry")
 	cardBucket   = []byte("kure_card")
+	fileBucket   = []byte("kure_file")
 	walletBucket = []byte("kure_wallet")
 )
 
@@ -26,7 +27,7 @@ func Init(path string) error {
 		return errors.Wrap(err, "open the database")
 	}
 
-	return CreateBucketIfNotExists(cardBucket, entryBucket, walletBucket)
+	return CreateBucketIfNotExists(cardBucket, entryBucket, fileBucket, walletBucket)
 }
 
 // CreateBucketIfNotExists creates a new bucket if it doesn't already exist.
@@ -54,7 +55,10 @@ func HTTPBackup(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Disposition", `attachment; filename="kure.db"`)
 		w.Header().Set("Content-Length", strconv.Itoa(int(tx.Size())))
 		_, err := tx.WriteTo(w)
-		return err
+		if err != nil {
+			return errors.Wrap(err, "write database")
+		}
+		return nil
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -85,13 +89,15 @@ func Stats() (map[string]int, error) {
 	}
 	defer tx.Rollback()
 
-	entryStats := tx.Bucket(entryBucket).Stats()
 	cardStats := tx.Bucket(cardBucket).Stats()
+	entryStats := tx.Bucket(entryBucket).Stats()
+	fileStats := tx.Bucket(fileBucket).Stats()
 	walletStats := tx.Bucket(walletBucket).Stats()
 
-	stats := make(map[string]int, 3)
-	stats["entries"] = entryStats.KeyN
+	stats := make(map[string]int, 4)
 	stats["cards"] = cardStats.KeyN
+	stats["entries"] = entryStats.KeyN
+	stats["files"] = fileStats.KeyN
 	stats["wallets"] = walletStats.KeyN
 
 	return stats, nil
@@ -102,7 +108,7 @@ func WriteTo(w io.Writer) error {
 	return db.View(func(tx *bolt.Tx) error {
 		_, err := tx.WriteTo(w)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "write database")
 		}
 		return nil
 	})
