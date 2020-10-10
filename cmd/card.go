@@ -3,9 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,211 +13,158 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var add, copy, delete, list, view bool
+var add, copy, delete, list bool
 var field string
 
 var cardCmd = &cobra.Command{
-	Use:   "card <name> [-a add | -c copy | -d delete | -l list | -v view] [-t timeout] [-f field]",
-	Short: "Add, copy, delete or list cards",
+	Use:   "card",
+	Short: "Card operations"}
+
+var addCard = &cobra.Command{
+	Use:   "card <name>",
+	Short: "Add card to the database",
+	Run: func(cmd *cobra.Command, args []string) {
+		name := strings.Join(args, " ")
+		if name == "" {
+			fatal(errInvalidName)
+		}
+
+		card, err := cardInput(name)
+		if err != nil {
+			fatal(err)
+		}
+
+		if err := db.CreateCard(card); err != nil {
+			fatal(err)
+		}
+
+		fmt.Print("\nSucessfully created the card.")
+	},
+}
+
+var copyCard = &cobra.Command{
+	Use:   "copy <name> [-t timeout] [field]",
+	Short: "Copy card number or CVC",
+	Run: func(cmd *cobra.Command, args []string) {
+		name := strings.Join(args, " ")
+		if name == "" {
+			fatal(errInvalidName)
+		}
+
+		card, err := db.GetCard(name)
+		if err != nil {
+			fatal(err)
+		}
+
+		field := strings.ToLower(field)
+
+		if field == "number" {
+			if err := clipboard.WriteAll(card.Number); err != nil {
+				fatal(errors.New("failed writing to the clipboard"))
+			}
+		} else if field == "code" {
+			if err := clipboard.WriteAll(card.CVC); err != nil {
+				fatal(errors.New("failed writing to the clipboard"))
+			}
+		}
+
+		if timeout > 0 {
+			<-time.After(timeout)
+			clipboard.WriteAll("")
+			os.Exit(1)
+		}
+	},
+}
+
+var deleteCard = &cobra.Command{
+	Use:   "delete <name>",
+	Short: "Delete a card from the database",
+	Run: func(cmd *cobra.Command, args []string) {
+		name := strings.Join(args, " ")
+		if name == "" {
+			fatal(errInvalidName)
+		}
+
+		_, err := db.GetCard(name)
+		if err != nil {
+			fatalf("%s card does not exist", name)
+		}
+
+		scanner := bufio.NewScanner(os.Stdin)
+		fmt.Print("Are you sure you want to proceed? [y/n]: ")
+
+		scanner.Scan()
+		text := scanner.Text()
+		input := strings.ToLower(text)
+
+		if strings.Contains(input, "y") || strings.Contains(input, "yes") {
+			if err := db.DeleteCard(name); err != nil {
+				fatal(err)
+			}
+
+			fmt.Printf("\nSuccessfully deleted %s card.", name)
+		}
+	},
+}
+
+var listCard = &cobra.Command{
+	Use:   "list <name>",
+	Short: "List a card or all the cards from the database",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := strings.Join(args, " ")
 
-		if add {
-			if err := addCard(); err != nil {
-				must(err)
+		if name != "" {
+			card, err := db.GetCard(name)
+			if err != nil {
+				fatal(err)
 			}
+
+			printCard(card)
 			return
 		}
 
-		if copy {
-			if err := copyCard(name, timeout); err != nil {
-				must(err)
-			}
-			return
+		cards, err := db.ListCards()
+		if err != nil {
+			fatal(err)
 		}
 
-		if delete {
-			if err := deleteCard(name); err != nil {
-				must(err)
-			}
-			return
-		}
-
-		if view {
-			if err := viewCards(); err != nil {
-				must(err)
-			}
-			return
-		}
-
-		if err := listCard(name); err != nil {
-			must(err)
+		for _, card := range cards {
+			printCard(card)
 		}
 	},
 }
 
 func init() {
-	RootCmd.AddCommand(cardCmd)
-	cardCmd.Flags().BoolVarP(&add, "add", "a", false, "add a card")
-	cardCmd.Flags().BoolVarP(&copy, "copy", "c", false, "copy card number")
-	cardCmd.Flags().BoolVarP(&delete, "delete", "d", false, "delete a card")
-	cardCmd.Flags().BoolVarP(&list, "list", "l", true, "list card/cards")
-	cardCmd.Flags().BoolVarP(&view, "view", "v", false, "view cards")
-	cardCmd.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
-	cardCmd.Flags().StringVarP(&field, "field", "f", "number", "choose which field to copy")
+	rootCmd.AddCommand(cardCmd)
+
+	cardCmd.AddCommand(addCard)
+	cardCmd.AddCommand(copyCard)
+	cardCmd.AddCommand(deleteCard)
+	cardCmd.AddCommand(listCard)
+
+	copyCard.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
+	copyCard.Flags().StringVarP(&field, "field", "f", "number", "choose which field to copy")
 }
 
-func addCard() error {
-	card, err := cardInput()
-	if err != nil {
-		return err
-	}
+func cardInput(name string) (*card.Card, error) {
+	var cType, expireDate, num, cardVerCode string
 
-	if err := db.CreateCard(card); err != nil {
-		return err
-	}
-
-	fmt.Print("\nSucessfully created the card.")
-	return nil
-}
-
-func copyCard(name string, timeout time.Duration) error {
-	if name == "" {
-		return errInvalidName
-	}
-
-	card, err := db.GetCard(name)
-	if err != nil {
-		return err
-	}
-
-	field := strings.ToLower(field)
-
-	if field == "number" {
-		number := strconv.Itoa(int(card.Number))
-		if err := clipboard.WriteAll(number); err != nil {
-			return err
-		}
-	} else if field == "code" {
-		cvc := strconv.Itoa(int(card.CVC))
-		if err := clipboard.WriteAll(cvc); err != nil {
-			return err
-		}
-	}
-
-	if timeout > 0 {
-		<-time.After(timeout)
-		clipboard.WriteAll("")
-		os.Exit(1)
-	}
-
-	return nil
-}
-
-func deleteCard(name string) error {
-	if name == "" {
-		return errInvalidName
-	}
-
-	_, err := db.GetCard(name)
-	if err != nil {
-		return errors.New("this card does not exist")
+	if len(name) > 33 {
+		return nil, errors.New("card name must contain 33 letters or less")
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print("Are you sure you want to proceed? [y/n]: ")
 
-	scanner.Scan()
-	text := scanner.Text()
-	input := strings.ToLower(text)
+	scan(scanner, "Type", &cType)
+	scan(scanner, "Expire date", &expireDate)
+	scan(scanner, "Number", &num)
+	scan(scanner, "CVC", &cardVerCode)
 
-	if strings.Contains(input, "y") || strings.Contains(input, "yes") {
-		if err := db.DeleteCard(name); err != nil {
-			must(err)
-		}
+	name = strings.TrimSpace(strings.ToLower(name))
 
-		fmt.Printf("\nSuccessfully deleted %s card.", name)
-	}
-
-	return nil
-}
-
-func listCard(name string) error {
-	if name != "" {
-		card, err := db.GetCard(name)
-		if err != nil {
-			return err
-		}
-
-		printCard(card)
-		return nil
-	}
-
-	cards, err := db.ListCards()
-	if err != nil {
-		return err
-	}
-
-	for _, card := range cards {
-		printCard(card)
-	}
-
-	return nil
-}
-
-func viewCards() error {
-	if port := viper.GetInt("http.port"); port != 0 {
-		httpPort = uint16(port)
-	}
-
-	cards, err := db.ListCards()
-	if err != nil {
-		return err
-	}
-
-	for _, c := range cards {
-		c.Name = strings.Title(c.Name)
-	}
-
-	http.HandleFunc("/", viewTemplate(cards))
-
-	addr := fmt.Sprintf(":%d", httpPort)
-	fmt.Printf("Serving cards on port %s\n", addr)
-
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func cardInput() (*card.Card, error) {
-	var name, cType, expireDate, num, carVerCode string
-
-	scanner := bufio.NewScanner(os.Stdin)
-
-	name = scan(scanner, "Name", name)
-	cType = scan(scanner, "Type", cType)
-	expireDate = scan(scanner, "Expire date", expireDate)
-	num = scan(scanner, "Number", num)
-	carVerCode = scan(scanner, "CVC", carVerCode)
-
-	number, err := strconv.Atoi(num)
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid card number")
-	}
-
-	cvc, err := strconv.Atoi(carVerCode)
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid card verification code")
-	}
-
-	name = strings.ToLower(name)
-
-	card := card.New(name, cType, expireDate, int32(number), int32(cvc))
+	card := card.New(name, cType, expireDate, num, cardVerCode)
 
 	return card, nil
 }
@@ -228,18 +173,42 @@ func printCard(c *card.Card) {
 	c.Name = strings.Title(c.Name)
 
 	if hide {
-		c.CVC = 0
+		c.CVC = "••••"
 	}
 
-	str := fmt.Sprintf(
-		`
-+───────────────+─────────────────>
-│ Name	        │ %s
-│ Type      	│ %s
-│ Number      	│ %d
-│ CVC           │ %d
-│ Expire Date   │ %s
-+───────────────+─────────────────>`,
-		c.Name, c.Type, c.Number, c.CVC, c.ExpireDate)
-	fmt.Println(str)
+	dashes := 33
+	halfBar := ((dashes - len(c.Name)) / 2) - 1
+
+	fmt.Print("+")
+	for i := 0; i < halfBar; i++ {
+		fmt.Print("─")
+	}
+	fmt.Printf(" %s ", c.Name)
+
+	if (len(c.Name) % 2) == 0 {
+		halfBar++
+	}
+
+	for i := 0; i < halfBar; i++ {
+		fmt.Print("─")
+	}
+	fmt.Print(">\n")
+
+	if c.Type != "" {
+		fmt.Printf("│ Type      	│ %s", c.Type)
+	}
+
+	if c.Number != "" {
+		fmt.Printf("│ Number      	│ %s", c.Number)
+	}
+
+	if c.CVC != "" {
+		fmt.Printf("│ CVC           │ %s", c.CVC)
+	}
+
+	if c.ExpireDate != "" {
+		fmt.Printf("│ Expire Date   │ %s", c.ExpireDate)
+	}
+
+	fmt.Println("+───────────────+─────────────────>")
 }

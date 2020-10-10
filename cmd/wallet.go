@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -14,189 +13,148 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var errInvalidName = errors.New("please specify a name")
 
 var walletCmd = &cobra.Command{
-	Use:   "wallet <name> [-a add | -c copy | -d delete | -l list | -v view] [-t timeout]",
-	Short: "Add, copy, delete or list wallets",
+	Use:   "wallet",
+	Short: "Wallet operations"}
+
+var addWallet = &cobra.Command{
+	Use:   "add <name>",
+	Short: "Add a wallet to the database.",
+	Run: func(cmd *cobra.Command, args []string) {
+		name := strings.Join(args, " ")
+		if name == "" {
+			fatal(errInvalidName)
+		}
+
+		wallet, err := walletInput(name)
+		if err != nil {
+			fatal(err)
+		}
+
+		if err := db.CreateWallet(wallet); err != nil {
+			fatal(err)
+		}
+
+		fmt.Print("\nSucessfully created the wallet.")
+	},
+}
+
+var copyWallet = &cobra.Command{
+	Use:   "copy <name> [-t timeout]",
+	Short: "Copy wallet public key",
+	Run: func(cmd *cobra.Command, args []string) {
+		name := strings.Join(args, " ")
+		if name == "" {
+			fatal(errInvalidName)
+		}
+
+		wallet, err := db.GetWallet(name)
+		if err != nil {
+			fatal(err)
+		}
+
+		if err := clipboard.WriteAll(wallet.PublicKey); err != nil {
+			fatal(errors.New("failed writing to the clipboard"))
+		}
+
+		if timeout > 0 {
+			<-time.After(timeout)
+			clipboard.WriteAll("")
+			os.Exit(1)
+		}
+	},
+}
+
+var deleteWallet = &cobra.Command{
+	Use:   "delete <name>",
+	Short: "Delete a wallet from the database",
+	Run: func(cmd *cobra.Command, args []string) {
+		name := strings.Join(args, " ")
+		if name == "" {
+			fatal(errInvalidName)
+		}
+
+		_, err := db.GetWallet(name)
+		if err != nil {
+			fatalf("%s wallet does not exist", name)
+		}
+
+		scanner := bufio.NewScanner(os.Stdin)
+		fmt.Print("Are you sure you want to proceed? [y/n]: ")
+
+		scanner.Scan()
+		text := scanner.Text()
+		input := strings.ToLower(text)
+
+		if strings.Contains(input, "y") {
+			if err := db.DeleteWallet(name); err != nil {
+				fatal(err)
+			}
+
+			fmt.Printf("\nSuccessfully deleted %s wallet.", name)
+		}
+	},
+}
+
+var listWallet = &cobra.Command{
+	Use:   "list <name>",
+	Short: "List a wallet or all the wallets from the database",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := strings.Join(args, " ")
 
-		if add {
-			if err := addWallet(); err != nil {
-				must(err)
+		if name != "" {
+			wallet, err := db.GetWallet(name)
+			if err != nil {
+				fatal(err)
 			}
+
+			printWallet(wallet)
 			return
 		}
 
-		if copy {
-			if err := copyWallet(name, timeout); err != nil {
-				must(err)
-			}
-			return
+		wallets, err := db.ListWallets()
+		if err != nil {
+			fatal(err)
 		}
 
-		if delete {
-			if err := deleteWallet(name); err != nil {
-				must(err)
-			}
-			return
-		}
-
-		if view {
-			if err := viewWallets(); err != nil {
-				must(err)
-			}
-			return
-		}
-
-		if err := listWallet(name); err != nil {
-			must(err)
+		for _, wallet := range wallets {
+			printWallet(wallet)
 		}
 	},
 }
 
 func init() {
-	RootCmd.AddCommand(walletCmd)
-	walletCmd.Flags().BoolVarP(&add, "add", "a", false, "add a wallet")
-	walletCmd.Flags().BoolVarP(&copy, "copy", "c", false, "copy wallet public key")
-	walletCmd.Flags().BoolVarP(&delete, "delete", "d", false, "delete a wallet")
-	walletCmd.Flags().BoolVarP(&list, "list", "l", true, "list wallet/wallets")
-	walletCmd.Flags().BoolVarP(&view, "view", "v", false, "view wallets")
-	walletCmd.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
+	rootCmd.AddCommand(walletCmd)
+
+	walletCmd.AddCommand(addWallet)
+	walletCmd.AddCommand(copyWallet)
+	walletCmd.AddCommand(deleteWallet)
+	walletCmd.AddCommand(listWallet)
+
+	copyWallet.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
 }
 
-func addWallet() error {
-	wallet, err := walletInput()
-	if err != nil {
-		return err
-	}
+func walletInput(name string) (*wallet.Wallet, error) {
+	var wType, scriptT, keystoreT, seedPhrase, publicKey, privateKey string
 
-	if err := db.CreateWallet(wallet); err != nil {
-		return err
-	}
-
-	fmt.Print("\nSucessfully created the wallet.")
-	return nil
-}
-
-func copyWallet(name string, timeout time.Duration) error {
-	if name == "" {
-		return errInvalidName
-	}
-
-	wallet, err := db.GetWallet(name)
-	if err != nil {
-		return err
-	}
-
-	if err := clipboard.WriteAll(wallet.PublicKey); err != nil {
-		return err
-	}
-
-	if timeout > 0 {
-		<-time.After(timeout)
-		clipboard.WriteAll("")
-		os.Exit(1)
-	}
-
-	return nil
-}
-
-func deleteWallet(name string) error {
-	if name == "" {
-		return errInvalidName
-	}
-
-	_, err := db.GetWallet(name)
-	if err != nil {
-		return errors.New("This wallet does not exist")
+	if len(name) > 43 {
+		return nil, errors.New("card name must contain 43 letters or less")
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print("Are you sure you want to proceed? [y/n]: ")
 
-	scanner.Scan()
-	text := scanner.Text()
-	input := strings.ToLower(text)
+	scan(scanner, "Type", &wType)
+	scan(scanner, "Script type", &scriptT)
+	scan(scanner, "Keystore Type", &keystoreT)
+	scan(scanner, "Seed Phrase", &seedPhrase)
+	scan(scanner, "Public Key", &publicKey)
+	scan(scanner, "Private Key", &privateKey)
 
-	if strings.Contains(input, "y") || strings.Contains(input, "yes") {
-		if err := db.DeleteWallet(name); err != nil {
-			must(err)
-		}
-
-		fmt.Printf("\nSuccessfully deleted %s wallet.", name)
-	}
-
-	return nil
-}
-
-func listWallet(name string) error {
-	if name != "" {
-		wallet, err := db.GetWallet(name)
-		if err != nil {
-			return err
-		}
-
-		printWallet(wallet)
-		return nil
-	}
-
-	wallets, err := db.ListWallets()
-	if err != nil {
-		return err
-	}
-
-	for _, wallet := range wallets {
-		printWallet(wallet)
-	}
-
-	return nil
-}
-
-func viewWallets() error {
-	if port := viper.GetInt("http.port"); port != 0 {
-		httpPort = uint16(port)
-	}
-
-	wallets, err := db.ListWallets()
-	if err != nil {
-		return err
-	}
-
-	for _, w := range wallets {
-		w.Name = strings.Title(w.Name)
-	}
-
-	http.HandleFunc("/", viewTemplate(wallets))
-
-	addr := fmt.Sprintf(":%d", httpPort)
-	fmt.Printf("Serving wallets on port %s\n", addr)
-
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func walletInput() (*wallet.Wallet, error) {
-	var name, wType, scriptT, keystoreT, seedPhrase, publicKey, privateKey string
-
-	scanner := bufio.NewScanner(os.Stdin)
-
-	name = scan(scanner, "Name", name)
-	wType = scan(scanner, "Type", wType)
-	scriptT = scan(scanner, "Script type", scriptT)
-	keystoreT = scan(scanner, "Keystore Type", keystoreT)
-	seedPhrase = scan(scanner, "Seed Phrase", seedPhrase)
-	publicKey = scan(scanner, "Public Key", publicKey)
-	privateKey = scan(scanner, "Private Key", privateKey)
-
-	name = strings.ToLower(name)
+	name = strings.TrimSpace(strings.ToLower(name))
 
 	wallet := wallet.New(name, wType, scriptT, keystoreT, seedPhrase, publicKey, privateKey)
 
@@ -207,21 +165,51 @@ func printWallet(w *wallet.Wallet) {
 	w.Name = strings.Title(w.Name)
 
 	if hide {
-		w.SeedPhrase = ""
-		w.PrivateKey = ""
+		w.SeedPhrase = "•••••••••••••••"
+		w.PrivateKey = "•••••••••••••••"
 	}
 
-	str := fmt.Sprintf(
-		`
-+────────────────+─────────────────>
-│ Name	         │ %s
-│ Type      	 │ %s
-│ Script Type    │ %s
-│ Keystore Type  │ %s
-│ Seed Phrase    │ %s
-│ Public Key     │ %s
-│ Private Key    │ %s
-+────────────────+─────────────────>`,
-		w.Name, w.Type, w.ScriptType, w.KeystoreType, w.SeedPhrase, w.PublicKey, w.PrivateKey)
-	fmt.Println(str)
+	dashes := 43
+	halfBar := ((dashes - len(w.Name)) / 2) - 1
+
+	fmt.Print("+")
+	for i := 0; i < halfBar; i++ {
+		fmt.Print("─")
+	}
+	fmt.Printf(" %s ", w.Name)
+
+	if (len(w.Name) % 2) == 0 {
+		halfBar++
+	}
+
+	for i := 0; i < halfBar; i++ {
+		fmt.Print("─")
+	}
+	fmt.Print(">\n")
+
+	if w.Type != "" {
+		fmt.Printf("│ Type      	 │ %s", w.Type)
+	}
+
+	if w.ScriptType != "" {
+		fmt.Printf("│ Script Type    │ %s", w.ScriptType)
+	}
+
+	if w.KeystoreType != "" {
+		fmt.Printf("│ Keystore Type  │ %s", w.KeystoreType)
+	}
+
+	if w.SeedPhrase != "" {
+		fmt.Printf("│ Seed Phrase    │ %s", w.SeedPhrase)
+	}
+
+	if w.PublicKey != "" {
+		fmt.Printf("│ Public Key     │ %s", w.PublicKey)
+	}
+
+	if w.PrivateKey != "" {
+		fmt.Printf("│ Private Key    │ %s", w.PrivateKey)
+	}
+
+	fmt.Println("+─────────────+─────────────────────────────>")
 }
