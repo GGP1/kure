@@ -1,10 +1,10 @@
 ## Use
 
-`edit <name>`
+`login`
 
 ## Description
 
-Edit an entry.
+Set master password.
 
 ## Flags 
 
@@ -12,7 +12,7 @@ No flags.
 
 ### Examples
 
-Edit an entry:
+Standard:
 ```
-kure edit Twitter
+kure login
 ```

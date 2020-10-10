@@ -1,10 +1,10 @@
 ## Use
 
-`edit <name>`
+`logout`
 
 ## Description
 
-Edit an entry.
+Unset master password.
 
 ## Flags 
 
@@ -12,7 +12,7 @@ No flags.
 
 ### Examples
 
-Edit an entry:
+Standard:
 ```
-kure edit Twitter
+kure logout
 ```

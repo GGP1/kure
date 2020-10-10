@@ -4,7 +4,7 @@
 
 ## Description
 
-Read or create the configuration file
+Read or create the configuration file.
 
 ## Flags 
 

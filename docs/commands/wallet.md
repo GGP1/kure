@@ -1,45 +1,96 @@
 ## Use
 
-`wallet <name> [-a add | -c copy | -d delete | -l list | -v view] [-t timeout]`
+`wallet`
 
 ## Description
 
-Wallets operations.
+Wallet operations.
 
 ## Flags 
 
-|  Name     |  Shorthand    |     Type      |    Default    |            Usage               |
-|-----------|---------------|---------------|---------------|--------------------------------|
-| add       | a             | bool          | false         | Add a wallet                   |
-| copy      | c             | bool          | false         | Copy wallet number             |
-| delete    | d             | bool          | false         | Delete a wallet                |
-| list      | l             | bool          | true          | List wallet/wallets            |
-| view      | v             | bool          | false         | View wallets                   |
-| timeout   | t             | duration      | 0             | Clipboard cleaning timeout     |
+No flags.
 
-### Examples
+## Subcommands
+
+### Use
+
+`add <name>`
+
+### Description
+
+Add a wallet to the database.
+
+### Flags
+
+No flags.
+
+#### Examples
 
 Add a wallet:
 ```
-kure wallet -a 
+kure wallet add Satoshi 
 ```
+
+### Use 
+
+`copy <name> [-t timeout]`
+
+### Description
+
+Copy wallet public key.
+
+### Flags
+
+|  Name     |  Shorthand    |     Type      |    Default    |                     Usage                     |
+|-----------|---------------|---------------|---------------|-----------------------------------------------|
+| timeout   | t             | duration      | 0             | Set a time until the clipboard is cleaned     |
+
+#### Examples
 
 Copy wallet number:
 ```
-kure wallet -c -t 15m
+kure wallet copy Satoshi
 ```
+
+### Use 
+
+`delete <name>`
+
+### Description
+
+Delete a wallet from the database.
+
+### Flags
+
+No flags.
+
+#### Exaples
 
 Delete wallet:
 ```
-kure wallet -d
+kure wallet delete Satoshi
 ```
+
+### Use 
+
+`list <name>`
+
+### Description
+
+List a wallet or all the wallets from the database.
+
+### Flags
+
+No flags.
+
+#### Examples
 
 List a specific wallet:
 ```
-kure wallet test -l  
+kure wallet list Satoshi
 ```
 
 List all wallets;
 ```
-kure wallet -l
+kure wallet list
 ```

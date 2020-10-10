@@ -18,22 +18,22 @@ Create database backups, serve the database file on a local http server.
 
 ### Examples
 
-Run server:
+Serve database on a server:
 ```
 kure backup -http -p 4000
 ```
 
-Download file:
+Download database:
 ```
 curl localhost:4000 > kure.db
 ```
 
 Encrypt file:
 ```
-kure backup --encrypt --path C:/Users/kure/Desktop/kure.db
+kure backup --encrypt --path path/to/file
 ```
 
 Decrypt file:
 ```
-kure backup --decrypt --path C:/Users/kure/Desktop/kure.db
+kure backup --decrypt --path path/to/file
 ```

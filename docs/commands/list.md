@@ -1,6 +1,6 @@
 ## Use
 
-`list <title> [-H hide]`
+`list <name> [-H hide]`
 
 ## Description
 
@@ -16,12 +16,12 @@ List entry/entries.
 
 List an entry:
 ```
-kure list Binance
+kure list Reddit
 ```
 
 List an entry hiding the password:
 ```
-kure list Youtube -H
+kure list StackOverflow -H
 ```
 
 List all entries:

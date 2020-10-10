@@ -4,7 +4,8 @@
 
 ## Description
 
-Manually clean the clipboard, terminal or both of them.
+Manually clean clipboard, terminal (and its history) or both of them.
+Windows users must clear the history manually with ALT+F7, executing "cmd" command or by re-opening the cmd (as it saves session history only).
 
 ## Flags 
 
@@ -20,7 +21,7 @@ Clear both clipboard and terminal:
 ```
 kure clear
 ```
-(including -b is optional as it is set to true by default)
+(by default it will clear both clipboard (its history also) and terminal)
 
 Clear clipboard:
 ```

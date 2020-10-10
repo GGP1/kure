@@ -1,12 +1,12 @@
 ## Use
 
-`copy <title> [-t timeout]`
+`copy <name> [-t timeout]`
 
 ## Description
 
-Copy password to clipboard for t time (never by default).
+Copy password to clipboard for t time (no timeout by default).
 
-## Flags 
+## Flags
 
 |  Name     |  Shorthand    |     Type      |    Default    |            Usage             |
 |-----------|---------------|---------------|---------------|------------------------------|
@@ -16,10 +16,10 @@ Copy password to clipboard for t time (never by default).
 
 Simple copy:
 ```
-kure copy Twitter
+kure copy Github
 ```
 
-Copy with timeout:
+Copy with and clean after 20 minutes:
 ```
-kure copy Twitter -t 20m
+kure copy Github -t 20m
 ```

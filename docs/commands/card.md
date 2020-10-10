@@ -1,51 +1,102 @@
 ## Use
 
-`card <name> [-a add | -c copy | -d delete | -l list | -v view] [-t timeout] [-f field]`
+`card`
 
 ## Description
 
-Cards operations.
+Card operations.
 
 ## Flags
 
-|  Name     |  Shorthand    |     Type      |    Default    |            Usage                  |
-|-----------|---------------|---------------|---------------|-----------------------------------|
-| add       | a             | bool          | false         | Add a card                        |
-| copy      | c             | bool          | false         | Copy card number                  |
-| delete    | d             | bool          | false         | Delete a card                     |
-| list      | l             | bool          | true          | List card/cards                   |
-| view      | v             | bool          | false         | View wallets                      |
-| timeout   | t             | duration      | 0             | Clipboard cleaning timeout        |
-| field     | f             | string        | "number"      | Choose which card field to copy   |
+No flags.
 
-### Examples
+## Subcommands
+
+### Use
+
+`add <name>`
+
+### Description
+
+Add a card to the database.
+
+### Flags
+
+No flags.
+
+#### Examples
 
 Add a card:
 ```
-kure card -a 
+kure card add Sample
 ```
 
-Copy card number:
+### Use 
+
+`copy <name> [-t timeout] [field]`
+
+### Description
+
+Copy card number or cvc.
+
+### Flags
+
+|  Name     |  Shorthand    |     Type      |    Default    |                     Usage                     |
+|-----------|---------------|---------------|---------------|-----------------------------------------------|
+| timeout   | t             | duration      | 0             | Set a time until the clipboard is cleaned     |
+| field     | f             | string        | "number"      | Set which card field to copy                  |
+
+#### Examples
+
+Copy card number and clean after 15 minutes:
 ```
-kure card -c -t 15m
+kure card copy Sample -t 15m
 ```
 
 Copy card CVC:
 ```
-kure card -c -t 15m -f cvc
+kure card copy Sample --field cvc
 ```
+
+### Use 
+
+`delete <name>`
+
+### Description
+
+Delete a card from the database.
+
+### Flags
+
+No flags.
+
+#### Examples
 
 Delete card:
 ```
-kure card -d
+kure card delete Sample
 ```
+
+### Use 
+
+`list <name>`
+
+### Description
+
+List a card or all the cards from the database.
+
+### Flags
+
+No flags.
+
+#### Examples
 
 List a specific card:
 ```
-kure card test -l  
+kure card list Sample
 ```
 
 List all cards;
 ```
-kure card -l
+kure card list
 ```

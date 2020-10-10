@@ -1,6 +1,6 @@
 ## Use
 
-`delete <title>`
+`delete <name>`
 
 ## Description
 
@@ -14,5 +14,5 @@ No flags.
 
 Delete an entry:
 ```
-kure delete Reddit
+kure delete Twitter
 ```
