@@ -24,6 +24,13 @@ var listCmd = &cobra.Command{
 				fatal(err)
 			}
 
+			if qr {
+				if err := QRCode(entry.Password); err != nil {
+					fatal(err)
+				}
+			}
+
+			fmt.Print("\n")
 			printEntry(entry)
 			return
 		}
@@ -43,6 +50,7 @@ var listCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(listCmd)
 	listCmd.Flags().BoolVarP(&hide, "hide", "H", false, "hide entries passwords")
+	listCmd.Flags().BoolVarP(&qr, "qr", "q", false, "create an image with the password QR code on the user home directory (non-available when listing all entries)")
 }
 
 func printEntry(e *entry.Entry) {
@@ -71,24 +79,24 @@ func printEntry(e *entry.Entry) {
 	fmt.Print(">\n")
 
 	if e.Username != "" {
-		fmt.Printf("│ Username    │ %s\n", e.Username)
+		fmt.Printf("│ Username   │ %s\n", e.Username)
 	}
 
 	if e.Password != "" {
-		fmt.Printf("│ Password    │ %s\n", e.Password)
+		fmt.Printf("│ Password   │ %s\n", e.Password)
 	}
 
 	if e.URL != "" {
-		fmt.Printf("│ URL         │ %s\n", e.URL)
+		fmt.Printf("│ URL        │ %s\n", e.URL)
 	}
 
 	if e.Notes != "" {
-		fmt.Printf("│ Notes       │ %s\n", e.Notes)
+		fmt.Printf("│ Notes      │ %s\n", e.Notes)
 	}
 
 	if e.Expires != "" {
-		fmt.Printf("│ Expires     │ %s\n", e.Expires)
+		fmt.Printf("│ Expires    │ %s\n", e.Expires)
 	}
 
-	fmt.Println("+─────────────+─────────────────────────────>")
+	fmt.Println("+────────────+──────────────────────────────>")
 }
