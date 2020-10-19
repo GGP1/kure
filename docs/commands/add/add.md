@@ -27,6 +27,10 @@ Add new entry to the database.
 4. Space
 5. Special (!, $, %...)
 
+### Subcommands
+
+kure add **phrase**: Add a new entry to the database using a passphrase instead of a password.
+
 ### Examples
 
 Standard:
@@ -42,35 +46,4 @@ kure add Sample -l 10 -f 1,2,3,4,5
 Use a custom password:
 ```
 kure add Sample --custom
-```
-
-## Subcommands
-
-`phrase <name> [-l length] [-s separator] [-i include] [-e exclude] [list]`
-
-## Flags
-
-|  Name     | Shorthand |     Type      |    Default    |                           Usage                                       |
-|-----------|-----------|---------------|---------------|-----------------------------------------------------------------------|
-| length    | l         | uint64        | 1             | Passphrase length                                                     |
-| separator | s         | string        | " " (space)   | Set the character that separates each word                            |
-| include   | i         | []string      | nil           | Characters to include in the password (except 2 byte ¡¿° chars)       |
-| exclude   | e         | []string      | nil           | Characters to exclude from the password                               |
-| list      | l         | string        | ""            | Choose passphrase generating method (NoList, WordList, SyllableList)  |
-
-### Examples
-
-Passphrase without a list (default):
-```
-kure add phrase Sample -l 5 -s / -i atoll, kure
-```
-
-Passphrase word list:
-```
-kure add phrase Sample -l 7 --list WordList
-```
-
-Passphrase syllable list:
-```
-kure add phrase Sample -l 12 -s = --list SyllableList
 ```
