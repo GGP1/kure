@@ -38,7 +38,7 @@ func fatal(err error) {
 
 // fatalf takes an error and its context, prints it and exits.
 func fatalf(format string, v ...interface{}) {
-	fmt.Println(fmt.Sprintf(format, v...))
+	fmt.Println("error:", fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 

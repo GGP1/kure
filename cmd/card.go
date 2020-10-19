@@ -15,15 +15,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var add, copy, delete, list bool
 var field string
 
 var cardCmd = &cobra.Command{
 	Use:   "card",
-	Short: "Card operations"}
+	Short: "Card operations",
+}
 
 var addCard = &cobra.Command{
-	Use:   "card <name>",
+	Use:   "add <name>",
 	Short: "Add card to the database",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := strings.Join(args, " ")
@@ -121,6 +121,7 @@ var listCard = &cobra.Command{
 				fatal(err)
 			}
 
+			fmt.Print("\n")
 			printCard(card)
 			return
 		}
@@ -131,6 +132,7 @@ var listCard = &cobra.Command{
 		}
 
 		for _, card := range cards {
+			fmt.Print("\n")
 			printCard(card)
 		}
 	},
@@ -151,8 +153,8 @@ func init() {
 func cardInput(name string) (*card.Card, error) {
 	var cType, expireDate, num, cardVerCode string
 
-	if len(name) > 33 {
-		return nil, errors.New("card name must contain 33 letters or less")
+	if len(name) > 43 {
+		return nil, errors.New("card name must contain 43 letters or less")
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -176,7 +178,7 @@ func printCard(c *card.Card) {
 		c.CVC = "••••"
 	}
 
-	dashes := 33
+	dashes := 43
 	halfBar := ((dashes - len(c.Name)) / 2) - 1
 
 	fmt.Print("+")
@@ -195,20 +197,20 @@ func printCard(c *card.Card) {
 	fmt.Print(">\n")
 
 	if c.Type != "" {
-		fmt.Printf("│ Type      	│ %s", c.Type)
+		fmt.Printf("│ Type       │ %s\n", c.Type)
 	}
 
 	if c.Number != "" {
-		fmt.Printf("│ Number      	│ %s", c.Number)
+		fmt.Printf("│ Number     │ %s\n", c.Number)
 	}
 
 	if c.CVC != "" {
-		fmt.Printf("│ CVC           │ %s", c.CVC)
+		fmt.Printf("│ CVC        │ %s\n", c.CVC)
 	}
 
 	if c.ExpireDate != "" {
-		fmt.Printf("│ Expire Date   │ %s", c.ExpireDate)
+		fmt.Printf("│ Expires    │ %s\n", c.ExpireDate)
 	}
 
-	fmt.Println("+───────────────+─────────────────>")
+	fmt.Println("+────────────+──────────────────────────────>")
 }

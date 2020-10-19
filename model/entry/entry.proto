@@ -2,6 +2,8 @@ syntax = "proto3";
 
 option go_package = "github.com/GGP1/kure/model/entry";
 
+package entry;
+
 message Entry {
     string name = 1;
     string username = 2;

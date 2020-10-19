@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// EncryptedFile creates a file with Chacha20Poly1305 encryption in the specified path.
+// EncryptedFile creates a file with XChacha20Poly1305 encryption in the specified path.
 func EncryptedFile(data []byte, filename string) error {
 	encrypted, err := Encrypt(data)
 	if err != nil {

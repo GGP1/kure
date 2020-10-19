@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -79,14 +81,14 @@ func Decrypt(data []byte) ([]byte, error) {
 
 // Create a SHA256 hash (256 bits) with the key provided.
 func createHash(key []byte) ([]byte, error) {
-	hasher := sha256.New()
+	h := sha256.New()
 
-	_, err := hasher.Write(key)
+	_, err := h.Write(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "create sha-256 hash")
 	}
 
-	return hasher.Sum(nil), nil
+	return h.Sum(nil), nil
 }
 
 func getMasterPassword() ([]byte, error) {
@@ -102,7 +104,15 @@ func getMasterPassword() ([]byte, error) {
 			return nil, errors.Wrap(err, "reading file")
 		}
 
-		return mPassword, nil
+		p := strings.TrimSpace(string(mPassword))
+		h := sha512.New()
+
+		_, err = h.Write([]byte(p))
+		if err != nil {
+			return nil, errors.Wrap(err, "password hash")
+		}
+
+		return h.Sum(nil), nil
 	}
 
 	fmt.Print("Enter master password: ")
@@ -122,5 +132,13 @@ func getMasterPassword() ([]byte, error) {
 		return nil, errors.New("passwords must be equal")
 	}
 
-	return masterPwd, nil
+	p := strings.TrimSpace(string(masterPwd))
+	h := sha512.New()
+
+	_, err = h.Write([]byte(p))
+	if err != nil {
+		return nil, errors.Wrap(err, "password hash")
+	}
+
+	return h.Sum(nil), nil
 }

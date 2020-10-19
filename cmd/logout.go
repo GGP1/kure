@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -14,22 +13,10 @@ var logoutCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		viper.Set("user.password", "")
 
-		filename := fmt.Sprintf("%s/config.yaml", os.Getenv("KURE_CONFIG"))
-		if filename != "" {
-			if err := viper.WriteConfigAs(filename); err != nil {
-				fatalf(errCreatingConfig, err)
-			}
-		} else {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				fatal(err)
-			}
+		filename := getConfigPath()
 
-			path = fmt.Sprintf("%s/config.yaml", home)
-
-			if err := viper.WriteConfigAs(path); err != nil {
-				fatalf(errCreatingConfig, err)
-			}
+		if err := viper.WriteConfigAs(filename); err != nil {
+			fatalf(errCreatingConfig, err)
 		}
 
 		fmt.Println("You logged out")

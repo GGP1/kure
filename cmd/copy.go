@@ -15,7 +15,7 @@ var timeout time.Duration
 
 var copyCmd = &cobra.Command{
 	Use:   "copy <name> [-t timeout]",
-	Short: "Copy password to clipboard",
+	Short: "Copy entry password to clipboard",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := strings.Join(args, " ")
 

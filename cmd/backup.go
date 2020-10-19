@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"path/filepath"
 
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/db"
@@ -19,7 +20,7 @@ var (
 	path                    string
 )
 
-var errInvalidPath = errors.New("please specify a path")
+var errInvalidPath = errors.New("invalid path")
 
 var backupCmd = &cobra.Command{
 	Use:   "backup [http | encrypt | decrypt] [port] [path]",
@@ -33,6 +34,7 @@ var backupCmd = &cobra.Command{
 			if path == "" {
 				fatal(errInvalidPath)
 			}
+			path = filepath.Clean(path)
 
 			file, err := crypt.DecryptFile(path)
 			if err != nil {
@@ -47,6 +49,7 @@ var backupCmd = &cobra.Command{
 			if path == "" {
 				fatal(errInvalidPath)
 			}
+			path = filepath.Clean(path)
 
 			buf := new(bytes.Buffer)
 			if err := db.WriteTo(buf); err != nil {
@@ -79,5 +82,5 @@ func init() {
 
 	backupCmd.Flags().BoolVar(&encrypt, "encrypt", false, "create encrypted backup")
 	backupCmd.Flags().BoolVar(&decrypt, "decrypt", false, "decrypt encrypted backup")
-	backupCmd.Flags().StringVar(&path, "path", "./backup", "backup file path")
+	backupCmd.Flags().StringVar(&path, "path", "", "backup file path")
 }

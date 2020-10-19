@@ -25,25 +25,10 @@ var loginCmd = &cobra.Command{
 			fatal(err)
 		}
 
-		configPath := os.Getenv("KURE_CONFIG")
+		filename := getConfigPath()
 
-		if configPath != "" {
-			filename := fmt.Sprintf("%s/config.yaml", configPath)
-
-			if err := viper.WriteConfigAs(filename); err != nil {
-				fatalf(errCreatingConfig, err)
-			}
-		} else {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				fatalf("failed fetching home directory: %v", err)
-			}
-
-			filename := fmt.Sprintf("%s/config.yaml", home)
-
-			if err := viper.WriteConfigAs(filename); err != nil {
-				fatalf(errCreatingConfig, err)
-			}
+		if err := viper.WriteConfigAs(filename); err != nil {
+			fatalf(errCreatingConfig, err)
 		}
 
 		fmt.Println("\nYou have successfully logged in")
@@ -69,7 +54,7 @@ func setMasterPassword() error {
 
 	_, err = h.Write([]byte(p))
 	if err != nil {
-		errors.Wrap(err, "password hash")
+		return errors.Wrap(err, "password hash")
 	}
 
 	pwd := fmt.Sprintf("%x", h.Sum(nil))

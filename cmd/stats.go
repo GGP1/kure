@@ -32,7 +32,8 @@ var statsCmd = &cobra.Command{
 
 		buckets := strings.Join(bucketsList, ", ")
 
-		fmt.Printf(`     STATISTICS
+		fmt.Printf(`
+     STATISTICS
 ────────────────────
 Number of cards: %d
 Number of entries: %d

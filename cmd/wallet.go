@@ -19,7 +19,8 @@ var errInvalidName = errors.New("please specify a name")
 
 var walletCmd = &cobra.Command{
 	Use:   "wallet",
-	Short: "Wallet operations"}
+	Short: "Wallet operations",
+}
 
 var addWallet = &cobra.Command{
 	Use:   "add <name>",
@@ -112,6 +113,7 @@ var listWallet = &cobra.Command{
 				fatal(err)
 			}
 
+			fmt.Print("\n")
 			printWallet(wallet)
 			return
 		}
@@ -122,6 +124,7 @@ var listWallet = &cobra.Command{
 		}
 
 		for _, wallet := range wallets {
+			fmt.Print("\n")
 			printWallet(wallet)
 		}
 	},
@@ -188,27 +191,27 @@ func printWallet(w *wallet.Wallet) {
 	fmt.Print(">\n")
 
 	if w.Type != "" {
-		fmt.Printf("│ Type      	 │ %s", w.Type)
+		fmt.Printf("│ Type      	 │ %s\n", w.Type)
 	}
 
 	if w.ScriptType != "" {
-		fmt.Printf("│ Script Type    │ %s", w.ScriptType)
+		fmt.Printf("│ Script Type    │ %s\n", w.ScriptType)
 	}
 
 	if w.KeystoreType != "" {
-		fmt.Printf("│ Keystore Type  │ %s", w.KeystoreType)
+		fmt.Printf("│ Keystore Type  │ %s\n", w.KeystoreType)
 	}
 
 	if w.SeedPhrase != "" {
-		fmt.Printf("│ Seed Phrase    │ %s", w.SeedPhrase)
+		fmt.Printf("│ Seed Phrase    │ %s\n", w.SeedPhrase)
 	}
 
 	if w.PublicKey != "" {
-		fmt.Printf("│ Public Key     │ %s", w.PublicKey)
+		fmt.Printf("│ Public Key     │ %s\n", w.PublicKey)
 	}
 
 	if w.PrivateKey != "" {
-		fmt.Printf("│ Private Key    │ %s", w.PrivateKey)
+		fmt.Printf("│ Private Key    │ %s\n", w.PrivateKey)
 	}
 
 	fmt.Println("+─────────────+─────────────────────────────>")

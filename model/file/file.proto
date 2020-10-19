@@ -2,9 +2,11 @@ syntax = "proto3";
 
 option go_package = "github.com/GGP1/kure/model/file";
 
+package file;
+
 message File {
     string name = 1;
     bytes content = 2;
-    string type = 3;
+    string filename = 3;
     int64 created_at = 4;
 }

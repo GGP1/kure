@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"bufio"
+	"crypto/sha512"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -38,21 +40,20 @@ var configCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if !create {
 			if path == "" {
-				path = os.Getenv("KURE_CONFIG")
-			} else {
-				fatal(errors.New("a path to the configuration file is required"))
+				path = getConfigPath()
 			}
 
-			filename := fmt.Sprintf("%s/config.yaml", path)
+			if !strings.Contains(path, ".") {
+				path = filepath.Join(path, "config.yaml")
+			}
 
-			data, err := ioutil.ReadFile(filename)
+			data, err := ioutil.ReadFile(path)
 			if err != nil {
 				fatalf("failed reading config file: %v", err)
 			}
 
 			file := strings.TrimSpace(string(data))
-
-			fmt.Println(file)
+			fmt.Println("\n" + file)
 			return
 		}
 
@@ -67,7 +68,7 @@ var configCmd = &cobra.Command{
 		} else {
 			home, err := os.UserHomeDir()
 			if err != nil {
-				fatal(err)
+				fatalf("couldn't find user home directory: %v", err)
 			}
 
 			path = fmt.Sprintf("%s/config.yaml", home)
@@ -81,8 +82,33 @@ var configCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(configCmd)
+
 	configCmd.Flags().StringVarP(&path, "path", "p", "", "set config file path")
 	configCmd.Flags().BoolVarP(&create, "create", "c", false, "create a config file")
+}
+
+func getConfigPath() string {
+	var filename string
+	configPath := os.Getenv("KURE_CONFIG")
+
+	if configPath != "" {
+		base := filepath.Base(configPath)
+		if strings.Contains(base, ".") {
+			return configPath
+		}
+
+		filename = fmt.Sprintf("%s/config.yaml", configPath)
+		return filename
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fatalf("couldn't find user home directory: %v", err)
+	}
+
+	filename = fmt.Sprintf("%s/config.yaml", home)
+
+	return filename
 }
 
 func setConfig() error {
@@ -102,9 +128,16 @@ func setConfig() error {
 		return errors.New("converting port to an integer")
 	}
 
+	h := sha512.New()
+	_, err = h.Write([]byte(password))
+	if err != nil {
+		return errors.Wrap(err, "creating the password hash")
+	}
+	p := string(h.Sum(nil))
+
 	viper.Set("database.name", name)
 	viper.Set("database.path", dbPath)
-	viper.Set("user.password", password)
+	viper.Set("user.password", p)
 	viper.Set("http.port", httpPort)
 	viper.Set("entry.repeat", repeat)
 

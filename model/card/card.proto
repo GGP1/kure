@@ -2,6 +2,8 @@ syntax = "proto3";
 
 option go_package = "github.com/GGP1/kure/model/card";
 
+package card;
+
 message Card {
     string name = 1;
     string type = 2;

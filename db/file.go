@@ -11,8 +11,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// CreateFile saved a new file into the database.
-func CreateFile(path string, file *file.File) error {
+// CreateFile saves a new file into the database.
+func CreateFile(file *file.File) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(fileBucket)
 
