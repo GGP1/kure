@@ -9,23 +9,16 @@ import (
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/db"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-var (
-	httpB, encrypt, decrypt bool
-	httpPort                uint16
-	path                    string
-)
-
-var errInvalidPath = errors.New("invalid path")
 
 var backupCmd = &cobra.Command{
 	Use:   "backup [http | encrypt | decrypt] [port] [path]",
 	Short: "Create database backups",
 	Run: func(cmd *cobra.Command, args []string) {
+		var err error
+
 		if p := viper.GetInt("http.port"); p != 0 {
 			httpPort = uint16(p)
 		}
@@ -34,9 +27,13 @@ var backupCmd = &cobra.Command{
 			if path == "" {
 				fatal(errInvalidPath)
 			}
-			path = filepath.Clean(path)
 
-			file, err := crypt.DecryptFile(path)
+			path, err = filepath.Abs(path)
+			if err != nil {
+				fatal(errInvalidPath)
+			}
+
+			file, err := crypt.DecryptEncFile(path)
 			if err != nil {
 				fatal(err)
 			}
@@ -49,20 +46,27 @@ var backupCmd = &cobra.Command{
 			if path == "" {
 				fatal(errInvalidPath)
 			}
-			path = filepath.Clean(path)
+
+			path, err = filepath.Abs(path)
+			if err != nil {
+				fatal(errInvalidPath)
+			}
 
 			buf := new(bytes.Buffer)
 			if err := db.WriteTo(buf); err != nil {
 				fatal(err)
 			}
 
-			if err := crypt.EncryptedFile(buf.Bytes(), path); err != nil {
+			if err := crypt.CreateEncFile(buf.Bytes(), path); err != nil {
 				fatal(err)
 			}
 			return
 		}
 
 		if httpB {
+			if err := db.RequirePassword(); err != nil {
+				fatal(err)
+			}
 			http.HandleFunc("/", db.HTTPBackup)
 
 			addr := fmt.Sprintf(":%d", httpPort)

@@ -1,16 +1,18 @@
 ## Use
 
-`gen [-l length] [-f format] [-i include] [-e exclude] [-r repeat] [-q qr]`
+![kure gen](https://user-images.githubusercontent.com/51374959/98058851-783f4380-1e24-11eb-8a6a-3dcc9e4ba5c8.png)
 
 ## Description
 
 Generate a random password.
 
-## Flags 
+## Flags
+
+> Non Windows 10 user won't be able to display the qr image in the terminal 
 
 |  Name     | Shorthand |     Type      |    Default    |                           Usage                                       |
 |-----------|-----------|---------------|---------------|-----------------------------------------------------------------------|
-| length    | l         | uint64        | 1             | Password length                                                       |
+| length    | l         | uint64        | 0             | Password length                                                       |
 | format    | f         | []string      | nil           | Password format                                                       |
 | include   | i         | string        | ""            | Characters to include in the password (except 2 byte ¡¿° chars)       |
 | exclude   | e         | string        | ""            | Characters to exclude from the password                               |

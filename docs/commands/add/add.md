@@ -1,6 +1,6 @@
 ## Use
 
-`add <name> [-c custom] [-l length] [-f format] [-i include] [-e exclude] [-r repeat]`
+![kure add](https://user-images.githubusercontent.com/51374959/98047029-022de300-1e0a-11eb-83f9-fa3c8de4145f.png)
 
 ## Description
 
@@ -11,7 +11,7 @@ Add new entry to the database.
 |  Name     | Shorthand |     Type      |    Default    |                           Usage                                       |
 |-----------|-----------|---------------|---------------|-----------------------------------------------------------------------|
 | custom    | c         | bool          | false         | Create an entry with a custom password                                |
-| length    | l         | uint64        | 1             | Pasword length                                                        |
+| length    | l         | uint64        | 0             | Pasword length                                                        |
 | format    | f         | []string      | nil           | Password format                                                       |
 | include   | i         | string        | ""            | Characters to include in the password (except 2 byte ¡¿° chars)       |
 | exclude   | e         | string        | ""            | Characters to exclude from the password                               |
@@ -27,6 +27,16 @@ Add new entry to the database.
 4. Space
 5. Special (!, $, %...)
 
+### Expiration
+
+Valid time formats are: 
+
+• ISO: 2006/01/02 or 2006-01-02.
+
+• US: 02/01/2006 or 02-01-2006.
+
+"0s", "0" or "" will be considered as if the entry never expires.
+
 ### Subcommands
 
 kure add **phrase**: Add a new entry to the database using a passphrase instead of a password.
@@ -38,12 +48,12 @@ Standard:
 kure add Sample --length 10 --format 1,2,3,4,5
 ```
 
-Using shorthands:
+Using shorthands and allowing repetition:
 ```
-kure add Sample -l 10 -f 1,2,3,4,5
+kure add Sample -l 10 -f 1,2,3,4,5 -r
 ```
 
-Use a custom password:
+Using a custom password:
 ```
 kure add Sample --custom
 ```

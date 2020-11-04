@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bufio"
-	"crypto/sha512"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,41 +9,25 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GGP1/kure/crypt"
+	"github.com/GGP1/kure/db"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-type config struct {
-	Database struct {
-		Name string
-		Path string
-	}
-	User struct {
-		Password string
-	}
-	Entry struct {
-		Format []int
-		Repeat bool
-	}
-	HTTP struct {
-		Port int
-	}
-}
-
-var create bool
-
 var configCmd = &cobra.Command{
 	Use:   "config [-c create] [-p path]",
 	Short: "Read or create the configuration file",
 	Run: func(cmd *cobra.Command, args []string) {
-		if !create {
-			if path == "" {
-				path = getConfigPath()
-			}
+		if path == "" {
+			path = getConfigPath()
+		}
 
-			if !strings.Contains(path, ".") {
-				path = filepath.Join(path, "config.yaml")
+		if !create {
+			if err := db.RequirePassword(); err != nil {
+				fatal(err)
 			}
 
 			data, err := ioutil.ReadFile(path)
@@ -61,22 +44,14 @@ var configCmd = &cobra.Command{
 			fatal(err)
 		}
 
-		if path != "" {
-			if err := viper.WriteConfigAs(path); err != nil {
-				fatalf("%s: %v", errCreatingConfig, err)
-			}
-		} else {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				fatalf("couldn't find user home directory: %v", err)
-			}
-
-			path = fmt.Sprintf("%s/config.yaml", home)
-
-			if err := viper.WriteConfigAs(path); err != nil {
-				fatalf("%s: %v", errCreatingConfig, err)
-			}
+		if !strings.Contains(filepath.Base(path), ".") {
+			path = filepath.Join(path, "config.yaml")
 		}
+
+		if err := viper.WriteConfigAs(path); err != nil {
+			fatalf("failed creating config file: %v", err)
+		}
+
 	},
 }
 
@@ -88,17 +63,17 @@ func init() {
 }
 
 func getConfigPath() string {
-	var filename string
-	configPath := os.Getenv("KURE_CONFIG")
+	var path string
+	cfgPath := os.Getenv("KURE_CONFIG")
 
-	if configPath != "" {
-		base := filepath.Base(configPath)
+	if cfgPath != "" {
+		base := filepath.Base(cfgPath)
 		if strings.Contains(base, ".") {
-			return configPath
+			return cfgPath
 		}
 
-		filename = fmt.Sprintf("%s/config.yaml", configPath)
-		return filename
+		path = filepath.Join(cfgPath, "config.yaml")
+		return path
 	}
 
 	home, err := os.UserHomeDir()
@@ -106,38 +81,35 @@ func getConfigPath() string {
 		fatalf("couldn't find user home directory: %v", err)
 	}
 
-	filename = fmt.Sprintf("%s/config.yaml", home)
+	path = filepath.Join(filepath.Clean(home), "config.yaml")
 
-	return filename
+	return path
 }
 
 func setConfig() error {
-	var name, dbPath, password, format, repeat, port string
+	var name, dbPath, format, repeat, port string
 
 	scanner := bufio.NewScanner(os.Stdin)
 
 	scan(scanner, "Database name", &name)
 	scan(scanner, "Database path", &dbPath)
-	scan(scanner, "User password", &password)
 	scan(scanner, "Entry format", &format)
 	scan(scanner, "Repeat characters", &repeat)
 	scan(scanner, "Http port", &port)
 
-	httpPort, err := strconv.Atoi(port)
+	password, err := crypt.AskPassword(true)
 	if err != nil {
-		return errors.New("converting port to an integer")
+		return err
 	}
 
-	h := sha512.New()
-	_, err = h.Write([]byte(password))
+	httpPort, err := strconv.Atoi(port)
 	if err != nil {
-		return errors.Wrap(err, "creating the password hash")
+		return errors.New("invalid port")
 	}
-	p := string(h.Sum(nil))
 
 	viper.Set("database.name", name)
 	viper.Set("database.path", dbPath)
-	viper.Set("user.password", p)
+	viper.Set("user.password", password)
 	viper.Set("http.port", httpPort)
 	viper.Set("entry.repeat", repeat)
 
@@ -145,7 +117,10 @@ func setConfig() error {
 
 	var f []int
 	for _, v := range levels {
-		integer, _ := strconv.Atoi(v)
+		integer, err := strconv.Atoi(v)
+		if err != nil {
+			return errors.New("invalid levels")
+		}
 		f = append(f, integer)
 	}
 

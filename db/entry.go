@@ -1,55 +1,42 @@
 package db
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/GGP1/kure/crypt"
-	"github.com/GGP1/kure/model/entry"
+	"github.com/GGP1/kure/pb"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 )
 
-// cleanExpired removes the expired entries from the database.
-func cleanExpired(b *bolt.Bucket, name, expires string, expired chan bool, errCh chan error) {
-	if expires == "Never" {
-		expired <- false
-		return
-	}
-
-	// Format expires time and time.Now to compare them
-	expiration, err := time.Parse(time.RFC3339, expires)
-	if err != nil {
-		errCh <- errors.Wrap(err, "expiration time parse")
-	}
-
-	now, err := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	if err != nil {
-		errCh <- errors.Wrap(err, "time now parse")
-	}
-
-	// Clean expired entries
-	if now.Sub(expiration) > 0 {
-		if err := b.Delete([]byte(name)); err != nil {
-			errCh <- errors.Wrap(err, "delete entry")
-		}
-		expired <- true
-	}
-
-	expired <- false
-}
-
 // CreateEntry creates a new record.
-func CreateEntry(entry *entry.Entry) error {
+func CreateEntry(entry *pb.Entry) error {
+	entries, err := EntriesByName(entry.Name)
+	if err == nil {
+		return err
+	}
+
+	var exists bool
+	for _, e := range entries {
+		if strings.Split(e.Name, "/")[0] == entry.Name {
+			exists = true
+			break
+		}
+	}
+
+	if exists {
+		return errors.New("already exists an entry or folder with this name, use <kure edit> to edit")
+	}
+
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(entryBucket)
 
 		exists := b.Get([]byte(entry.Name))
 		if exists != nil {
-			return errors.New("there is an existing entry with this name, to edit it please use <kure edit>")
+			return errors.Errorf("there is an existing entry called %s, use <kure edit> to edit", entry.Name)
 		}
 
 		buf, err := proto.Marshal(entry)
@@ -70,31 +57,27 @@ func CreateEntry(entry *entry.Entry) error {
 	})
 }
 
-// DeleteEntry removes an entry from the database.
-func DeleteEntry(name string) error {
-	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(entryBucket)
-		t := strings.ToLower(name)
-
-		if err := b.Delete([]byte(t)); err != nil {
-			return errors.Wrap(err, "delete entry")
-		}
-
-		return nil
-	})
-}
-
 // EditEntry edits an entry.
-func EditEntry(entry *entry.Entry) error {
+func EditEntry(name string, entry *pb.Entry) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(entryBucket)
+		name = strings.TrimSpace(strings.ToLower(name))
+
+		if err := b.Delete([]byte(name)); err != nil {
+			return errors.Wrap(err, "delete old entry")
+		}
 
 		buf, err := proto.Marshal(entry)
 		if err != nil {
 			return errors.Wrap(err, "marshal entry")
 		}
 
-		if err := b.Put([]byte(entry.Name), buf); err != nil {
+		encEntry, err := crypt.Encrypt(buf)
+		if err != nil {
+			return errors.Wrap(err, "encrypt entry")
+		}
+
+		if err := b.Put([]byte(entry.Name), encEntry); err != nil {
 			return errors.Wrap(err, "edit entry")
 		}
 
@@ -102,30 +85,62 @@ func EditEntry(entry *entry.Entry) error {
 	})
 }
 
+// EntriesByName filters all the entries and returns those matching with the name passed.
+func EntriesByName(name string) ([]*pb.Entry, error) {
+	var group []*pb.Entry
+	name = strings.TrimSpace(strings.ToLower(name))
+
+	entries, err := ListEntries()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, e := range entries {
+		if strings.Contains(e.Name, name) {
+			group = append(group, e)
+		}
+	}
+
+	if len(group) == 0 {
+		return nil, errors.New("no entries were found")
+	}
+
+	return group, nil
+}
+
 // GetEntry retrieves the entry with the specified name.
-func GetEntry(name string) (*entry.Entry, error) {
-	e := &entry.Entry{}
+func GetEntry(name string) (*pb.Entry, error) {
+	entry := &pb.Entry{}
+	expired := make(chan bool, 1)
+	errCh := make(chan error, 1)
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(entryBucket)
-		t := strings.ToLower(name)
+		name = strings.TrimSpace(strings.ToLower(name))
 
-		result := b.Get([]byte(t))
-		if result == nil {
+		encEntry := b.Get([]byte(name))
+		if encEntry == nil {
 			return errors.Errorf("\"%s\" does not exist", name)
 		}
 
-		decEntry, err := crypt.Decrypt(result)
+		decEntry, err := crypt.Decrypt(encEntry)
 		if err != nil {
 			return errors.Wrap(err, "decrypt entry")
 		}
 
-		if err := proto.Unmarshal(decEntry, e); err != nil {
+		if err := proto.Unmarshal(decEntry, entry); err != nil {
 			return errors.Wrap(err, "unmarshal entry")
 		}
 
-		if e.Name == "" {
-			return fmt.Errorf("%s does not exist", name)
+		go cleanExpired(b, entry.Name, entry.Expires, expired, errCh)
+
+		select {
+		case e := <-expired:
+			if e {
+				return errors.Errorf("\"%s\" expired", name)
+			}
+		case err := <-errCh:
+			return err
 		}
 
 		return nil
@@ -134,25 +149,29 @@ func GetEntry(name string) (*entry.Entry, error) {
 		return nil, err
 	}
 
-	return e, nil
+	return entry, nil
 }
 
 // ListEntries returns a list with all the entries.
-func ListEntries() ([]*entry.Entry, error) {
-	var entries []*entry.Entry
-
+func ListEntries() ([]*pb.Entry, error) {
+	var entries []*pb.Entry
 	expired := make(chan bool, 1)
 	errCh := make(chan error, 1)
 
-	err := db.Update(func(tx *bolt.Tx) error {
+	password, err := crypt.GetMasterPassword()
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(entryBucket)
 		c := b.Cursor()
 
 		// Place cursor in the first line of the bucket and move it to the next one
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			entry := &entry.Entry{}
+			entry := &pb.Entry{}
 
-			decEntry, err := crypt.Decrypt(v)
+			decEntry, err := crypt.DecryptX(v, password)
 			if err != nil {
 				return errors.Wrap(err, "decrypt entry")
 			}
@@ -180,4 +199,53 @@ func ListEntries() ([]*entry.Entry, error) {
 	}
 
 	return entries, nil
+}
+
+// RemoveEntry removes an entry from the database.
+func RemoveEntry(name string) error {
+	_, err := GetEntry(name)
+	if err != nil {
+		return err
+	}
+
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(entryBucket)
+		name = strings.TrimSpace(strings.ToLower(name))
+
+		if err := b.Delete([]byte(name)); err != nil {
+			return errors.Wrap(err, "remove entry")
+		}
+
+		return nil
+	})
+}
+
+// cleanExpired removes the expired entry from the database.
+func cleanExpired(b *bolt.Bucket, name, expires string, expired chan<- bool, errCh chan<- error) {
+	if expires == "Never" {
+		expired <- false
+		return
+	}
+
+	// Format expires time and time.Now to compare them
+	expiration, err := time.Parse(time.RFC1123Z, expires)
+	if err != nil {
+		errCh <- errors.Wrap(err, "expiration time parse")
+	}
+
+	now, err := time.Parse(time.RFC1123Z, time.Now().Format(time.RFC1123Z))
+	if err != nil {
+		errCh <- errors.Wrap(err, "time now parse")
+	}
+
+	// Delete expired entries
+	if now.Sub(expiration) >= 0 {
+		if err := b.Delete([]byte(name)); err != nil {
+			errCh <- errors.Wrap(err, "remove expired entry")
+		}
+		expired <- true
+		return
+	}
+
+	expired <- false
 }

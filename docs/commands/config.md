@@ -1,6 +1,6 @@
 ## Use
 
-`config [-c create] [-p path]`
+![kure config](https://user-images.githubusercontent.com/51374959/98058707-1ed71480-1e24-11eb-84da-ff8897b3146d.png)
 
 ## Description
 

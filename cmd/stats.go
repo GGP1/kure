@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/GGP1/kure/db"
+
 	"github.com/spf13/cobra"
 )
 
@@ -25,12 +26,12 @@ var statsCmd = &cobra.Command{
 		totalRecords := nCards + nEntries + nFiles + nWallets
 		totalBuckets := len(stats)
 
-		bucketsList, err := db.ListOfBuckets()
+		list, err := db.ListOfBuckets()
 		if err != nil {
 			fatal(err)
 		}
 
-		buckets := strings.Join(bucketsList, ", ")
+		buckets := strings.Join(list, ", ")
 
 		fmt.Printf(`
      STATISTICS
@@ -42,7 +43,7 @@ Number of wallets: %d
 
 Total records: %d
 Number of buckets: %d
-List of buckets: %s
+Buckets list: %s
 		`, nCards, nEntries, nFiles, nWallets, totalRecords, totalBuckets, buckets)
 	},
 }

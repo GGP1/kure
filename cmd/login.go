@@ -2,36 +2,36 @@ package cmd
 
 import (
 	"bufio"
-	"crypto/sha512"
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
+	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/db"
-	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"golang.org/x/crypto/ssh/terminal"
 )
-
-var errCreatingConfig = "failed creating config file"
 
 var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Set master password",
 	Run: func(cmd *cobra.Command, args []string) {
+		p := viper.GetString("user.password")
+		if p != "" {
+			fmt.Println("Warning: the password is already set, if you want to abort please use ctrl+c")
+		}
 		if err := setMasterPassword(); err != nil {
 			fatal(err)
 		}
 
-		filename := getConfigPath()
+		path := getConfigPath()
 
-		if err := viper.WriteConfigAs(filename); err != nil {
-			fatalf(errCreatingConfig, err)
+		if err := viper.WriteConfigAs(path); err != nil {
+			fatalf("failed creating config file: %s", err)
 		}
 
-		fmt.Println("\nYou have successfully logged in")
+		fmt.Println("\nYou have successfully logged in.")
 	},
 }
 
@@ -40,37 +40,28 @@ func init() {
 }
 
 // setMasterPassword asks the user for a password, hashes it with SHA-512,
-// sets it in viper and verifies if it's capable of decrypting past records,
+// sets it in viper and verifies if it's capable of decrypting saved records,
 // if not it will ask the user for a confirmation to proceed.
 func setMasterPassword() error {
-	fmt.Print("Enter master password: ")
-	password, err := terminal.ReadPassword(int(syscall.Stdin))
+	password, err := crypt.AskPassword(false)
 	if err != nil {
-		return errors.Wrap(err, "reading password")
+		return err
 	}
 
-	p := strings.TrimSpace(string(password))
-	h := sha512.New()
+	viper.Set("user.password", password)
 
-	_, err = h.Write([]byte(p))
-	if err != nil {
-		return errors.Wrap(err, "password hash")
-	}
-
-	pwd := fmt.Sprintf("%x", h.Sum(nil))
-	viper.Set("user.password", pwd)
-
-	// Check if the hashed password provided is capable of decrypting saved entries
+	// Check if the hashed password provided is capable of decrypting saved records
 	_, err = db.ListEntries()
+	_, err = db.ListFiles()
 	if err != nil {
 		scanner := bufio.NewScanner(os.Stdin)
-		fmt.Print("\nAlready stored records were encrypted with a different password. Do you want to proceed? [y/n] ")
+		fmt.Print("\nAlready stored records were encrypted with a different password. Do you want to proceed? [y/N] ")
 
 		scanner.Scan()
 		text := scanner.Text()
-		input := strings.ToLower(text)
+		text = strings.ToLower(text)
 
-		if !strings.Contains(input, "y") {
+		if !strings.Contains(text, "y") {
 			os.Exit(0)
 		}
 	}

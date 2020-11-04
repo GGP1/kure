@@ -1,9 +1,9 @@
 database:
-  path: path/to/file
+  path: absolute/path/to/file
   name: kure
 
 user:
-  password: your-password-hash     # OR password_path: path/to/file
+  password: your-password-hash     # OR password_path: absolute/path/to/file
 
 entry:
   format: 

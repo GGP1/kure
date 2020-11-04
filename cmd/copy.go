@@ -11,11 +11,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var timeout time.Duration
-
 var copyCmd = &cobra.Command{
-	Use:   "copy <name> [-t timeout]",
-	Short: "Copy entry password to clipboard",
+	Use:   "copy <name> [-t timeout] [-u username]",
+	Short: "Copy entry credentials to clipboard",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := strings.Join(args, " ")
 
@@ -24,7 +22,13 @@ var copyCmd = &cobra.Command{
 			fatal(err)
 		}
 
-		if err := clipboard.WriteAll(entry.Password); err != nil {
+		copy := entry.Password
+
+		if username {
+			copy = entry.Username
+		}
+
+		if err := clipboard.WriteAll(copy); err != nil {
 			fatalf("couldn't copy the password to the clipboard: %v", err)
 		}
 
@@ -39,4 +43,5 @@ var copyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(copyCmd)
 	copyCmd.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
+	copyCmd.Flags().BoolVarP(&username, "username", "u", false, "copy entry username")
 }

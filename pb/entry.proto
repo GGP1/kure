@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option go_package = "github.com/GGP1/kure/model/entry";
+option go_package = "github.com/GGP1/kure/pb";
 
-package entry;
+package pb;
 
 message Entry {
     string name = 1;

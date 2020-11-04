@@ -1,6 +1,7 @@
 # Kure
 
 [![GoDoc](https://img.shields.io/static/v1?label=godoc&message=reference&color=blue)](https://godoc.org/github.com/GGP1/kure)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/GGP1/kure)](https://pkg.go.dev/github.com/GGP1/kure)
 [![Go Report Card](https://goreportcard.com/badge/github.com/GGP1/kure)](https://goreportcard.com/report/github.com/GGP1/kure)
 
 Kure is a command line password manager written in pure Go.
@@ -37,7 +38,7 @@ This project is not intended for production yet. Although it is secure and relia
 - **Secure:** Every record is encrypted before hitting the database, using a strong [encryption algorithm](#encryption) and the user's master password SHA-512 hash.
 - **Simple and easy to use:** Kure is develop with simplicity in mind, not only to use but to mantain aswell.
 - **Dynamic:** Perfect for people that uses passwords frequently.
-- **Portable:** Can be easily carried around in an external device.
+- **Portable:** Both kure and the database compile to binary files and they can be easily carried around in an external device.
 - **Multiple options**: Kure offers not only storing entries but also: bank cards, crypto wallets and files of any type.
 
 ## Installation
@@ -46,11 +47,11 @@ No releases yet.
 
 ## Configuration
 
-Kure by default will create the database and look for the configuration file in the user home directory, unless the path of it is set in an environment variable called `KURE_CONFIG`. Moreover, for executing a configuration for just one command use `<command> --config path/to/file`.
+Kure by default will create the database and look for the configuration file in the user home directory, unless the path of it is set in an environment variable called `KURE_CONFIG`. Paths inside the configuration file must be **absolute**. Moreover, for executing a configuration for just one command use `<command> --config path/to/file`.
 
-In this file we can also specify where to save our database, modify its name and set a path to a file with **only** the master password (Kure will read all the bytes in file and use that as the master password), allowing the user to use external hardware and create multiple databases with different passwords.
+In this file we can also specify where to save our database, modify its name and set a path to a file with **only** the master password (Kure will read all the bytes in the file and use that as the master password), allowing the user to use external hardware and create multiple databases with different passwords.
 
-Finally, use `kure login` and `kure logout` to set and remove the **master password hash** from the configuration file. If you decide not to store it, you will be asked for it everytime it's needed. The master password is the only non-encrypted information, our focus is on giving you secure ways of handling it. Make sure no one reads the hash as they will be able to decrypt your information.
+Finally, use `kure login` and `kure logout` to set and remove the **master password hash** from the configuration file. If you decide not to store it, you will be asked for it everytime it's required. The master password is the only non-encrypted information, our focus is on giving you secure ways of handling it. Make sure no one reads the hash as they will be able to decrypt your information.
 
 *Formats supported*: JSON, TOML, YAML, HCL, envfile and Java properties.
 
@@ -58,7 +59,7 @@ Finally, use `kure login` and `kure logout` to set and remove the **master passw
 
 ## Usage
 
-For detailed information about each command, please visit [docs/commands](/docs/commands) folder.
+For detailed information about each command, please visit [docs/commands](/docs/commands) or execute `kure <command> -h`.
 
 ```bash
 Usage:
@@ -70,15 +71,15 @@ Available Commands:
   card        Card operations
   clear       Clear clipboard/terminal or both
   config      Read or create the configuration file
-  copy        Copy entry password to clipboard
-  delete      Delete an entry
+  copy        Copy entry credentials to clipboard
   edit        Edit an entry
   file        File operations
   gen         Generate a random password
   help        Help about any command
-  list        List an entry or all the entries
   login       Set master password
   logout      Unset master password
+  ls          List an entry or all the entries
+  rm          Remove an entry from the database
   stats       Show database statistics
   wallet      Wallet operations
 
@@ -91,44 +92,56 @@ Use "kure [command] --help" for more information about a command.
 
 #### Commands flags
 
+Flags might be used with a '=' sign or not. 
+
+Here are three ways to run the same command:
+
+`kure add Github -l 15 -f 1,2,3`
+
+`kure add Github -l=15 -f=1,2,3`
+
+`kure add Github --length 15 --format 1,2,3`
+
 ```
-kure add <name> [-c custom] [-l length] [-f format] [-i include] [-e exclude] [-r repeat]
-kure backup [http] [port] [encrypt] [decrypt] [path]
-kure card
-kure clear [-b both] [-c clipboard] [-t terminal]
-kure config [-c create] [-p path]
-kure copy <name> [-t timeout]
-kure delete <name>
-kure edit <name>
-kure gen [-l length] [-f format] [-i include] [-e exclude] [-r repeat] [-q qr]
-kure help
-kure file
-kure list <name> [-H hide] [-q qr]
-kure login
-kure logout
-kure stats
-kure wallet
+add <name> [-c custom] [-l length] [-f format] [-i include] [-e exclude] [-r repeat]
+backup [http] [port] [encrypt] [decrypt] [path]
+card
+clear [-b both] [-c clipboard] [-t terminal]
+config [-c create] [-p path]
+copy <name> [-t timeout] [-u username]
+edit <name>
+gen [-l length] [-f format] [-i include] [-e exclude] [-r repeat] [-q qr]
+help
+file
+login
+logout
+ls <name> [-H hide] [-q qr] [-f filter]
+rm <name>
+stats
+wallet
 ```
 
 #### Subcommands
 
 [kure add](/docs/commands/add/add.md): phrase.
 
-[kure card](/docs/commands/card/card.md): add, copy, delete, list.
+[kure card](/docs/commands/card/card.md): add, copy, rm, ls.
 
-[kure file](/docs/commands/file/file.md): add, create, delete, list.
+[kure file](/docs/commands/file/file.md): add, create, rename, rm, ls.
 
 [kure gen](/docs/commands/gen/gen.md): phrase.
 
-[kure wallet](/docs/commands/wallet/wallet.md): add, copy, delete, list.
+[kure wallet](/docs/commands/wallet/wallet.md): add, copy, rm, ls.
 
 ## Documentation
 
 ### How are records stored?
 
-[Bolt](https://github.com/etcd-io/bbolt) is a **key-value** store that provides an ordered map, which allows easy access and lookup. All collections of key/value pairs are stored in **buckets** within which all keys must be unique. The keys are stored in byte-sorted order within a bucket.
+Kure's database [Bolt](https://github.com/etcd-io/bbolt) is a **key-value** store that provides an ordered map, which allows easy access and lookup. All collections of key/value pairs are stored in **buckets** within which all keys must be unique. The keys are stored in byte-sorted order within a bucket.
 
-> We use four buckets, one for each type of object. There can't be two records with the same name, Kure will warn you if you are trying to create a record with an already used name.
+> A limitation to have into account: Bolt uses a memory-mapped file so the underlying operating system handles the caching of the data. Typically, the OS will cache as much of the file as it can in memory and will release memory as needed to other processes. This means that Bolt can show very high memory usage when working with large databases. However, this is expected and the OS will release memory as needed.
+
+We use four buckets, one for each type of object. There can't be two records (object or folder) with the same name/key, Kure will warn you if you are trying to create a record with an already used name.
 
 For example, adding an entry with the name "Go" will look like:
 
@@ -137,6 +150,12 @@ For example, adding an entry with the name "Go" will look like:
 **Key**: Go
 
 **Value**: encrypted entry object
+
+### Folders
+
+Creating folders couldn't be simpler, all you have to do is include the folder name in the object name when creating it. For example:
+
+`kure add socialMedia/twitter` will store twitter entry inside the socialMedia folder (spaces between folder names are allowed).
 
 #### Objects
 
@@ -147,30 +166,30 @@ For example, adding an entry with the name "Go" will look like:
 │───────────────│──────────────────│    │───────────────│──────────────────│    │───────────────│──────────────────│    │───────────────│──────────────────│
 │ Name          │ x                │    │ Name          │ x                │    │ Name          │ x                │    │ Name          │ x                │
 │───────────────│──────────────────│    │───────────────│──────────────────│    │───────────────│──────────────────│    │───────────────│──────────────────│
-│ Username      │ x                │    │ Type          │ x                │    │ Content       │ x                │    │ Type          │ x                │
+│ Username      │ x                │    │ Type          │ x                │    │ Filename      │ x                │    │ Type          │ x                │
 │───────────────│──────────────────│    │───────────────│──────────────────│    │───────────────│──────────────────│    │───────────────│──────────────────│
-│ Password      │ x                │    │ Number        │ x                │    │ Type          │ x                │    │ Script Type   │ x                │
+│ Password      │ x                │    │ Number        │ x                │    │ Size          │ x                │    │ Script Type   │ x                │
+│───────────────│──────────────────│    │───────────────│──────────────────│    │───────────────│──────────────────│    │───────────────│──────────────────│
+│ URL           │ x                │    │ CVC           │ x                │    │ Created at    │ x                |    │ Keystore Type │ x                │
 │───────────────│──────────────────│    │───────────────│──────────────────│                                            │───────────────│──────────────────│
-│ URL           │ x                │    │ CVC           │ x                │                                            │ Keystore Type │ x                │
-│───────────────│──────────────────│    │───────────────│──────────────────│                                            │───────────────│──────────────────│
-│ Notes         │ x                │    │ Expire date   │ x                │                                            │ Seed Phrase   │ x                │
+│ Notes         │ x                │    │ Expires       │ x                │                                            │ Seed Phrase   │ x                │
 │───────────────│──────────────────│                                                                                    │───────────────│──────────────────│
 │ Expires       │ x                │                                                                                    │ Public Key    │ x                │
                                                                                                                         │───────────────│──────────────────│
                                                                                                                         │ Private Key   │ x                │
 ```
 
-#### Secret generation
+### Secret generation
 
 For generating secure random secrets we use [Atoll](https://www.github.com/GGP1/atoll) (check repository documentation for further information).
 
-#### Encryption
+### Encryption
 
 Kure hashes user records with **SHA-256** that then are encrypted with Bernstein's **XChaCha20** symmetric cipher along with **Poly1305** message authentication code. Detailed information [here](https://tools.ietf.org/html/draft-nir-cfrg-chacha20-poly1305-02).
 
 Also, a **SHA-512** hash of the user master password is utilized to encrypt records before saving them into the database and for decryption aswell.
 
-#### Backups
+### Backups
 
 The user can opt to serve the database file on a local server or doing an encrypted backup of it.
 
@@ -180,9 +199,11 @@ The user can opt to serve the database file on a local server or doing an encryp
 
 > A secure password is one you can't remember.
 
-While this briefly explains why you should use a password manager, we all need at least one password to encrypt/decrypt all the others, this is why it is crucial that you choose a **strong master password** to make it as hard as possible to guess. You should **avoid** choosing one that contains words that can be found in a dictionary. Forget putting names or dates of birth.
+While this briefly explains why you should use a password manager, we all need at least one password to encrypt/decrypt all the others, this is why it is crucial that you choose a **strong master password** to make it as hard as possible to guess. You should **avoid** choosing words that can be found in a dictionary. Forget putting names or dates of birth.
 
 A good password is a random combination of upper and lower case letters, numbers and special characters. We recommend choosing a password/passphrase consisting of 20 or more characters (the longer, the better).
+
+Make sure you don't forget it as you will lose access to your data.
 
 ### Secret sharing
 
@@ -194,7 +215,7 @@ Here is a simple CLI program written in Go: [Horcrux](https://github.com/jessedu
 
 ### Two-factor authentication
 
-Two-factor authentication is a type, or subset, of multi-factor authentication. It is a method of confirming users' claimed identities by using a combination of **two different factors** (usually 1 and 2): 1. something they know (account credentials), 2. something they have (devices), or 3. something they are. So if an attacker gets access to the secrets, he still need the **constantly refreshing code** to get into the account, making it, not impossible, but much more complicated.
+Two-factor authentication is a type, or subset, of multi-factor authentication. It is a method of confirming users' claimed identities by using a combination of **two different factors** (usually 1 and 2): 1. something you know (account credentials), 2. something you have (devices), or 3. something you are. So if an attacker gets access to the secrets, he will still need the **constantly refreshing code** to get into the account, making it, not impossible, but much more complicated.
 
 ### Double-blind passwords
 

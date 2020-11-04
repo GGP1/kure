@@ -1,6 +1,6 @@
 ## Use
 
-`backup [http | encrypt | decrypt] [port] [path]`
+![kure backup](https://user-images.githubusercontent.com/51374959/98058564-d7508880-1e23-11eb-9407-c323d01f1860.png)
 
 ## Description
 

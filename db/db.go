@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/GGP1/kure/crypt"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -105,6 +107,10 @@ func Stats() (map[string]int, error) {
 
 // WriteTo writes the entire database to a writer.
 func WriteTo(w io.Writer) error {
+	if err := RequirePassword(); err != nil {
+		return err
+	}
+
 	return db.View(func(tx *bolt.Tx) error {
 		_, err := tx.WriteTo(w)
 		if err != nil {
@@ -112,4 +118,63 @@ func WriteTo(w io.Writer) error {
 		}
 		return nil
 	})
+}
+
+// RequirePassword verifies that the person that is trying to execute
+// a command is effectively the owner.
+func RequirePassword() error {
+	masterPassword := viper.GetString("user.password")
+	password, err := crypt.AskPassword(false)
+	if err != nil {
+		return err
+	}
+
+	if password != masterPassword {
+		return errors.New("invalid password")
+	}
+
+	// Verify that the password can decrypt existing records
+	stats, err := Stats()
+	if err != nil {
+		return err
+	}
+
+	nCards := stats["cards"]
+	nEntries := stats["entries"]
+	nFiles := stats["files"]
+	nWallets := stats["wallets"]
+
+	if nCards > 0 {
+		_, err := ListCards()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if nEntries > 0 {
+		_, err := ListEntries()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if nFiles > 0 {
+		_, err := ListFiles()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if nWallets > 0 {
+		_, err := ListWallets()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	return errors.New("there are no records in this database")
 }

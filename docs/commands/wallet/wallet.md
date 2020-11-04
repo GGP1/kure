@@ -1,6 +1,6 @@
 ## Use
 
-`wallet`
+![kure wallet](https://user-images.githubusercontent.com/51374959/98058976-bfc5cf80-1e24-11eb-9c31-78e6b453b72e.png)
 
 ## Description
 
@@ -16,6 +16,6 @@ No flags.
 
 - kure wallet **copy**: Copy wallet public key.
 
-- kure wallet **delete**: Delete a wallet from the database.
-
 - kure wallet **list**: List a wallet or all the wallets from the database.
+
+- kure wallet **rm**: Remove a wallet from the database.

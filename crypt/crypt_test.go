@@ -2,24 +2,21 @@ package crypt
 
 import (
 	"testing"
-
-	"github.com/spf13/viper"
 )
 
 func TestCrypt(t *testing.T) {
 	testCases := []struct {
-		data string
+		data     string
+		password string
 	}{
-		{"kure cli password manager"},
-		{"encrypting and decrypting"},
-		{"chacha20-poly1305"},
-		{"sha-256"},
+		{"kure cli password manager", "test1"},
+		{"encrypting and decrypting", "test2"},
+		{"chacha20-poly1305", "test3"},
+		{"sha-256", "test4"},
 	}
 
 	for _, tC := range testCases {
-		viper.Set("user.password", "testingCrypt")
-
-		ciphertext, err := Encrypt([]byte(tC.data))
+		ciphertext, err := EncryptX([]byte(tC.data), []byte(tC.password))
 		if err != nil {
 			t.Errorf("Failed encrypting data: %v", err)
 		}
@@ -28,7 +25,7 @@ func TestCrypt(t *testing.T) {
 			t.Error("Test failed, data hasn't been encrypted correctly")
 		}
 
-		plaintext, err := Decrypt(ciphertext)
+		plaintext, err := DecryptX(ciphertext, []byte(tC.password))
 		if err != nil {
 			t.Errorf("Failed decrypting data: %v", err)
 		}

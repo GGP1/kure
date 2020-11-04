@@ -8,14 +8,13 @@ import (
 	"time"
 
 	"github.com/GGP1/kure/db"
-	"github.com/GGP1/kure/model/card"
+	"github.com/GGP1/kure/pb"
+	"github.com/GGP1/kure/tree"
 
 	"github.com/atotto/clipboard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
-
-var field string
 
 var cardCmd = &cobra.Command{
 	Use:   "card",
@@ -40,12 +39,12 @@ var addCard = &cobra.Command{
 			fatal(err)
 		}
 
-		fmt.Print("\nSucessfully created the card.")
+		fmt.Printf("\nSuccessfully created \"%s\" card.\n", name)
 	},
 }
 
 var copyCard = &cobra.Command{
-	Use:   "copy <name> [-t timeout] [field]",
+	Use:   "copy <name> [-t timeout] [-f field]",
 	Short: "Copy card number or CVC",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := strings.Join(args, " ")
@@ -58,16 +57,20 @@ var copyCard = &cobra.Command{
 			fatal(err)
 		}
 
-		field := strings.ToLower(field)
+		field = strings.ToLower(field)
 
-		if field == "number" {
-			if err := clipboard.WriteAll(card.Number); err != nil {
-				fatal(errors.New("failed writing to the clipboard"))
-			}
-		} else if field == "code" {
-			if err := clipboard.WriteAll(card.CVC); err != nil {
-				fatal(errors.New("failed writing to the clipboard"))
-			}
+		var f string
+		switch field {
+		case "number":
+			f = card.Number
+		case "code":
+			f = card.CVC
+		default:
+			fatalf("invalid card field, use \"number\" or \"code\"")
+		}
+
+		if err := clipboard.WriteAll(f); err != nil {
+			fatal(errWritingClipboard)
 		}
 
 		if timeout > 0 {
@@ -78,9 +81,54 @@ var copyCard = &cobra.Command{
 	},
 }
 
-var deleteCard = &cobra.Command{
-	Use:   "delete <name>",
-	Short: "Delete a card from the database",
+var lsCard = &cobra.Command{
+	Use:   "ls <name> [-f filter]",
+	Short: "List cards",
+	Run: func(cmd *cobra.Command, args []string) {
+		name := strings.Join(args, " ")
+
+		if name == "" {
+			cards, err := db.ListCards()
+			if err != nil {
+				fatal(err)
+			}
+
+			paths := make([]string, len(cards))
+
+			for i, card := range cards {
+				paths[i] = card.Name
+			}
+
+			tree.Print(paths)
+			return
+		}
+
+		if filter {
+			cards, err := db.CardsByName(name)
+			if err != nil {
+				fatal(err)
+			}
+
+			for _, card := range cards {
+				fmt.Print("\n")
+				printCard(card)
+			}
+			return
+		}
+
+		card, err := db.GetCard(name)
+		if err != nil {
+			fatal(err)
+		}
+
+		fmt.Print("\n")
+		printCard(card)
+	},
+}
+
+var rmCard = &cobra.Command{
+	Use:   "rm <name>",
+	Short: "Remove a card from the database",
 	Run: func(cmd *cobra.Command, args []string) {
 		name := strings.Join(args, " ")
 		if name == "" {
@@ -92,48 +140,12 @@ var deleteCard = &cobra.Command{
 			fatalf("%s card does not exist", name)
 		}
 
-		scanner := bufio.NewScanner(os.Stdin)
-		fmt.Print("Are you sure you want to proceed? [y/n]: ")
-
-		scanner.Scan()
-		text := scanner.Text()
-		input := strings.ToLower(text)
-
-		if strings.Contains(input, "y") || strings.Contains(input, "yes") {
-			if err := db.DeleteCard(name); err != nil {
+		if proceed() {
+			if err := db.RemoveCard(name); err != nil {
 				fatal(err)
 			}
 
-			fmt.Printf("\nSuccessfully deleted %s card.", name)
-		}
-	},
-}
-
-var listCard = &cobra.Command{
-	Use:   "list <name>",
-	Short: "List a card or all the cards from the database",
-	Run: func(cmd *cobra.Command, args []string) {
-		name := strings.Join(args, " ")
-
-		if name != "" {
-			card, err := db.GetCard(name)
-			if err != nil {
-				fatal(err)
-			}
-
-			fmt.Print("\n")
-			printCard(card)
-			return
-		}
-
-		cards, err := db.ListCards()
-		if err != nil {
-			fatal(err)
-		}
-
-		for _, card := range cards {
-			fmt.Print("\n")
-			printCard(card)
+			fmt.Printf("\nSuccessfully removed \"%s\" card.\n", name)
 		}
 	},
 }
@@ -143,74 +155,54 @@ func init() {
 
 	cardCmd.AddCommand(addCard)
 	cardCmd.AddCommand(copyCard)
-	cardCmd.AddCommand(deleteCard)
-	cardCmd.AddCommand(listCard)
+	cardCmd.AddCommand(lsCard)
+	cardCmd.AddCommand(rmCard)
 
 	copyCard.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
 	copyCard.Flags().StringVarP(&field, "field", "f", "number", "choose which field to copy")
+
+	lsCard.Flags().BoolVarP(&filter, "filter", "f", false, "filter cards")
 }
 
-func cardInput(name string) (*card.Card, error) {
-	var cType, expireDate, num, cardVerCode string
+func cardInput(name string) (*pb.Card, error) {
+	var cType, expDate, num, CVC string
 
-	if len(name) > 43 {
+	if !strings.Contains(name, "/") && len(name) > 43 {
 		return nil, errors.New("card name must contain 43 letters or less")
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 
 	scan(scanner, "Type", &cType)
-	scan(scanner, "Expire date", &expireDate)
+	scan(scanner, "Expire date", &expDate)
 	scan(scanner, "Number", &num)
-	scan(scanner, "CVC", &cardVerCode)
+	scan(scanner, "CVC", &CVC)
 
-	name = strings.TrimSpace(strings.ToLower(name))
+	name = strings.ToLower(name)
 
-	card := card.New(name, cType, expireDate, num, cardVerCode)
+	card := &pb.Card{
+		Name:       name,
+		Type:       cType,
+		ExpireDate: expDate,
+		Number:     num,
+		CVC:        CVC,
+	}
 
 	return card, nil
 }
 
-func printCard(c *card.Card) {
-	c.Name = strings.Title(c.Name)
+func printCard(c *pb.Card) {
+	printObjectName(c.Name)
 
 	if hide {
 		c.CVC = "••••"
 	}
 
-	dashes := 43
-	halfBar := ((dashes - len(c.Name)) / 2) - 1
-
-	fmt.Print("+")
-	for i := 0; i < halfBar; i++ {
-		fmt.Print("─")
-	}
-	fmt.Printf(" %s ", c.Name)
-
-	if (len(c.Name) % 2) == 0 {
-		halfBar++
-	}
-
-	for i := 0; i < halfBar; i++ {
-		fmt.Print("─")
-	}
-	fmt.Print(">\n")
-
-	if c.Type != "" {
-		fmt.Printf("│ Type       │ %s\n", c.Type)
-	}
-
-	if c.Number != "" {
-		fmt.Printf("│ Number     │ %s\n", c.Number)
-	}
-
-	if c.CVC != "" {
-		fmt.Printf("│ CVC        │ %s\n", c.CVC)
-	}
-
-	if c.ExpireDate != "" {
-		fmt.Printf("│ Expires    │ %s\n", c.ExpireDate)
-	}
+	fmt.Printf(`│ Type       │ %s
+│ Number     │ %s
+│ CVC        │ %s
+│ Expires    │ %s
+`, c.Type, c.Number, c.CVC, c.ExpireDate)
 
 	fmt.Println("+────────────+──────────────────────────────>")
 }

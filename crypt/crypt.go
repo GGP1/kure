@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -17,9 +16,9 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-// Encrypt ciphers data with the given passphrase.
+// Encrypt ciphers data.
 func Encrypt(data []byte) ([]byte, error) {
-	password, err := getMasterPassword()
+	password, err := GetMasterPassword()
 	if err != nil {
 		return nil, err
 	}
@@ -46,9 +45,9 @@ func Encrypt(data []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-// Decrypt deciphers data with the given passphrase.
+// Decrypt deciphers data.
 func Decrypt(data []byte) ([]byte, error) {
-	password, err := getMasterPassword()
+	password, err := GetMasterPassword()
 	if err != nil {
 		return nil, err
 	}
@@ -79,19 +78,98 @@ func Decrypt(data []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-// Create a SHA256 hash (256 bits) with the key provided.
-func createHash(key []byte) ([]byte, error) {
-	h := sha256.New()
-
-	_, err := h.Write(key)
+// EncryptX is like Encrypt but takes a password.
+// Useful for using it inside a loop.
+func EncryptX(data, password []byte) ([]byte, error) {
+	hash, err := createHash(password)
 	if err != nil {
-		return nil, errors.Wrap(err, "create sha-256 hash")
+		return nil, err
 	}
 
-	return h.Sum(nil), nil
+	AEAD, err := chacha20poly1305.NewX(hash)
+	if err != nil {
+		return nil, errors.Wrap(err, "creating AEAD")
+	}
+
+	nonce := make([]byte, AEAD.NonceSize())
+
+	_, err = io.ReadFull(rand.Reader, nonce)
+	if err != nil {
+		return nil, errors.Wrap(err, "reading nonce")
+	}
+
+	ciphertext := AEAD.Seal(nonce, nonce, data, nil)
+
+	return ciphertext, nil
 }
 
-func getMasterPassword() ([]byte, error) {
+// DecryptX is like Encrypt but takes a password.
+// Useful for using it inside a loop.
+func DecryptX(data, password []byte) ([]byte, error) {
+	hash, err := createHash(password)
+	if err != nil {
+		return nil, err
+	}
+
+	AEAD, err := chacha20poly1305.NewX(hash)
+	if err != nil {
+		return nil, errors.Wrap(err, "creating AEAD")
+	}
+
+	nonceSize := AEAD.NonceSize()
+
+	if len(data) < nonceSize {
+		return nil, errors.New("encrypted data is too short")
+	}
+
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+
+	plaintext, err := AEAD.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, errors.New("invalid password")
+	}
+
+	return plaintext, nil
+}
+
+// AskPassword returns the hash of the input password.
+func AskPassword(confirm bool) (string, error) {
+	fmt.Print("Enter master password: ")
+	password, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", errors.Wrap(err, "reading password")
+	}
+	fmt.Print("\n")
+
+	if confirm {
+		fmt.Print("\nRetype to verify: ")
+		password2, err := terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			return "", errors.Wrap(err, "reading password")
+		}
+		fmt.Print("\n")
+
+		if bytes.Compare(bytes.TrimSpace(password), bytes.TrimSpace(password2)) != 0 {
+			return "", errors.New("passwords must be equal")
+		}
+	}
+
+	password = bytes.TrimSpace(password)
+	h := sha512.New()
+
+	_, err = h.Write(password)
+	if err != nil {
+		return "", errors.Wrap(err, "password hash")
+	}
+
+	p := fmt.Sprintf("%x", h.Sum(nil))
+
+	return p, nil
+}
+
+// GetMasterPassword takes the user master password from the config
+// or requests it.
+func GetMasterPassword() ([]byte, error) {
 	password := viper.GetString("user.password")
 	if password != "" {
 		return []byte(password), nil
@@ -99,45 +177,39 @@ func getMasterPassword() ([]byte, error) {
 
 	filename := viper.GetString("user.password_path")
 	if filename != "" {
-		mPassword, err := ioutil.ReadFile(filename)
+		p, err := ioutil.ReadFile(filename)
 		if err != nil {
 			return nil, errors.Wrap(err, "reading file")
 		}
 
-		p := strings.TrimSpace(string(mPassword))
+		p = bytes.TrimSpace(p)
 		h := sha512.New()
 
-		_, err = h.Write([]byte(p))
+		_, err = h.Write(p)
 		if err != nil {
 			return nil, errors.Wrap(err, "password hash")
 		}
 
-		return h.Sum(nil), nil
+		pwd := fmt.Sprintf("%x", h.Sum(nil))
+
+		return []byte(pwd), nil
 	}
 
-	fmt.Print("Enter master password: ")
-	masterPwd, err := terminal.ReadPassword(int(syscall.Stdin))
+	pwd, err := AskPassword(false)
 	if err != nil {
-		return nil, errors.Wrap(err, "reading password")
+		return nil, err
 	}
 
-	fmt.Print("\nConfirm master password: ")
-	masterPwd2, err := terminal.ReadPassword(int(syscall.Stdin))
+	return []byte(pwd), nil
+}
+
+// Create a SHA256 hash (256 bits) with the key provided.
+func createHash(key []byte) ([]byte, error) {
+	h := sha256.New()
+
+	_, err := h.Write(key)
 	if err != nil {
-		return nil, errors.Wrap(err, "reading confirmation password")
-	}
-
-	if bytes.Compare(masterPwd, masterPwd2) != 0 {
-		fmt.Print("\n")
-		return nil, errors.New("passwords must be equal")
-	}
-
-	p := strings.TrimSpace(string(masterPwd))
-	h := sha512.New()
-
-	_, err = h.Write([]byte(p))
-	if err != nil {
-		return nil, errors.Wrap(err, "password hash")
+		return nil, errors.Wrap(err, "create sha-256 hash")
 	}
 
 	return h.Sum(nil), nil

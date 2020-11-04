@@ -13,10 +13,10 @@ var logoutCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		viper.Set("user.password", "")
 
-		filename := getConfigPath()
+		path := getConfigPath()
 
-		if err := viper.WriteConfigAs(filename); err != nil {
-			fatalf(errCreatingConfig, err)
+		if err := viper.WriteConfigAs(path); err != nil {
+			fatalf("failed creating config file: %v", err)
 		}
 
 		fmt.Println("You logged out")

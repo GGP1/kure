@@ -1,6 +1,6 @@
 ## Use
 
-`create <name> [-p path]`
+![kure file create](https://user-images.githubusercontent.com/51374959/98058769-48903b80-1e24-11eb-9c1b-3098752f5d05.png)
 
 ## Description
 

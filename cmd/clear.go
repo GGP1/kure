@@ -9,12 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var both, clip, term bool
-
 var clearCmd = &cobra.Command{
 	Use:   "clear [-b both] [-c clipboard] [-t terminal]",
 	Short: "Clear clipboard/terminal or both",
-	Long: `Manually clean clipboard, terminal (and its history) or both of them.
+	Long: `Manually clean clipboard, terminal (and its history) or both of them (kure clears all by default).
 Windows users must clear the history manually with ALT+F7, executing "cmd" command 
 or by re-opening the cmd (as it saves session history only).`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -29,7 +27,7 @@ or by re-opening the cmd (as it saves session history only).`,
 
 		if clip {
 			if err := clipboard.WriteAll(""); err != nil {
-				fatal(err)
+				fatalf("failed clearing clipboard: %v", err)
 			}
 		}
 
@@ -54,6 +52,7 @@ or by re-opening the cmd (as it saves session history only).`,
 
 func init() {
 	rootCmd.AddCommand(clearCmd)
+
 	clearCmd.Flags().BoolVarP(&both, "both", "b", true, "clear clipboard, terminal and history")
 	clearCmd.Flags().BoolVarP(&clip, "clipboard", "c", false, "clear clipboard")
 	clearCmd.Flags().BoolVarP(&term, "terminal", "t", false, "clear terminal")

@@ -1,6 +1,6 @@
 ## Use
 
-`add <name> [-p path]`
+![kure file add](https://user-images.githubusercontent.com/51374959/98058767-475f0e80-1e24-11eb-8b08-c6c744fe8e11.png)
 
 ## Description
 
@@ -10,9 +10,11 @@ The user can specify either a path to a file or to a folder, in case it points t
 
 ## Flags 
 
-|  Name     |  Shorthand    |     Type      |    Default    |            Usage             |
-|-----------|---------------|---------------|---------------|------------------------------|
-| path      | p             | string        | ""            | Path to the file file       |
+|  Name     |  Shorthand    |     Type      |    Default    |                               Usage                                   |
+|-----------|---------------|---------------|---------------|-----------------------------------------------------------------------|
+| path      | p             | string        | ""            | Path to the file/folder                                               |
+| semaphore | s             | uint          | 25            | Maximum number of goroutines to run when adding files to the database |
+| ignore    | i             | bool          | false         | Ignore subfolders                                                     | 
 
 ### Examples
 
@@ -20,3 +22,9 @@ Add a file:
 ```
 kure file add example -p path/to/file
 ```
+
+Add all the files into a folder:
+```
+kure file add group -p path/to/folder
+```
+The first file will be stored as group-1, the second group-2 and so on.

@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option go_package = "github.com/GGP1/kure/model/wallet";
+option go_package = "github.com/GGP1/kure/pb";
 
-package wallet;
+package pb;
 
 message Wallet {
     string name = 1;

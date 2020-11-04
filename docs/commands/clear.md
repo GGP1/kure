@@ -1,6 +1,6 @@
 ## Use
 
-`clear [-b both] [-c clipboard] [-t terminal]`
+![kure clear](https://user-images.githubusercontent.com/51374959/98058592-e3d4e100-1e23-11eb-9186-acf7cf3c5e05.png)
 
 ## Description
 

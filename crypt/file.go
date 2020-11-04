@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// EncryptedFile creates a file with XChacha20Poly1305 encryption in the specified path.
-func EncryptedFile(data []byte, filename string) error {
+// CreateEncFile creates a file with XChacha20Poly1305 encryption in the specified path.
+func CreateEncFile(data []byte, filename string) error {
 	encrypted, err := Encrypt(data)
 	if err != nil {
 		return err
@@ -28,8 +28,8 @@ func EncryptedFile(data []byte, filename string) error {
 	return nil
 }
 
-// DecryptFile takes an encrypted file and decrypts it.
-func DecryptFile(filename string) ([]byte, error) {
+// DecryptEncFile takes an encrypted file and decrypts it.
+func DecryptEncFile(filename string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed reading file on path %s", filename)
