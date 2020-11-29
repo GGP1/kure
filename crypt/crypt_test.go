@@ -2,10 +2,13 @@ package crypt
 
 import (
 	"testing"
+
+	"github.com/awnumar/memguard"
+	"github.com/spf13/viper"
 )
 
 func TestCrypt(t *testing.T) {
-	testCases := []struct {
+	cases := []struct {
 		data     string
 		password string
 	}{
@@ -15,23 +18,48 @@ func TestCrypt(t *testing.T) {
 		{"sha-256", "test4"},
 	}
 
-	for _, tC := range testCases {
-		ciphertext, err := EncryptX([]byte(tC.data), []byte(tC.password))
+	for _, tc := range cases {
+		viper.Reset()
+		password := memguard.NewBufferFromBytes([]byte(tc.password))
+		viper.Set("user.password", password.Seal())
+
+		ciphertext, err := Encrypt([]byte(tc.data))
 		if err != nil {
-			t.Errorf("Failed encrypting data: %v", err)
+			t.Fatalf("Encrypt() failed: %v", err)
 		}
 
-		if tC.data == string(ciphertext) {
-			t.Error("Test failed, data hasn't been encrypted correctly")
+		if tc.data == string(ciphertext) {
+			t.Error("Data hasn't been encrypted")
 		}
 
-		plaintext, err := DecryptX(ciphertext, []byte(tC.password))
+		plaintext, err := Decrypt(ciphertext)
 		if err != nil {
-			t.Errorf("Failed decrypting data: %v", err)
+			t.Fatalf("Decrypt() failed: %v", err)
 		}
 
-		if tC.data != string(plaintext) {
-			t.Errorf("Test failed, expected: %s, got: %s", tC.data, string(plaintext))
+		if tc.data != string(plaintext) {
+			t.Errorf("Expected: %q, got: %q", tc.data, string(plaintext))
 		}
 	}
+}
+
+func TestInvalidPasswordEncrypt(t *testing.T) {
+	viper.Reset()
+
+	_, err := Encrypt([]byte("test_fail"))
+	if err == nil {
+		t.Error("Expected Encrypt() to fail but got nil")
+	}
+}
+
+func TestInvalidPasswordDecrypt(t *testing.T) {
+	viper.Reset()
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Expected Decrypt() to fail but got nil")
+		}
+	}()
+
+	Decrypt([]byte("test_fail"))
 }

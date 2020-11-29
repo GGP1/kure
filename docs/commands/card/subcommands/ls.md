@@ -1,6 +1,6 @@
 ## Use 
 
-![kure card ls](https://user-images.githubusercontent.com/51374959/98058638-f8b17480-1e23-11eb-865e-12be8010d0b7.png)
+`kure card ls <name> [-f filter] [-H hide]`
 
 ## Description
 
@@ -11,17 +11,18 @@ List cards.
 |  Name     | Shorthand |     Type      |    Default    |       Usage        |
 |-----------|-----------|---------------|---------------|--------------------|
 | filter    | f         | bool          | false         | Filter cards       |
+| hide      | H         | bool          | false         | Hide card CVC      |
 
 ### Examples
 
-List a specific card:
+List a specific card hiding CVC:
 ```
-kure card ls Sample
+kure card ls sample -H
 ```
 
 Filter among cards:
 ```
-kure file ls debit -f
+kure file ls ple -f
 ```
 
 List all cards;

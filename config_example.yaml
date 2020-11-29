@@ -1,18 +1,35 @@
 database:
-  path: absolute/path/to/file
+  path: absolute/path/to/folder
   name: kure
 
-user:
-  password: your-password-hash     # OR password_path: absolute/path/to/file
-
 entry:
-  format: 
+  format:
   - 1
   - 2
   - 3
   - 4
   - 5
+  - 6
   repeat: true
 
 http:
   port: 4000
+
+session:
+  prefix: kure:~$
+  timeout: 10m
+
+# In this case, each iteration consumes 64 MB of RAM and repeats the process 50 times.
+#
+# Records encrypted using certain values won't be decryptable if they are changed later,
+# this parameters should be set only once when starting to use Kure and never modified. Hovewer, we
+# may include a command to allow re-encrypting records with new ones. 
+argon2id:
+# Amount of memory allowed by algorithm. This value, evidently, depends on the application and the
+# environment. There is no "insecure" value for this parameter, though clearly the more memory the
+# better. The value is represented in kibibytes, 1 kibibyte = 1024 bytes. Default is 1048576 kibibytes (1024 MB).
+  memory: 1048576
+# Number of passes over the memory. The running time depends linearly on this parameter. We expect
+# that the user chooses this number according to the time constraints on the application. Again, there is
+# no "insecure value". Default is 1.
+  iterations: 1

@@ -1,6 +1,6 @@
 ## Use
 
-![kure card](https://user-images.githubusercontent.com/51374959/98058629-f6e7b100-1e23-11eb-9c3c-e7e8c73cbac4.png)
+`kure card <subcommand>`
 
 ## Description
 
@@ -16,6 +16,6 @@ No flags.
 
 - kure card **copy**: Copy card number or cvc.
 
-- kure card **list**: List a card or all the cards from the database.
+- kure card **list**: List cards.
 
 - kure card **rm**: Remove a card from the database.

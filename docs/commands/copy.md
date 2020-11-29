@@ -1,6 +1,8 @@
 ## Use
 
-![kure copy](https://user-images.githubusercontent.com/51374959/98058727-2991a980-1e24-11eb-8371-41d5838748e5.png)
+`kure copy <name> [-t timeout] [-u username]`
+
+*Aliases*: copy, cp.
 
 ## Description
 
@@ -8,10 +10,10 @@ Copy entry credentials to clipboard.
 
 ## Flags
 
-|  Name     |  Shorthand    |     Type      |    Default    |            Usage             |
-|-----------|---------------|---------------|---------------|------------------------------|
-| timeout   | t             | duration      | 0             | Clipboard cleaning timeout   |
-| username  | u             | bool          | false         | Copy entry username          |
+|  Name     | Shorthand |     Type      |    Default    |            Usage             |
+|-----------|-----------|---------------|---------------|------------------------------|
+| timeout   | t         | duration      | 0             | Clipboard cleaning timeout   |
+| username  | u         | bool          | false         | Copy entry username          |
 
 ### Timeout units
 

@@ -1,10 +1,12 @@
 ## Use
 
-![kure add phrase](https://user-images.githubusercontent.com/51374959/98047230-5933b800-1e0a-11eb-8c88-a8541a25f423.png)
+`kure phrase <name> [-l length] [-s separator] [-i include] [-e exclude] [list]`
+
+*Aliases*: phrase, p.
 
 ## Description
 
-Add a new entry to the database using a passphrase instead of a password.
+Add an entry using a passphrase instead of a password.
 
 ## Flags
 
@@ -12,9 +14,9 @@ Add a new entry to the database using a passphrase instead of a password.
 |-----------|-----------|---------------|---------------|-----------------------------------------------------------------------|
 | length    | l         | uint64        | 1             | Passphrase length                                                     |
 | separator | s         | string        | " " (space)   | Set the character that separates each word                            |
-| include   | i         | []string      | nil           | Characters to include in the password (except 2 byte ¡¿° chars)       |
+| include   | i         | []string      | nil           | Characters to include in the password                                 |
 | exclude   | e         | []string      | nil           | Characters to exclude from the password                               |
-| list      | l         | string        | ""            | Choose passphrase generating method (NoList, WordList, SyllableList)  |
+| list      | l         | string        | "NoList"      | Choose passphrase generating method (NoList, WordList, SyllableList)  |
 
 ### Expiration
 
@@ -24,7 +26,7 @@ Valid time formats are:
 
 • US: 02/01/2006 or 02-01-2006.
 
-"0s", "0" or "" will be considered as if the entry never expires.
+"never", "", " ", "0", "0s" will be considered as if the entry never expires.
 
 ### Examples
 
@@ -33,12 +35,12 @@ Passphrase without a list (default):
 kure add phrase Sample -l 5 -s / -i atoll, kure
 ```
 
-Passphrase word list:
+Passphrase using a word list:
 ```
 kure add phrase Sample -l 7 --list WordList
 ```
 
-Passphrase syllable list:
+Passphrase using a syllable list:
 ```
 kure add phrase Sample -l 12 -s = --list SyllableList
 ```

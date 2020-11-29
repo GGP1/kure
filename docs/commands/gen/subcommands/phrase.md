@@ -1,6 +1,8 @@
 ## Use
 
-![kure gen phrase](https://user-images.githubusercontent.com/51374959/98058855-79707080-1e24-11eb-9da2-ce4f1ad2edf5.png)
+`kure gen phrase [-l length] [-s separator] [-i include] [-e exclude] [list] [-q qr]`
+
+*Aliases*: phrase, p.
 
 ## Description
 
@@ -12,9 +14,9 @@ Generate a random passphrase.
 |-----------|-----------|---------------|---------------|-----------------------------------------------------------------------|
 | length    | l         | uint64        | 0             | Passphrase length                                                     |
 | separator | s         | string        | " " (space)   | Set the character that separates each word                            |
-| include   | i         | []string      | nil           | Words to include in the passphrase (except 2 byte ¡¿° chars)          |
+| include   | i         | []string      | nil           | Words to include in the passphrase                                    |
 | exclude   | e         | []string      | nil           | Words to exclude from the passphrase                                  |
-| list      |           | string        | ""            | Choose passphrase generating method (NoList, WordList, SyllableList)  |
+| list      |           | string        | "NoList"      | Choose passphrase generating method (NoList, WordList, SyllableList)  |
 | qr        | q         | bool          | false         | Create an image with the password QR code on the user home directory  |
 
 ### Examples

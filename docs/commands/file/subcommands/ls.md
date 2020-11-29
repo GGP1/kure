@@ -1,6 +1,6 @@
 ## Use
 
-![kure file ls](https://user-images.githubusercontent.com/51374959/98058770-4928d200-1e24-11eb-88cd-3f40b7c5d21f.png)
+`kure file ls <name> [-f filter]`
 
 ## Description
 

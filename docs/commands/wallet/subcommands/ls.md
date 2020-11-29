@@ -1,6 +1,6 @@
 ## Use 
 
-![kure wallet ls](https://user-images.githubusercontent.com/51374959/98058971-be94a280-1e24-11eb-8450-5c49fd0e9dee.png)
+`kure wallet ls <name> [-f filter] [-H hide]`
 
 ## Description
 
@@ -8,15 +8,17 @@ List wallets.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |       Usage        |
-|-----------|-----------|---------------|---------------|--------------------|
-| filter    | f         | bool          | false         | Filter wallets     |
+|  Name     | Shorthand |     Type      |    Default    |                 Usage                     |
+|-----------|-----------|---------------|---------------|-------------------------------------------|
+| filter    | f         | bool          | false         | Filter wallets                            |
+| hide      | H         | bool          | false         | Hide wallet seed phrase and private key   |
+
 
 ### Examples
 
-List a specific wallet:
+List a specific wallet hiding critical information:
 ```
-kure wallet ls Satoshi
+kure wallet ls Satoshi -H
 ```
 
 Filter among wallets:

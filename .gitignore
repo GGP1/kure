@@ -1,4 +1,6 @@
 *.db
+*.out
+*.exe
 config.yaml
 config.yml
 

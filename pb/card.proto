@@ -11,3 +11,7 @@ message Card {
     string CVC = 4;
     string expireDate = 5;
 }
+
+message CardList {
+    string name = 1;
+}

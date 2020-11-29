@@ -1,6 +1,6 @@
 ## Use
 
-![kure clear](https://user-images.githubusercontent.com/51374959/98058592-e3d4e100-1e23-11eb-9186-acf7cf3c5e05.png)
+`kure clear [-b both] [-c clipboard] [-t terminal]`
 
 ## Description
 
@@ -9,11 +9,11 @@ Windows users must clear the history manually with ALT+F7, executing "cmd" comma
 
 ## Flags 
 
-|  Name     |  Shorthand    |     Type      |    Default    |            Usage                  |
-|-----------|---------------|---------------|---------------|-----------------------------------|
-| both      | b             | bool          | true          | Clear both clipboard and terminal |
-| clipboard | c             | bool          | false         | Clear clipboard                   |
-| terminal  | t             | bool          | false         | Clear terminal                    |
+|  Name     | Shorthand |     Type      |    Default    |            Usage                  |
+|-----------|-----------|---------------|---------------|-----------------------------------|
+| both      | b         | bool          | true          | Clear both clipboard and terminal |
+| clipboard | c         | bool          | false         | Clear clipboard                   |
+| terminal  | t         | bool          | false         | Clear terminal                    |
 
 ### Examples
 

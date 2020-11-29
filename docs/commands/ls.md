@@ -1,6 +1,6 @@
 ## Use
 
-![kure ls](https://user-images.githubusercontent.com/51374959/98058909-9d33b680-1e24-11eb-92ca-8221561310d2.png)
+`kure ls <name> [-f filter] [-H hide] [-q qr]`
 
 ## Description
 
@@ -10,9 +10,9 @@ List entries.
 
 |  Name     | Shorthand |     Type      |    Default    |                                     Usage                                            |
 |-----------|-----------|---------------|---------------|--------------------------------------------------------------------------------------|
+| filter    | f         | bool          | false         | Filter entries                                                                       |
 | hide      | H         | bool          | false         | Hide entries passwords                                                               |
 | qr        | q         | bool          | false         | Show the password QR code on the terminal (non-available when listing all entries)   |
-| filter    | f         | bool          | false         | Filter entries                                                                       |
 
 
 ### Examples

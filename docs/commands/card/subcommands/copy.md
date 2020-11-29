@@ -1,6 +1,8 @@
 ## Use 
 
-![kure card copy](https://user-images.githubusercontent.com/51374959/98058636-f818de00-1e23-11eb-940f-b637cdb8c96c.png)
+`kure card copy <name> [-f field] [-t timeout]`
+
+*Aliases*: copy, c.
 
 ## Description
 
@@ -8,10 +10,10 @@ Copy card number or cvc.
 
 ## Flags
 
-|  Name     |  Shorthand    |     Type      |    Default    |                     Usage                     |
-|-----------|---------------|---------------|---------------|-----------------------------------------------|
-| timeout   | t             | duration      | 0             | Set a time until the clipboard is cleaned     |
-| field     | f             | string        | "number"      | Set which card field to copy                  |
+|  Name     | Shorthand |     Type      |    Default    |                     Usage                     |
+|-----------|-----------|---------------|---------------|-----------------------------------------------|
+| field     | f         | string        | "number"      | Set which card field to copy                  |
+| timeout   | t         | duration      | 0             | Set a time until the clipboard is cleaned     |
 
 ### Timeout units
 

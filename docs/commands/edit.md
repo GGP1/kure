@@ -1,19 +1,30 @@
 ## Use
 
-![kure edit](https://user-images.githubusercontent.com/51374959/98058742-37472f00-1e24-11eb-8ba0-78d475686255.png)
+`kure edit <name> [-n name]`
 
 ## Description
 
 Edit entry fields.
 	
 "-" = Clear field.
+
 "" (nothing) = Do not modify field.
 
 ## Flags 
 
-|  Name     |  Shorthand    |     Type      |    Default    |            Usage             |
-|-----------|---------------|---------------|---------------|------------------------------|
-| password  | p             | bool          | false         | Edit entry password (only)   |
+|  Name     | Shorthand |     Type      |    Default    |           Usage            |
+|-----------|-----------|---------------|---------------|----------------------------|
+| name      | n         | bool          | false         | Edit entry name as well    |
+
+### Expires
+
+Valid time formats are: 
+
+• ISO: 2006/01/02 or 2006-01-02.
+
+• US: 02/01/2006 or 02-01-2006.
+
+"never" and "" will be considered as if the entry never expires.
 
 ### Examples
 

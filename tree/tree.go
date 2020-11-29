@@ -51,13 +51,15 @@ func build(root *Folder, path string) {
 		return
 	}
 
+	// In case we want to modify parts[1:] slice in the future we should
+	// use copy() to avoid underlying array unexpected behaviour
 	parts := strings.Split(path, "/")
 
 	child.Name = parts[0]
-	remains := strings.Join(parts[1:], "/")
+	remaining := strings.Join(parts[1:], "/")
 
-	// Repeat the process with the rest of the parts
-	build(child, remains)
+	// Repeat the process with the remaining parts
+	build(child, remaining)
 
 	// If the root already exists, check heritage to the deepest level
 	// and merge if two parents have the same name
@@ -93,6 +95,8 @@ func checkHeritage(parent *Folder, children []*Folder) bool {
 	return true
 }
 
+// printChildren uses recursion for printing every folder children and adds
+// indentation every time it prints the last element of the branch.
 func printChildren(root *Folder, indent, start string) {
 	for i, r := range root.Children {
 		fmt.Print(start)
@@ -100,10 +104,10 @@ func printChildren(root *Folder, indent, start string) {
 		add := " │  "
 
 		if i == len(root.Children)-1 {
-			fmt.Println(indent, "└──", r.Name)
+			fmt.Printf("%s └── %s\n", indent, r.Name)
 			add = "    "
 		} else {
-			fmt.Println(indent, "├──", r.Name)
+			fmt.Printf("%s ├── %s\n", indent, r.Name)
 		}
 
 		printChildren(r, indent+add, start)

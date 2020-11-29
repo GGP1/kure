@@ -13,3 +13,7 @@ message Wallet {
     string publicKey = 6;
     string privateKey = 7;
 }
+
+message WalletList {
+    string name = 1;
+}

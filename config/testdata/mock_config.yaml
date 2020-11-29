@@ -1,0 +1,4 @@
+test:
+  string: test
+  number: 1
+  bool: true

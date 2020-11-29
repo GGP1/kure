@@ -1,6 +1,8 @@
 ## Use
 
-![kure config](https://user-images.githubusercontent.com/51374959/98058707-1ed71480-1e24-11eb-84da-ff8897b3146d.png)
+`kure config [-c create] [-p path]`
+
+*Aliases*: config, cfg.
 
 ## Description
 
@@ -8,10 +10,10 @@ Read or create the configuration file.
 
 ## Flags 
 
-|  Name     |  Shorthand    |     Type      |    Default    |            Usage             |
-|-----------|---------------|---------------|---------------|------------------------------|
-| create    | c             | bool          | false         | Create a config file         |
-| path      | p             | string        | ""            | Config file path             |
+|  Name     | Shorthand |     Type      |    Default    |            Usage             |
+|-----------|-----------|---------------|---------------|------------------------------|
+| create    | c         | bool          | false         | Create a config file         |
+| path      | p         | string        | ""            | Config file path             |
 
 ### Examples
 

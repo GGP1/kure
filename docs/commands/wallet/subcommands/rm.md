@@ -1,6 +1,6 @@
 ## Use 
 
-![kure wallet rm](https://user-images.githubusercontent.com/51374959/98058973-bf2d3900-1e24-11eb-9ad1-3b12ae4bfb28.png)
+`kure wallet rm <name>`
 
 ## Description
 

@@ -1,19 +1,15 @@
 package crypt
 
 import (
-	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
-	"crypto/sha256"
-	"crypto/sha512"
-	"fmt"
 	"io"
-	"io/ioutil"
-	"syscall"
+	"runtime"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	"golang.org/x/crypto/chacha20poly1305"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/crypto/argon2"
 )
 
 // Encrypt ciphers data.
@@ -23,194 +19,103 @@ func Encrypt(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	hash, err := createHash(password)
+	lockedBuf, err := password.Open()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed opening enclave")
+	}
+
+	key, salt, err := deriveKey(lockedBuf.Bytes(), nil)
+	if err != nil {
+		return nil, err
+	}
+	go lockedBuf.Destroy()
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating block")
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating gcm")
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+
+	_, err = io.ReadFull(rand.Reader, nonce)
 	if err != nil {
 		return nil, err
 	}
 
-	AEAD, err := chacha20poly1305.NewX(hash)
-	if err != nil {
-		return nil, errors.Wrap(err, "creating AEAD")
-	}
-
-	nonce := make([]byte, AEAD.NonceSize())
-
-	_, err = io.ReadFull(rand.Reader, nonce)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading nonce")
-	}
-
-	ciphertext := AEAD.Seal(nonce, nonce, data, nil)
+	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+	ciphertext = append(ciphertext, salt...)
 
 	return ciphertext, nil
 }
 
 // Decrypt deciphers data.
 func Decrypt(data []byte) ([]byte, error) {
+	salt, data := data[len(data)-32:], data[:len(data)-32]
+
 	password, err := GetMasterPassword()
 	if err != nil {
 		return nil, err
 	}
 
-	hash, err := createHash(password)
+	lockedBuf, err := password.Open()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed opening enclave")
+	}
+
+	key, _, err := deriveKey(lockedBuf.Bytes(), salt)
 	if err != nil {
 		return nil, err
 	}
+	go lockedBuf.Destroy()
 
-	AEAD, err := chacha20poly1305.NewX(hash)
+	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, errors.Wrap(err, "creating AEAD")
+		return nil, errors.Wrap(err, "failed creating block")
 	}
 
-	nonceSize := AEAD.NonceSize()
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating gcm")
+	}
 
+	nonceSize := gcm.NonceSize()
 	if len(data) < nonceSize {
-		return nil, errors.New("encrypted data is too short")
+		return nil, errors.New("data is too short")
 	}
 
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-
-	plaintext, err := AEAD.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, errors.New("invalid password")
-	}
-
-	return plaintext, nil
+	return gcm.Open(nil, data[:nonceSize], data[nonceSize:], nil)
 }
 
-// EncryptX is like Encrypt but takes a password.
-// Useful for using it inside a loop.
-func EncryptX(data, password []byte) ([]byte, error) {
-	hash, err := createHash(password)
-	if err != nil {
-		return nil, err
+// deriveKey derives the key from the password, salt and other parameters using
+// the key derivation function argon2id. Use parameters from the configuration file if they exist.
+func deriveKey(key []byte, salt []byte) ([]byte, []byte, error) {
+	var (
+		iters   uint32 = 1
+		memory  uint32 = 1 << 20 // 1048576
+		threads uint8  = uint8(runtime.NumCPU())
+	)
+
+	if i := viper.GetUint32("argon2id.iterations"); i != 0 {
+		iters = i
+	}
+	if m := viper.GetUint32("argon2id.memory"); m != 0 {
+		memory = m
 	}
 
-	AEAD, err := chacha20poly1305.NewX(hash)
-	if err != nil {
-		return nil, errors.Wrap(err, "creating AEAD")
-	}
-
-	nonce := make([]byte, AEAD.NonceSize())
-
-	_, err = io.ReadFull(rand.Reader, nonce)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading nonce")
-	}
-
-	ciphertext := AEAD.Seal(nonce, nonce, data, nil)
-
-	return ciphertext, nil
-}
-
-// DecryptX is like Encrypt but takes a password.
-// Useful for using it inside a loop.
-func DecryptX(data, password []byte) ([]byte, error) {
-	hash, err := createHash(password)
-	if err != nil {
-		return nil, err
-	}
-
-	AEAD, err := chacha20poly1305.NewX(hash)
-	if err != nil {
-		return nil, errors.Wrap(err, "creating AEAD")
-	}
-
-	nonceSize := AEAD.NonceSize()
-
-	if len(data) < nonceSize {
-		return nil, errors.New("encrypted data is too short")
-	}
-
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-
-	plaintext, err := AEAD.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, errors.New("invalid password")
-	}
-
-	return plaintext, nil
-}
-
-// AskPassword returns the hash of the input password.
-func AskPassword(confirm bool) (string, error) {
-	fmt.Print("Enter master password: ")
-	password, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return "", errors.Wrap(err, "reading password")
-	}
-	fmt.Print("\n")
-
-	if confirm {
-		fmt.Print("\nRetype to verify: ")
-		password2, err := terminal.ReadPassword(int(syscall.Stdin))
+	if salt == nil {
+		salt = make([]byte, 32)
+		_, err := rand.Read(salt)
 		if err != nil {
-			return "", errors.Wrap(err, "reading password")
-		}
-		fmt.Print("\n")
-
-		if bytes.Compare(bytes.TrimSpace(password), bytes.TrimSpace(password2)) != 0 {
-			return "", errors.New("passwords must be equal")
+			return nil, nil, errors.New("failed generating salt")
 		}
 	}
 
-	password = bytes.TrimSpace(password)
-	h := sha512.New()
+	password := argon2.IDKey(key, salt, iters, memory, threads, 32)
 
-	_, err = h.Write(password)
-	if err != nil {
-		return "", errors.Wrap(err, "password hash")
-	}
-
-	p := fmt.Sprintf("%x", h.Sum(nil))
-
-	return p, nil
-}
-
-// GetMasterPassword takes the user master password from the config
-// or requests it.
-func GetMasterPassword() ([]byte, error) {
-	password := viper.GetString("user.password")
-	if password != "" {
-		return []byte(password), nil
-	}
-
-	filename := viper.GetString("user.password_path")
-	if filename != "" {
-		p, err := ioutil.ReadFile(filename)
-		if err != nil {
-			return nil, errors.Wrap(err, "reading file")
-		}
-
-		p = bytes.TrimSpace(p)
-		h := sha512.New()
-
-		_, err = h.Write(p)
-		if err != nil {
-			return nil, errors.Wrap(err, "password hash")
-		}
-
-		pwd := fmt.Sprintf("%x", h.Sum(nil))
-
-		return []byte(pwd), nil
-	}
-
-	pwd, err := AskPassword(false)
-	if err != nil {
-		return nil, err
-	}
-
-	return []byte(pwd), nil
-}
-
-// Create a SHA256 hash (256 bits) with the key provided.
-func createHash(key []byte) ([]byte, error) {
-	h := sha256.New()
-
-	_, err := h.Write(key)
-	if err != nil {
-		return nil, errors.Wrap(err, "create sha-256 hash")
-	}
-
-	return h.Sum(nil), nil
+	return password, salt, nil
 }

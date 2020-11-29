@@ -1,6 +1,6 @@
 ## Use
 
-![kure file](https://user-images.githubusercontent.com/51374959/98058779-4b8b2c00-1e24-11eb-8d48-eebc3e177e23.png)
+`kure file <subcommand>`
 
 ## Description
 
@@ -17,10 +17,10 @@ No flags.
 
 - kure file **add**: Add files to the database.
 
-- kure file **create**: Create one, many or all the files in the database. In case a path is passed, kure will create any missing folders for you.
-
-- kure file **list**: Display information about each file in the bucket.
+- kure file **list**: List files.
 
 - kure file **rename**: Rename a file.
 
 - kure file **rm**: Remove a file from the database.
+
+- kure file **touch**: Create one, multiple or all the files in the database. In case a path is passed, kure will create any missing folders for you.

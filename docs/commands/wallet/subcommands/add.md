@@ -1,6 +1,8 @@
 ## Use
 
-![kure wallet add](https://user-images.githubusercontent.com/51374959/98058980-c05e6600-1e24-11eb-9046-52fe9e7b22b1.png)
+`kure wallet add <name>`
+
+*Aliases*: add, a, new, create.
 
 ## Description
 

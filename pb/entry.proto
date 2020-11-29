@@ -12,3 +12,8 @@ message Entry {
     string notes = 5;
     string expires = 6;
 }
+
+message EntryList {
+    string name = 1;
+    string expires = 6;
+}

@@ -1,33 +1,37 @@
 ## Use
 
-![kure add](https://user-images.githubusercontent.com/51374959/98047029-022de300-1e0a-11eb-83f9-fa3c8de4145f.png)
+`kure add <name> [-c custom] [-l length] [-f format] [-i include] [-e exclude] [-r repeat]`
+
+*Aliases*: add, a, new, create.
 
 ## Description
 
-Add new entry to the database.
+Add an entry entry.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |                           Usage                                       |
-|-----------|-----------|---------------|---------------|-----------------------------------------------------------------------|
-| custom    | c         | bool          | false         | Create an entry with a custom password                                |
-| length    | l         | uint64        | 0             | Pasword length                                                        |
-| format    | f         | []string      | nil           | Password format                                                       |
-| include   | i         | string        | ""            | Characters to include in the password (except 2 byte ¡¿° chars)       |
-| exclude   | e         | string        | ""            | Characters to exclude from the password                               |
-| repeat    | r         | bool          | false         | Allow duplicated characters or not                                    |
+|  Name     | Shorthand |     Type      |    Default    |                            Usage                                 |
+|-----------|-----------|---------------|---------------|------------------------------------------------------------------|
+| custom    | c         | bool          | false         | Create an entry with a custom password                           |
+| length    | l         | uint64        | 0             | Pasword length                                                   |
+| format    | f         | []string      | nil           | Password format (1,2,3,4,5)                                      |
+| include   | i         | string        | ""            | Characters to include in the password                            |
+| exclude   | e         | string        | ""            | Characters to exclude from the password                          |
+| repeat    | r         | bool          | false         | Allow duplicated characters or not                               |
+
 
 ### Format levels
 
-> Default is [1, 2, 3, 4, 5]
+> Default is [1, 2, 3, 4, 5]. Extended UTF-8 characters may mess the terminal up.
 
 1. Lowercases (a, b, c...)
 2. Uppercases (A, B, C...)
 3. Digits (0, 1, 2...)
 4. Space
 5. Special (!, $, %...)
+6. Extended UTF-8 (¡, ¢, £, ¤, ¥)
 
-### Expiration
+### Expires
 
 Valid time formats are: 
 
@@ -35,7 +39,7 @@ Valid time formats are:
 
 • US: 02/01/2006 or 02-01-2006.
 
-"0s", "0" or "" will be considered as if the entry never expires.
+"never", "", " ", "0", "0s" will be considered as if the entry never expires.
 
 ### Subcommands
 
