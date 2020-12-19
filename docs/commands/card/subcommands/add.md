@@ -2,11 +2,11 @@
 
 `kure card add <name>`
 
-*Aliases*: add, a, new, create.
+*Aliases*: add, create, new.
 
 ## Description
 
-Add a card to the database.
+Add a card.
 
 ## Flags
 

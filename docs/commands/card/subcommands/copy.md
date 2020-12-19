@@ -1,18 +1,18 @@
 ## Use 
 
-`kure card copy <name> [-f field] [-t timeout]`
+`kure card copy <name> [-c cvc] [-t timeout]`
 
-*Aliases*: copy, c.
+*Aliases*: copy, cp.
 
 ## Description
 
-Copy card number or cvc.
+Copy card number or security code.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |                     Usage                     |
+|  Name     | Shorthand |     Type      |    Default    |                  Description                  |
 |-----------|-----------|---------------|---------------|-----------------------------------------------|
-| field     | f         | string        | "number"      | Set which card field to copy                  |
+| cvc       | c         | bool          | false         | Copy card security code                       |
 | timeout   | t         | duration      | 0             | Set a time until the clipboard is cleaned     |
 
 ### Timeout units
@@ -21,12 +21,12 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 ### Examples
 
-Copy card number and clean after 15 minutes:
+Copy number and clean after 15 minutes:
 ```
 kure card copy Sample -t 15m
 ```
 
-Copy card CVC:
+Copy security code:
 ```
-kure card copy Sample --field cvc
+kure card copy Sample -c
 ```

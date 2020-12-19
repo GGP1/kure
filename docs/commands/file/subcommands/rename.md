@@ -1,12 +1,14 @@
 ## Use
 
-`kure file rename <name>`
+`kure file rename <oldName> <newName>`
 
 *Aliases*: rename, rn.
 
 ## Description
 
 Rename a file.
+
+In case any of the paths contains spaces within it, it must be enclosed by double quotes.
 
 ## Flags 
 
@@ -16,5 +18,5 @@ No flags.
 
 Rename a file:
 ```
-kure file rename example
+kure file rename sample sample-2
 ```

@@ -8,7 +8,7 @@ List cards.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |       Usage        |
+|  Name     | Shorthand |     Type      |    Default    |    Description     |
 |-----------|-----------|---------------|---------------|--------------------|
 | filter    | f         | bool          | false         | Filter cards       |
 | hide      | H         | bool          | false         | Hide card CVC      |

@@ -1,8 +1,8 @@
 ## Use
 
-`kure gen phrase [-l length] [-s separator] [-i include] [-e exclude] [list] [-q qr]`
+`kure gen phrase [-c copy] [-l length] [-s separator] [-i include] [-e exclude] [list] [-q qr]`
 
-*Aliases*: phrase, p.
+*Aliases*: phrase, passphrase, p.
 
 ## Description
 
@@ -10,14 +10,15 @@ Generate a random passphrase.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |                           Usage                                       |
-|-----------|-----------|---------------|---------------|-----------------------------------------------------------------------|
-| length    | l         | uint64        | 0             | Passphrase length                                                     |
-| separator | s         | string        | " " (space)   | Set the character that separates each word                            |
-| include   | i         | []string      | nil           | Words to include in the passphrase                                    |
-| exclude   | e         | []string      | nil           | Words to exclude from the passphrase                                  |
-| list      |           | string        | "NoList"      | Choose passphrase generating method (NoList, WordList, SyllableList)  |
-| qr        | q         | bool          | false         | Create an image with the password QR code on the user home directory  |
+|  Name     | Shorthand |     Type      |    Default    |                         Description                            |
+|-----------|-----------|---------------|---------------|----------------------------------------------------------------|
+| copy      | c         | bool          | false         | Copy the passphrase to the clipboard                           |
+| length    | l         | uint64        | 0             | Passphrase length                                              |
+| separator | s         | string        | " " (space)   | Character that separates each word                             |
+| include   | i         | []string      | nil           | Words to include in the passphrase                             |
+| exclude   | e         | []string      | nil           | Words to exclude from the passphrase                           |
+| list      |           | string        | "NoList"      | Passphrase generating method (NoList, WordList, SyllableList)  |
+| qr        | q         | bool          | false         | Show the QR code image on the terminal                         |
 
 ### Examples
 

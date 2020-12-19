@@ -2,13 +2,15 @@
 
 `kure ls <name> [-f filter] [-H hide] [-q qr]`
 
+*Aliases*: ls, entries.
+
 ## Description
 
 List entries.
 
 ## Flags 
 
-|  Name     | Shorthand |     Type      |    Default    |                                     Usage                                            |
+|  Name     | Shorthand |     Type      |    Default    |                                  Description                                         |
 |-----------|-----------|---------------|---------------|--------------------------------------------------------------------------------------|
 | filter    | f         | bool          | false         | Filter entries                                                                       |
 | hide      | H         | bool          | false         | Hide entries passwords                                                               |

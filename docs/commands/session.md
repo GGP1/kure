@@ -12,11 +12,11 @@ The user can set a timeout to automatically close the session after *X* amount o
 Once into the session:
 • it's optional to use the word "kure" to run a command.
 • type "timeout" to see the time left.
-• type "exit" or press CTRL+C to quit.
+• type "exit" or press Ctrl+C to quit.
 
 ### Flags
 
-|  Name     | Shorthand |     Type      |    Default    |                      Usage                        |
+|  Name     | Shorthand |     Type      |    Default    |                   Description                     |
 |-----------|-----------|---------------|---------------|---------------------------------------------------|
 | prefix    | p         | string        | "kure:~#"     | Customize the text that precedes your commands    |
 | timeout   | t         | duration      | 0             | Session timeout. By default it never ends         |
@@ -40,4 +40,9 @@ kure session -l kure:~$
 Show the session time left (once into one)
 ```
 timeout
+```
+
+Exit the session
+```
+exit
 ```

@@ -12,7 +12,7 @@ Edit entry fields.
 
 ## Flags 
 
-|  Name     | Shorthand |     Type      |    Default    |           Usage            |
+|  Name     | Shorthand |     Type      |    Default    |        Description         |
 |-----------|-----------|---------------|---------------|----------------------------|
 | name      | n         | bool          | false         | Edit entry name as well    |
 
@@ -20,11 +20,11 @@ Edit entry fields.
 
 Valid time formats are: 
 
-• ISO: 2006/01/02 or 2006-01-02.
+• **ISO**: 2006/01/02 or 2006-01-02.
 
-• US: 02/01/2006 or 02-01-2006.
+• **US**: 02/01/2006 or 02-01-2006.
 
-"never" and "" will be considered as if the entry never expires.
+> "never", "", " ", "0", "0s" will be considered as if the entry never expires.
 
 ### Examples
 

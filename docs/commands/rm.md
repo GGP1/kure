@@ -1,18 +1,25 @@
 ## Use
 
-`kure rm <name>`
+`kure rm <name> [-d dir]`
 
 ## Description
 
-Remove an entry.
+Remove an entry or a directory.
 
 ## Flags 
 
-No flags.
+|  Name     | Shorthand |     Type      |    Default    |      Description      |
+|-----------|-----------|---------------|---------------|-----------------------|
+| dir       | d         | bool          | false         | Remove a directory    |
 
 ### Examples
 
-Remove an entry:
+Remove:
 ```
-kure rm Twitter
+kure rm Sample
+```
+
+Remove a directory:
+```
+kure rm dirName -d
 ```

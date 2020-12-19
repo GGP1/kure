@@ -10,7 +10,7 @@ Copy entry credentials to clipboard.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |            Usage             |
+|  Name     | Shorthand |     Type      |    Default    |         Description          |
 |-----------|-----------|---------------|---------------|------------------------------|
 | timeout   | t         | duration      | 0             | Clipboard cleaning timeout   |
 | username  | u         | bool          | false         | Copy entry username          |

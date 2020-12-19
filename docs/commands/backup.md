@@ -4,11 +4,11 @@
 
 ## Description
 
-Create database backups.
+Create database backup.
 
 ## Flags
 
-|  Name     |     Type      |    Default    |                  Usage                         |
+|  Name     |     Type      |    Default    |                  Description                   |
 |-----------|---------------|---------------|------------------------------------------------|
 | http      | bool          | false         | Serve the database file on a http server       |
 | path      | string        | ""            | Backup file path                               |
@@ -16,7 +16,7 @@ Create database backups.
 
 ### Examples
 
-Create backup file:
+Create file backup:
 ```
 kure backup --path path/to/file
 ```

@@ -8,15 +8,15 @@ List files.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |       Usage        |
-|-----------|-----------|---------------|---------------|--------------------|
-| filter    | f         | bool          | false         | Filter files       |
+|  Name     | Shorthand |     Type      |    Default    |      Description      |
+|-----------|-----------|---------------|---------------|-----------------------|
+| filter    | f         | bool          | false         | Filter files by name  |
 
 ### Example
 
-List passport file:
+List trip.txt file and copy its content to the clipboard:
 ```
-kure file ls passport
+kure file ls trip.txt
 ```
 
 Filter among files:

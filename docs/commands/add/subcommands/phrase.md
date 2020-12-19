@@ -1,32 +1,32 @@
 ## Use
 
-`kure phrase <name> [-l length] [-s separator] [-i include] [-e exclude] [list]`
+`kure add phrase <name> [-l length] [-s separator] [-i include] [-e exclude] [list]`
 
-*Aliases*: phrase, p.
+*Aliases*: phrase, passphrase, p.
 
 ## Description
 
-Add an entry using a passphrase instead of a password.
+Create an entry using a passphrase instead of a password.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |                           Usage                                       |
+|  Name     | Shorthand |     Type      |    Default    |                             Description                               |
 |-----------|-----------|---------------|---------------|-----------------------------------------------------------------------|
 | length    | l         | uint64        | 1             | Passphrase length                                                     |
 | separator | s         | string        | " " (space)   | Set the character that separates each word                            |
 | include   | i         | []string      | nil           | Characters to include in the password                                 |
 | exclude   | e         | []string      | nil           | Characters to exclude from the password                               |
-| list      | l         | string        | "NoList"      | Choose passphrase generating method (NoList, WordList, SyllableList)  |
+| list      |           | string        | "NoList"      | Choose passphrase generating method (NoList, WordList, SyllableList)  |
 
 ### Expiration
 
 Valid time formats are: 
 
-• ISO: 2006/01/02 or 2006-01-02.
+• **ISO**: 2006/01/02 or 2006-01-02.
 
-• US: 02/01/2006 or 02-01-2006.
+• **US**: 02/01/2006 or 02-01-2006.
 
-"never", "", " ", "0", "0s" will be considered as if the entry never expires.
+> "never", "", " ", "0", "0s" will be considered as if the entry never expires.
 
 ### Examples
 

@@ -1,17 +1,16 @@
 ## Use
 
-`kure file rm <name> [-d dir] [-s semaphore]`
+`kure file rm <name> [-d dir]`
 
 ## Description
 
-Delete files from the database.
+Remove a file or directory.
 
 ## Flags 
 
-|  Name     | Shorthand |     Type      |    Default    |                       Usage                           |
+|  Name     | Shorthand |     Type      |    Default    |                    Description                        |
 |-----------|-----------|---------------|---------------|-------------------------------------------------------|
 | dir       | d         | bool          | false         | Remove a directory and all the files stored in it     |
-| semaphore | s         | uint          | 1             | Maximum number of goroutines running concurrently     |
 
 #### Goroutines
 
@@ -26,7 +25,7 @@ Remove a file:
 kure file rm example
 ```
 
-Remove a directory using a maximum of 20 goroutines:
+Remove a directory:
 ``` 
-kure file rm books -d -s 20
+kure file rm books -d
 ```
