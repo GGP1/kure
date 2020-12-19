@@ -2,6 +2,7 @@ package crypt
 
 import (
 	"bytes"
+	"crypto/subtle"
 	"testing"
 
 	"github.com/awnumar/memguard"
@@ -24,9 +25,10 @@ func TestGetMasterPassword(t *testing.T) {
 		t.Errorf("Failed opening enclave: %v", err)
 	}
 
-	if !bytes.Equal(got.Bytes(), expected) {
+	if subtle.ConstantTimeCompare(got.Bytes(), expected) == 0 {
 		t.Errorf("Expected %s, got %s", string(expected), got.String())
 	}
+	got.Destroy()
 }
 
 func TestGetMasterPasswordDefault(t *testing.T) {
@@ -37,5 +39,15 @@ func TestGetMasterPasswordDefault(t *testing.T) {
 	_, err := GetMasterPassword()
 	if err == nil {
 		t.Fatal("Expected GetMasterPassword() to fail but it didn't")
+	}
+}
+
+func TestZero(t *testing.T) {
+	buf := []byte("test")
+
+	zero(buf)
+
+	if !bytes.Equal(buf, []byte{0, 0, 0, 0}) {
+		t.Error("Failed wiping the buffer")
 	}
 }

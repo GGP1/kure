@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/cmd"
@@ -24,9 +25,10 @@ func TestCreate(t *testing.T) {
 	timeout := "10m"
 	memory := "8192"
 	iter := "50"
+	threads := "2"
 
-	s := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
-		dbName, dbPath, format, repeat, port, prefix, timeout, memory, iter)
+	s := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
+		dbName, dbPath, format, repeat, port, prefix, timeout, memory, iter, threads)
 	buf := bytes.NewBufferString(s)
 
 	cmd := NewCmd(db, buf)
@@ -62,11 +64,14 @@ func TestCreate(t *testing.T) {
 	gotTimeout := viper.GetString("session.timeout")
 	assertEqual(t, timeout, gotTimeout)
 
-	gotMemory := viper.GetString("argon2id.memory")
+	gotMemory := viper.GetString("argon2.memory")
 	assertEqual(t, memory, gotMemory)
 
-	gotIter := viper.GetString("argon2id.iterations")
+	gotIter := viper.GetString("argon2.iterations")
 	assertEqual(t, iter, gotIter)
+
+	gotThreads := viper.GetString("argon2.threads")
+	assertEqual(t, threads, gotThreads)
 
 	if err := os.Remove("testdata/test_config.yaml"); err != nil {
 		t.Fatalf("Failed removing config: %v", err)
@@ -79,16 +84,19 @@ func TestRead(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
-	cases := map[string]struct {
+	cases := []struct {
+		desc  string
 		setup func()
 	}{
-		"Empty path": {
+		{
+			desc: "Empty path",
 			setup: func() {
 				path = ""
 				os.Setenv("KURE_CONFIG", "testdata/mock_config.yaml")
 			},
 		},
-		"Non-empty path": {
+		{
+			desc: "Non-empty path",
 			setup: func() {
 				path = "testdata/mock_config.yaml"
 				os.Setenv("KURE_CONFIG", "")
@@ -96,18 +104,21 @@ func TestRead(t *testing.T) {
 		},
 	}
 
-	for k, tc := range cases {
-		tc.setup()
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			tc.setup()
 
-		cmd := NewCmd(db, nil)
-		f := cmd.Flags()
-		f.Set("path", path)
+			cmd := NewCmd(db, nil)
+			f := cmd.Flags()
+			f.Set("path", path)
 
-		if err := cmd.RunE(cmd, nil); err != nil {
-			t.Fatalf("%s: failed reading config: %v", k, err)
-		}
+			if err := cmd.RunE(cmd, nil); err != nil {
+				t.Fatalf("Dailed reading config: %v", err)
+			}
+		})
 	}
 
+	// Reset after finished
 	os.Setenv("KURE_CONFIG", "")
 }
 
@@ -115,26 +126,70 @@ func TestInvalidFields(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
-	cases := map[string]struct {
+	cases := []struct {
+		desc   string
 		port   string
 		format string
 	}{
-		"Invalid port":   {port: "", format: "1,2,3"},
-		"Invalid format": {port: "8800", format: "a, b, c"},
+		{desc: "Invalid format", port: "8800", format: "a, b, c"},
 	}
 
-	for k, tc := range cases {
-		s := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s", "", "", tc.format, "", tc.port, "", "")
-		buf := bytes.NewBufferString(s)
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			s := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s", "", "", tc.format, "", tc.port, "", "")
+			buf := bytes.NewBufferString(s)
 
-		cmd := NewCmd(db, buf)
-		f := cmd.Flags()
-		f.Set("path", path)
-		f.Set("create", "true")
+			cmd := NewCmd(db, buf)
+			f := cmd.Flags()
+			f.Set("path", path)
+			f.Set("create", "true")
 
-		if err := cmd.RunE(cmd, nil); err == nil {
-			t.Fatalf("%s: expected an error and got nil", k)
-		}
+			if err := cmd.RunE(cmd, nil); err == nil {
+				t.Fatal("Expected an error and got nil")
+			}
+		})
+	}
+}
+
+func TestTest(t *testing.T) {
+	cases := []struct {
+		desc       string
+		iterations uint32
+		memory     uint32
+		threads    uint8
+	}{
+		{
+			desc:       "Test 1",
+			iterations: 1,
+			memory:     400000,
+			threads:    uint8(runtime.NumCPU() - 2),
+		},
+		{
+			desc:       "Test 2",
+			iterations: 15,
+			memory:     3000,
+			threads:    uint8(runtime.NumCPU()),
+		},
+		{
+			desc:       "Test 3",
+			iterations: 2,
+			memory:     716500,
+			threads:    uint8(runtime.NumCPU() - 1),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			cmd := testSubCmd()
+			f := cmd.Flags()
+			f.Set("iterations", fmt.Sprintf("%d", tc.iterations))
+			f.Set("memory", fmt.Sprintf("%d", tc.memory))
+			f.Set("threads", fmt.Sprintf("%d", tc.threads))
+
+			if err := cmd.RunE(cmd, nil); err != nil {
+				t.Fatalf("Test sub command failed: %v", err)
+			}
+		})
 	}
 }
 

@@ -17,17 +17,17 @@ func TestCard(t *testing.T) {
 	defer db.Close()
 
 	c := &pb.Card{
-		Name:       "test",
-		Type:       "debit",
-		Number:     "4403650939814064",
-		CVC:        "1234",
-		ExpireDate: "16/2024",
+		Name:         "test",
+		Type:         "debit",
+		Number:       "4403650939814064",
+		SecurityCode: "1234",
+		ExpireDate:   "16/2024",
 	}
 
 	t.Run("Create", create(db, c))
 	t.Run("Get", get(db, c))
 	t.Run("List", list(db))
-	t.Run("List by name", listByName(db, c.Name))
+	t.Run("List fastest", listFastest(db))
 	t.Run("List names", listNames(db))
 	t.Run("Remove", remove(db, c.Name))
 }
@@ -67,15 +67,10 @@ func list(db *bolt.DB) func(*testing.T) {
 	}
 }
 
-func listByName(db *bolt.DB, name string) func(*testing.T) {
+func listFastest(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		cards, err := ListByName(db, name)
-		if err != nil {
-			t.Fatalf("ListByName() failed: %v", err)
-		}
-
-		if len(cards) == 0 {
-			t.Error("Expected one or more cards, got 0")
+		if !ListFastest(db) {
+			t.Error("Failed decrypting cards")
 		}
 	}
 }
@@ -87,15 +82,15 @@ func listNames(db *bolt.DB) func(*testing.T) {
 			t.Fatalf("List() failed: %v", err)
 		}
 
+		if len(cards) == 0 {
+			t.Fatal("Expected one or more cards, got 0")
+		}
+
 		expected := "test"
-		got := cards[0].Name
+		got := cards[0]
 
 		if got != expected {
 			t.Errorf("Expected %s, got %s", expected, got)
-		}
-
-		if len(cards) == 0 {
-			t.Error("Expected one or more cards, got 0")
 		}
 	}
 }
@@ -117,7 +112,7 @@ func TestCreateErrors(t *testing.T) {
 	t.Run("Create", create(db, card))
 
 	if err := Create(db, &pb.Card{}); err == nil {
-		t.Error("Expected 'save entry' error, got nil")
+		t.Error("Expected 'save card' error, got nil")
 	}
 
 	viper.Set("user.password", nil)
@@ -136,15 +131,6 @@ func TestGetError(t *testing.T) {
 	}
 }
 
-func TestRemoveError(t *testing.T) {
-	db := setContext(t)
-	defer db.Close()
-
-	if err := Remove(db, "non-existent"); err == nil {
-		t.Error("Expected 'does not exist' error, got nil")
-	}
-}
-
 func TestBucketError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
@@ -156,20 +142,58 @@ func TestBucketError(t *testing.T) {
 		return nil
 	})
 
+	if err := Create(db, card); err == nil {
+		t.Error("Create() didn't return 'invalid bucket' error")
+	}
 	_, err := Get(db, card.Name)
 	if err == nil {
-		t.Error("Get() failed")
+		t.Error("Get() didn't return 'invalid bucket' error")
 	}
 	_, err = List(db)
 	if err == nil {
-		t.Error("List() failed")
+		t.Error("List() didn't return 'invalid bucket' error")
 	}
-	_, err = ListByName(db, card.Name)
+	_, err = ListNames(db)
 	if err == nil {
-		t.Error("ListByName() failed")
+		t.Error("ListNames() didn't return 'invalid bucket' error")
 	}
 	if err := Remove(db, card.Name); err == nil {
-		t.Error("Remove() failed")
+		t.Error("Remove() didn't return 'invalid bucket' error")
+	}
+}
+
+func TestDecryptError(t *testing.T) {
+	db := setContext(t)
+	defer db.Close()
+
+	card := &pb.Card{Name: "test decrypt error"}
+	if err := Create(db, card); err != nil {
+		t.Fatal(err)
+	}
+
+	viper.Set("user.password", nil)
+
+	_, err := Get(db, card.Name)
+	if err == nil {
+		t.Error("Get() didn't return 'decrypt card' error")
+	}
+	_, err = List(db)
+	if err == nil {
+		t.Error("List() didn't return 'decrypt card' error")
+	}
+	if ListFastest(db) {
+		t.Error("Expected ListFastest() to return false and returned true")
+	}
+}
+
+func TestKeyError(t *testing.T) {
+	db := setContext(t)
+	defer db.Close()
+
+	card := &pb.Card{Name: ""}
+
+	if err := Create(db, card); err == nil {
+		t.Error("Create() didn't fail")
 	}
 }
 
@@ -185,13 +209,10 @@ func setContext(t *testing.T) *bolt.DB {
 	viper.Set("user.password", password.Seal())
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		buckets := [4]string{"kure_card", "kure_entry", "kure_file", "kure_wallet"}
-		for _, bucket := range buckets {
-			tx.DeleteBucket([]byte(bucket))
-			_, err := tx.CreateBucketIfNotExists([]byte(bucket))
-			if err != nil {
-				return errors.Wrapf(err, "couldn't create %q bucket", bucket)
-			}
+		bucket := "kure_card"
+		tx.DeleteBucket([]byte(bucket))
+		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
+			return errors.Wrapf(err, "couldn't create %q bucket", bucket)
 		}
 		return nil
 	})

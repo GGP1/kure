@@ -11,57 +11,157 @@ import (
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/file"
-	"github.com/GGP1/kure/db/wallet"
+	"github.com/GGP1/kure/db/note"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/spf13/cobra"
+	bolt "go.etcd.io/bbolt"
 )
+
+func TestBuildBox(t *testing.T) {
+	expected := `┌───── Test ─────┐
+│ Jedi   │ Luke  │
+│ Hobbit │ Frodo │
+│        │ Sam   │
+│ Wizard │ Harry │
+└────────────────┘`
+
+	// The iteration order it's not guaranteed and the test
+	// may fail until the use of an ordered map
+	mp := map[string]string{
+		"Jedi": "Luke",
+		"Hobbit": `Frodo
+Sam`,
+		"Wizard": "Harry",
+	}
+
+	got := BuildBox("test/test", mp)
+	if got != expected {
+		t.Errorf("Expected %s, got %s", expected, got)
+	}
+}
 
 func TestDisplayQRCode(t *testing.T) {
 	cases := []struct {
-		action string
+		desc   string
 		secret string
 		pass   bool
 	}{
-		{action: "Low", secret: "secret", pass: true},
-		{action: "High", secret: "secret", pass: true},
-		{action: "Highest", secret: "secret", pass: true},
-		{action: "Fail", secret: "", pass: false},
-		{action: "Secret too long", secret: longSecret, pass: false},
+		{desc: "Low", secret: "secret", pass: true},
+		{desc: "High", secret: "secret", pass: true},
+		{desc: "Highest", secret: "secret", pass: true},
+		{desc: "Fail", secret: "", pass: false},
+		{desc: "Secret too long", secret: longSecret, pass: false},
 	}
 
 	for _, tc := range cases {
-		err := DisplayQRCode(tc.secret)
-		assertError(t, tc.action, "DisplayQRCode()", err, tc.pass)
+		t.Run(tc.desc, func(t *testing.T) {
+			err := DisplayQRCode(tc.secret)
+			assertError(t, "DisplayQRCode()", err, tc.pass)
+		})
+	}
+}
+
+func TestExistsTrue(t *testing.T) {
+	db := SetContext(t, "../db/testdata/database")
+	defer db.Close()
+
+	cases := []struct {
+		name   string
+		object string
+		create func() error
+	}{
+		{
+			name:   "test",
+			object: "card",
+			create: func() error { return card.Create(db, &pb.Card{Name: "test"}) },
+		},
+		{
+			name:   "test",
+			object: "entry",
+			create: func() error { return entry.Create(db, &pb.Entry{Name: "test", Expires: "Never"}) },
+		},
+		{
+			name:   "test",
+			object: "note",
+			create: func() error { return note.Create(db, &pb.Note{Name: "test"}) },
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.object, func(t *testing.T) {
+			if err := tc.create(); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := Exists(db, tc.name, tc.object); err == nil {
+				t.Error("Expected exists to fail but got nil")
+			}
+		})
+	}
+}
+
+func TestExistsFalse(t *testing.T) {
+	db := SetContext(t, "../db/testdata/database")
+	defer db.Close()
+
+	cases := []struct {
+		name   string
+		object string
+	}{
+		{name: "test", object: "card"},
+		{name: "test", object: "entry"},
+		{name: "test", object: "note"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.object, func(t *testing.T) {
+			if err := Exists(db, tc.name, tc.object); err != nil {
+				t.Errorf("Exists() failed: %v", err)
+			}
+		})
+	}
+}
+
+func TestExistsInvalidObject(t *testing.T) {
+	db := SetContext(t, "../db/testdata/database")
+	defer db.Close()
+
+	if err := Exists(db, "test", "invalid"); err == nil {
+		t.Error("Expected exists to fail but got nil")
 	}
 }
 
 func TestGetConfigPath(t *testing.T) {
 	cases := []struct {
-		action string
-		path   string
+		desc string
+		path string
 	}{
-		{action: "Env var with extension", path: "/home/kure/.kure.yaml"},
-		{action: "Env var without extension", path: "/home/kure"},
-		{action: "Home directory", path: ""},
+		{desc: "Env var with extension", path: "/home/kure/.kure.yaml"},
+		{desc: "Env var without extension", path: "/home/kure"},
+		{desc: "Home directory", path: ""},
 	}
 
 	for _, tc := range cases {
-		if err := os.Setenv("KURE_CONFIG", tc.path); err != nil {
-			t.Errorf("%s: failed to set the environment variable: %v", tc.action, err)
-		}
+		t.Run(tc.desc, func(t *testing.T) {
+			if err := os.Setenv("KURE_CONFIG", tc.path); err != nil {
+				t.Errorf("Failed to set the environment variable: %v", err)
+			}
 
-		path, err := GetConfigPath()
-		if err != nil {
-			t.Errorf("Failed getting the configuration file path: %v", err)
-		}
+			path, err := GetConfigPath()
+			if err != nil {
+				t.Errorf("Failed getting the configuration file path: %v", err)
+			}
 
-		if path == "" {
-			t.Errorf("Expected a path to the file and got %q", path)
-		}
+			if path == "" {
+				t.Errorf("Expected a path to the file and got %q", path)
+			}
 
-		filename := ".kure.yaml"
-		if !strings.Contains(path, filename) {
-			t.Errorf("Invalid path, expected it to contain %q but got: %q", filename, path)
-		}
+			filename := ".kure.yaml"
+			if !strings.Contains(path, filename) {
+				t.Errorf("Invalid path, expected it to contain %q but got: %q", filename, path)
+			}
+		})
 	}
 }
 
@@ -85,32 +185,25 @@ func TestGetConfigPathError(t *testing.T) {
 	}
 }
 
-func TestPrintObjectName(t *testing.T) {
-	name := "test"
-
-	PrintObjectName(name)
-	// Output:
-	//
-	// +───────────────────────── Test ─────────────────────────>
-}
-
 func TestProceed(t *testing.T) {
 	cases := []struct {
-		action  string
+		desc    string
 		input   string
 		proceed bool
 	}{
-		{action: "Continue", input: "y", proceed: true},
-		{action: "Stop", input: "n", proceed: false},
+		{desc: "Continue", input: "y", proceed: true},
+		{desc: "Stop", input: "n", proceed: false},
 	}
 
 	for _, tc := range cases {
-		buf := bytes.NewBufferString(tc.input)
+		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString(tc.input)
 
-		proceed := Proceed(buf)
-		if proceed != tc.proceed {
-			t.Errorf("%s: expected %v, got %v", tc.action, tc.proceed, proceed)
-		}
+			proceed := Proceed(buf)
+			if proceed != tc.proceed {
+				t.Errorf("Expected %v, got %v", tc.proceed, proceed)
+			}
+		})
 	}
 }
 
@@ -121,113 +214,101 @@ func TestRequirePassword(t *testing.T) {
 	name := "require_password_test"
 
 	cases := []struct {
-		action string
-		create func()
-		delete func()
+		desc   string
+		create func() error
+		remove func() error
 	}{
 		{
-			action: "Card",
-			create: func() {
-				if err := card.Create(db, &pb.Card{Name: name}); err != nil {
-					t.Fatal(err)
-				}
-			},
-			delete: func() {
-				if err := card.Remove(db, name); err != nil {
-					t.Fatal(err)
-				}
-			},
+			desc:   "Card",
+			create: func() error { return card.Create(db, &pb.Card{Name: name}) },
+			remove: func() error { return card.Remove(db, name) },
 		},
 		{
-			action: "Entry",
-			create: func() {
-				if err := entry.Create(db, &pb.Entry{Name: name, Expires: "Never"}); err != nil {
-					t.Fatal(err)
-				}
-			},
-			delete: func() {
-				if err := entry.Remove(db, name); err != nil {
-					t.Fatal(err)
-				}
-			},
+			desc:   "Entry",
+			create: func() error { return entry.Create(db, &pb.Entry{Name: name, Expires: "Never"}) },
+			remove: func() error { return entry.Remove(db, name) },
 		},
 		{
-			action: "File",
-			create: func() {
-				if err := file.Create(db, &pb.File{Name: name}); err != nil {
-					t.Fatal(err)
-				}
-			},
-			delete: func() {
-				if err := file.Remove(db, name); err != nil {
-					t.Fatal(err)
-				}
-			},
+			desc:   "File",
+			create: func() error { return file.Create(db, &pb.File{Name: name}) },
+			remove: func() error { return file.Remove(db, name) },
 		},
 		{
-			action: "Wallet",
-			create: func() {
-				if err := wallet.Create(db, &pb.Wallet{Name: name}); err != nil {
-					t.Fatal(err)
-				}
-			},
-			delete: func() {
-				if err := wallet.Remove(db, name); err != nil {
-					t.Fatal(err)
-				}
-			},
+			desc:   "Note",
+			create: func() error { return note.Create(db, &pb.Note{Name: name}) },
+			remove: func() error { return note.Remove(db, name) },
 		},
+	}
+
+	// This mock is used to execute RequirePassword as PreRunE
+	mock := func(db *bolt.DB) *cobra.Command {
+		return &cobra.Command{
+			Use:     "mock",
+			PreRunE: RequirePassword(db),
+		}
 	}
 
 	for _, tc := range cases {
-		tc.create()
-		if err := RequirePassword(db); err != nil {
-			t.Errorf("%s: RequirePassword() failed: %v", tc.action, err)
-		}
-		tc.delete()
-	}
+		t.Run(tc.desc, func(t *testing.T) {
+			if err := tc.create(); err != nil {
+				t.Fatal(err)
+			}
 
+			cmd := mock(db)
+			if err := cmd.PreRunE(cmd, nil); err != nil {
+				t.Errorf("RequirePassword() failed: %v", err)
+			}
+
+			if err := tc.remove(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 }
 
 func TestScan(t *testing.T) {
 	cases := []struct {
-		action   string
+		desc     string
 		input    string
 		expected string
 	}{
-		{action: "Scan", input: "test\n", expected: "test"},
-		{action: "Empty scan", input: "\n", expected: ""},
+		{desc: "Scan", input: "test\n", expected: "test"},
+		{desc: "Empty scan", input: "\n", expected: ""},
 	}
 
 	for _, tc := range cases {
-		buf := bytes.NewBufferString(tc.input)
-		scanner := bufio.NewScanner(buf)
+		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString(tc.input)
+			scanner := bufio.NewScanner(buf)
 
-		got := Scan(scanner, "test")
-		if got != tc.expected {
-			t.Errorf("expected %s, got: %s", tc.expected, got)
-		}
+			got := Scan(scanner, "test")
+			if got != tc.expected {
+				t.Errorf("Expected %s, got: %s", tc.expected, got)
+			}
+		})
 	}
 }
 
 func TestScanlns(t *testing.T) {
 	cases := []struct {
-		action   string
+		desc     string
 		input    string
 		expected string
 	}{
-		{action: "Scan lines", input: "test\nscanlns\n!end\n", expected: "test\nscanlns"},
-		{action: "Break", input: "!end\n", expected: ""},
+		{desc: "Scan lines", input: "test\nscanlns\n!end\n", expected: "test\nscanlns"},
+		{desc: "Break", input: "!end\n", expected: ""},
 	}
 
 	for _, tc := range cases {
-		buf := bytes.NewBufferString(tc.input)
-		scanner := bufio.NewScanner(buf)
+		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString(tc.input)
+			scanner := bufio.NewScanner(buf)
 
-		got := Scanlns(scanner, "test")
-		if got != tc.expected {
-			t.Errorf("%s: expected %s, got: %s", tc.action, tc.expected, got)
-		}
+			got := Scanlns(scanner, "test")
+			if got != tc.expected {
+				t.Errorf("Expected %s, got: %s", tc.expected, got)
+			}
+		})
 	}
 }
 
@@ -236,12 +317,12 @@ func TestSetContext(t *testing.T) {
 	defer db.Close()
 }
 
-func assertError(t *testing.T, name, funcName string, err error, pass bool) {
+func assertError(t *testing.T, funcName string, err error, pass bool) {
 	if err != nil && pass {
-		t.Errorf("%s: failed running %s: %v", name, funcName, err)
+		t.Errorf("Failed running %s: %v", funcName, err)
 	}
 	if err == nil && !pass {
-		t.Errorf("%s: expected an error and got nil", name)
+		t.Error("Expected an error and got nil")
 	}
 }
 

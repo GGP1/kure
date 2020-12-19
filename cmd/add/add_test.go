@@ -16,7 +16,8 @@ func TestAddWithPassword(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
-	cases := map[string]struct {
+	cases := []struct {
+		desc    string
 		name    string
 		length  string
 		format  string
@@ -25,7 +26,8 @@ func TestAddWithPassword(t *testing.T) {
 		repeat  string
 		pass    bool
 	}{
-		"Add": {
+		{
+			desc:    "Add",
 			name:    "test",
 			length:  "18",
 			format:  "1,2,3,4,5",
@@ -34,25 +36,25 @@ func TestAddWithPassword(t *testing.T) {
 			repeat:  "true",
 			pass:    true,
 		},
-		"Default values": {
+		{
+			desc:   "Default values",
 			name:   "test2",
 			length: "8",
 			pass:   true,
 		},
-		"Invalid name": {
+		{
+			desc: "Invalid name",
 			name: "",
 			pass: false,
 		},
-		"Invalid length": {
+		{
+			desc:   "Invalid length",
 			name:   "test",
 			length: "0",
 			pass:   false,
 		},
-		"Name too long": {
-			name: "012345678901234567890123456789012345678901234567890123456789",
-			pass: false,
-		},
-		"Include and exclude error": {
+		{
+			desc:    "Include and exclude error",
 			name:    "test",
 			length:  "5",
 			include: "a",
@@ -68,98 +70,108 @@ func TestAddWithPassword(t *testing.T) {
 	cmd := NewCmd(db, os.Stdin)
 	f := cmd.Flags()
 
-	for k, tc := range cases {
-		args := []string{tc.name}
-		f.Set("length", tc.length)
-		f.Set("format", tc.format)
-		f.Set("include", tc.include)
-		f.Set("exclude", tc.exclude)
-		f.Set("repeat", tc.repeat)
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			args := []string{tc.name}
+			f.Set("length", tc.length)
+			f.Set("format", tc.format)
+			f.Set("include", tc.include)
+			f.Set("exclude", tc.exclude)
+			f.Set("repeat", tc.repeat)
 
-		err := cmd.RunE(cmd, args)
-		assertError(t, k, "add", err, tc.pass)
+			err := cmd.RunE(cmd, args)
+			assertError(t, "add", err, tc.pass)
 
-		cmd.ResetFlags()
+			cmd.ResetFlags()
+		})
 	}
 
-	// Test already exists separate to avoid "Add" executing after it and fail
-	args := []string{"test"}
-	f.Set("length", "10")
-	if err := cmd.RunE(cmd, args); err == nil {
-		t.Error("Expected an error and got nil")
-	}
+	// Test separated to avoid "Add" executing after it and fail
+	t.Run("Already exists", func(t *testing.T) {
+		args := []string{"test"}
+		f.Set("length", "10")
+		if err := cmd.RunE(cmd, args); err == nil {
+			t.Error("Expected an error and got nil")
+		}
+	})
 }
 
 func TestAddWithPassphrase(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
-	cases := map[string]struct {
+	cases := []struct {
+		desc      string
 		name      string
 		separator string
 		length    string
 		list      string
 		pass      bool
 	}{
-		"No list": {
+		{
+			desc:      "No list",
 			name:      "test",
 			separator: "/",
 			length:    "7",
 			list:      "nolist",
 			pass:      true,
 		},
-		"Word list": {
+		{
+			desc:      "Word list",
 			name:      "test wordlist",
 			separator: "&",
 			length:    "5",
 			list:      "wordlist",
 			pass:      true,
 		},
-		"Syllable list": {
+		{
+			desc:   "Syllable list",
 			name:   "test syllablelist",
 			length: "9",
 			list:   "syllablelist",
 			pass:   true,
 		},
-		"Invalid name": {
+		{
+			desc:   "Invalid name",
 			name:   "",
 			length: "4",
 			list:   "word list",
 			pass:   false,
 		},
-		"Invalid length": {
+		{
+			desc:   "Invalid length",
 			name:   "test",
 			length: "0",
 			list:   "nolist",
 			pass:   false,
-		},
-		"Name too long": {
-			name: "0123456789012345678901234567890123456789012345678901234567890",
-			pass: false,
 		},
 	}
 
 	cmd := phraseSubCmd(db, os.Stdin)
 	f := cmd.Flags()
 
-	for k, tc := range cases {
-		args := []string{tc.name}
-		f.Set("separator", tc.separator)
-		f.Set("length", tc.length)
-		f.Set("list", tc.list)
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			args := []string{tc.name}
+			f.Set("separator", tc.separator)
+			f.Set("length", tc.length)
+			f.Set("list", tc.list)
 
-		err := cmd.RunE(cmd, args)
-		assertError(t, k, "add with passphrase", err, tc.pass)
+			err := cmd.RunE(cmd, args)
+			assertError(t, "add with passphrase", err, tc.pass)
 
-		cmd.ResetFlags()
+			cmd.ResetFlags()
+		})
 	}
 
-	// Test already exists separate to avoid NoList executing after it and fail
-	args := []string{"test"}
-	f.Set("length", "5")
-	if err := cmd.RunE(cmd, args); err == nil {
-		t.Error("Expected an error and got nil")
-	}
+	// Test separated to avoid NoList executing after it and fail
+	t.Run("Already exists", func(t *testing.T) {
+		args := []string{"test"}
+		f.Set("length", "5")
+		if err := cmd.RunE(cmd, args); err == nil {
+			t.Error("Expected an error and got nil")
+		}
+	})
 }
 
 func TestAddWithCustomPassword(t *testing.T) {
@@ -178,7 +190,7 @@ func TestAddWithCustomPassword(t *testing.T) {
 	cmd.ResetFlags()
 }
 
-func TestEntryInput(t *testing.T) {
+func TestInput(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
@@ -193,7 +205,7 @@ func TestEntryInput(t *testing.T) {
 
 	buf := bytes.NewBufferString("username\npassword\nurl\nnotes\n!end\nnever")
 
-	got, err := entryInput(db, "test", true, buf)
+	got, err := input(db, "test", true, buf)
 	if err != nil {
 		t.Fatalf("Failed creating entry: %v", err)
 	}
@@ -203,23 +215,15 @@ func TestEntryInput(t *testing.T) {
 	}
 }
 
-func TestFormatExpiration(t *testing.T) {
-	expected := "Fri, 20 Aug 2021 00:00:00 +0000"
+func TestInvalidExpirationFormat(t *testing.T) {
+	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	defer db.Close()
 
-	got, err := formatExpiration("20/08/2021")
-	if err != nil {
-		t.Fatal(err)
-	}
+	buf := bytes.NewBufferString("username\npassword\nurl\nnotes\n!end\n201/02/003")
 
-	if got != expected {
-		t.Errorf("Expected %s, got %s", expected, got)
-	}
-}
-
-func TestInvalidTimeFormat(t *testing.T) {
-	_, err := formatExpiration("204/09/2021")
+	_, err := input(db, "test", true, buf)
 	if err == nil {
-		t.Error("Expected to get an error but got nil")
+		t.Fatal("Expected input() to fail but it didn't")
 	}
 }
 
@@ -233,11 +237,11 @@ func TestPostRun(t *testing.T) {
 	f2(passphrase, nil)
 }
 
-func assertError(t *testing.T, name, funcName string, err error, pass bool) {
+func assertError(t *testing.T, funcName string, err error, pass bool) {
 	if err != nil && pass {
-		t.Errorf("%s: failed running %s: %v", name, funcName, err)
+		t.Errorf("Failed running %s: %v", funcName, err)
 	}
 	if err == nil && !pass {
-		t.Errorf("%s: expected an error and got nil", name)
+		t.Error("Expected an error and got nil")
 	}
 }

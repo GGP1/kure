@@ -20,21 +20,23 @@ func TestClear(t *testing.T) {
 	cmd := NewCmd()
 	f := cmd.Flags()
 	for _, tc := range cases {
-		f.Set(tc.flag, tc.value)
+		t.Run("Clear "+tc.flag, func(t *testing.T) {
+			f.Set(tc.flag, tc.value)
 
-		if err := cmd.RunE(cmd, nil); err != nil {
-			t.Fatalf("Failed clearing %s: %v", tc.flag, err)
-		}
-
-		switch tc.flag {
-		case "clipboard", "both":
-			got, _ := clipboard.ReadAll()
-			if got != "" {
-				t.Errorf("Expected clipboard to be empty but got: %s", got)
+			if err := cmd.RunE(cmd, nil); err != nil {
+				t.Fatalf("Failed clearing %s: %v", tc.flag, err)
 			}
-		}
 
-		cmd.ResetFlags()
+			switch tc.flag {
+			case "clipboard", "both":
+				got, _ := clipboard.ReadAll()
+				if got != "" {
+					t.Errorf("Expected clipboard to be empty but got: %s", got)
+				}
+			}
+
+			cmd.ResetFlags()
+		})
 	}
 }
 

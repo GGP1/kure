@@ -17,46 +17,57 @@ func TestEdit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cases := map[string]struct {
+	cases := []struct {
+		desc     string
 		name     string
 		nameFlag string
 		input    string
 		pass     bool
 	}{
-		"Edit": {
+		{
+			desc:     "Edit",
 			name:     "test",
 			nameFlag: "true",
 			input:    "testname\n\npassword\n-\n!end\n26/02/2021",
 			pass:     true,
 		},
-		"Invalid name": {
+		{
+			desc: "Invalid name",
 			name: "non-existent",
 			pass: false,
 		},
-		"Invalid new name": {
+		{
+			desc:     "Invalid new name",
 			name:     "testname",
 			nameFlag: "true",
 			input:    "\nusername\npassword\ntestedit.com\n!end\n26/02/2021",
 			pass:     false,
 		},
-		"Invalid expiration format": {
+		{
+			desc:  "Invalid expiration format",
 			name:  "testname",
 			input: "-\n\npassword\ntestedit.com\n!end\ninvalid format",
 			pass:  false,
 		},
 	}
 
-	for k, tc := range cases {
-		buf := bytes.NewBufferString(tc.input)
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString(tc.input)
 
-		cmd := NewCmd(db, buf)
-		f := cmd.Flags()
+			cmd := NewCmd(db, buf)
+			f := cmd.Flags()
 
-		args := []string{tc.name}
-		f.Set("name", tc.nameFlag)
+			args := []string{tc.name}
+			f.Set("name", tc.nameFlag)
 
-		err := cmd.RunE(cmd, args)
-		assertError(t, k, "edit", err, tc.pass)
+			err := cmd.RunE(cmd, args)
+			assertError(t, "edit", err, tc.pass)
+		})
+	}
+
+	if _, err := entry.Get(db, "testname"); err != nil {
+		t.Errorf("Expected to get the edited entry but failed: %v", err)
 	}
 }
 
@@ -66,11 +77,11 @@ func TestPostRun(t *testing.T) {
 	f(cmd, nil)
 }
 
-func assertError(t *testing.T, name, funcName string, err error, pass bool) {
+func assertError(t *testing.T, funcName string, err error, pass bool) {
 	if err != nil && pass {
-		t.Errorf("%s: failed running %s: %v", name, funcName, err)
+		t.Errorf("Failed running %s: %v", funcName, err)
 	}
 	if err == nil && !pass {
-		t.Errorf("%s: expected an error and got nil", name)
+		t.Error("Expected an error and got nil")
 	}
 }

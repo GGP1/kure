@@ -28,7 +28,7 @@ func TestEntry(t *testing.T) {
 	t.Run("Edit", edit(db, entry.Name))
 	t.Run("Get", get(db, entry))
 	t.Run("List", list(db))
-	t.Run("List by name", listByName(db, entry.Name))
+	t.Run("List fastest", listFastest(db))
 	t.Run("List names", listNames(db))
 	t.Run("Remove", remove(db, entry.Name))
 }
@@ -84,15 +84,10 @@ func list(db *bolt.DB) func(*testing.T) {
 	}
 }
 
-func listByName(db *bolt.DB, name string) func(*testing.T) {
+func listFastest(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		entries, err := ListByName(db, name)
-		if err != nil {
-			t.Fatalf("ListByName() failed: %v", err)
-		}
-
-		if len(entries) == 0 {
-			t.Error("Expected one or more entries, got 0")
+		if !ListFastest(db) {
+			t.Error("Failed decrypting entries")
 		}
 	}
 }
@@ -105,7 +100,7 @@ func listNames(db *bolt.DB) func(*testing.T) {
 		}
 
 		expected := "test"
-		got := entries[0].Name
+		got := entries[0]
 
 		if got != expected {
 			t.Errorf("Expected %s, got %s", expected, got)
@@ -125,7 +120,7 @@ func remove(db *bolt.DB, name string) func(*testing.T) {
 	}
 }
 
-func TestLsExpired(t *testing.T) {
+func TestListExpired(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
@@ -135,10 +130,34 @@ func TestLsExpired(t *testing.T) {
 	}
 
 	t.Run("Create", create(db, entry))
-
 	_, err := List(db)
 	if err != nil {
 		t.Errorf("List() failed: %v", err)
+	}
+
+	// Recreate as it was deleted by List()
+	t.Run("Create", create(db, entry))
+	_, err = ListNames(db)
+	if err != nil {
+		t.Errorf("List() failed: %v", err)
+	}
+}
+
+func TestIsExpired(t *testing.T) {
+	expired := make(chan bool, 1)
+	errCh := make(chan error, 1)
+	isExpired("Mon, 02 Jan 2030 15:04:05 -0700", expired, errCh)
+
+	select {
+	case e := <-expired:
+		if e {
+			t.Error("Expected non expired result")
+		}
+
+	case err := <-errCh:
+		if err != nil {
+			t.Errorf("isExpired() failed: %v", err)
+		}
 	}
 }
 
@@ -146,18 +165,10 @@ func TestCreateErrors(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	entry := &pb.Entry{Name: "test create errors"}
-	// Create the entry to receive 'already exists' error
-	t.Run("Create", create(db, entry))
-
-	if err := Create(db, &pb.Entry{}); err == nil {
-		t.Error("Expected 'save entry' error, got nil")
-	}
-
 	// Remove the entry to not receive 'already exists' error
 	viper.Set("user.password", nil)
 	if err := Create(db, &pb.Entry{}); err == nil {
-		t.Error("Expected List 'decrypt entry' error, got nil")
+		t.Error("Expected 'encrypt entry' error, got nil")
 	}
 }
 
@@ -175,9 +186,10 @@ func TestGetErrors(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run("Create", create(db, tc))
+	// Create only the first entry
+	t.Run("Create", create(db, cases[0]))
 
+	for _, tc := range cases {
 		_, err := Get(db, tc.Name)
 		if err == nil {
 			t.Error("Expected an error, got nil")
@@ -185,12 +197,18 @@ func TestGetErrors(t *testing.T) {
 	}
 }
 
-func TestRemoveError(t *testing.T) {
-	db := setContext(t)
-	defer db.Close()
+func TestIsExpiredError(t *testing.T) {
+	expired := make(chan bool, 1)
+	errCh := make(chan error, 1)
+	isExpired("invalid format", expired, errCh)
 
-	if err := Remove(db, "non-existent"); err == nil {
-		t.Error("Expected 'does not exist' error, got nil")
+	select {
+	case e := <-expired:
+		if e {
+			t.Error("Expected the expired channel to return an error")
+		}
+
+	case <-errCh:
 	}
 }
 
@@ -208,6 +226,9 @@ func TestBucketError(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if err := Create(db, entry); err == nil {
+		t.Error("Edit() didn't return 'invalid bucket'")
+	}
 	if err := Edit(db, entry.Name, entry); err == nil {
 		t.Error("Edit() didn't return 'invalid bucket'")
 	}
@@ -219,16 +240,50 @@ func TestBucketError(t *testing.T) {
 	if err == nil {
 		t.Error("List() didn't return 'invalid bucket'")
 	}
-	_, err = ListByName(db, entry.Name)
-	if err == nil {
-		t.Error("ListByName() didn't return 'invalid bucket'")
-	}
 	_, err = ListNames(db)
 	if err == nil {
 		t.Error("ListAllNames() didn't return 'invalid bucket'")
 	}
 	if err := Remove(db, entry.Name); err == nil {
 		t.Error("Remove() didn't return 'invalid bucket'")
+	}
+}
+
+func TestDecryptError(t *testing.T) {
+	db := setContext(t)
+	defer db.Close()
+
+	entry := &pb.Entry{Name: "test decrypt error"}
+	if err := Create(db, entry); err != nil {
+		t.Fatal(err)
+	}
+
+	viper.Set("user.password", nil)
+
+	_, err := Get(db, entry.Name)
+	if err == nil {
+		t.Error("Get() didn't return 'decrypt entry' error")
+	}
+	_, err = List(db)
+	if err == nil {
+		t.Error("List() didn't return 'decrypt entry' error")
+	}
+	if ListFastest(db) {
+		t.Error("Expected ListFastest() to return false and returned true")
+	}
+}
+
+func TestKeyError(t *testing.T) {
+	db := setContext(t)
+	defer db.Close()
+
+	entry := &pb.Entry{Name: ""}
+
+	if err := Create(db, entry); err == nil {
+		t.Error("Create() didn't fail")
+	}
+	if err := Edit(db, entry.Name, entry); err == nil {
+		t.Error("Edit() didn't fail")
 	}
 }
 
@@ -244,13 +299,10 @@ func setContext(t *testing.T) *bolt.DB {
 	viper.Set("user.password", password.Seal())
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		buckets := [4]string{"kure_card", "kure_entry", "kure_file", "kure_wallet"}
-		for _, bucket := range buckets {
-			tx.DeleteBucket([]byte(bucket))
-			_, err := tx.CreateBucketIfNotExists([]byte(bucket))
-			if err != nil {
-				return errors.Wrapf(err, "couldn't create %q bucket", bucket)
-			}
+		bucket := "kure_entry"
+		tx.DeleteBucket([]byte(bucket))
+		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
+			return errors.Wrapf(err, "couldn't create %q bucket", bucket)
 		}
 		return nil
 	})

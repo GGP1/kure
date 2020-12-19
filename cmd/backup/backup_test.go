@@ -14,27 +14,30 @@ func TestBackup(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
-	cases := map[string]struct {
+	cases := []struct {
+		desc string
 		path string
 		pass bool
 	}{
-		"Backup":       {path: "backup.test", pass: true},
-		"Invalid path": {path: "", pass: false},
+		{desc: "Backup", path: "backup.test", pass: true},
+		{desc: "Invalid path", path: "", pass: false},
 	}
 
-	for k, tc := range cases {
-		cmd := NewCmd(db)
-		cmd.Flags().Set("path", tc.path)
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			cmd := NewCmd(db)
+			cmd.Flags().Set("path", tc.path)
 
-		err := cmd.RunE(cmd, nil)
-		if err != nil && tc.pass {
-			t.Errorf("%s: failed creating the backup file: %v", k, err)
-		}
-		if err == nil && !tc.pass {
-			t.Errorf("%s: expected and error but got nil", k)
-		}
+			err := cmd.RunE(cmd, nil)
+			if err != nil && tc.pass {
+				t.Errorf("Failed creating the backup file: %v", err)
+			}
+			if err == nil && !tc.pass {
+				t.Error("Expected and error but got nil")
+			}
 
-		cmd.ResetFlags()
+			cmd.ResetFlags()
+		})
 	}
 
 	if err := os.Remove("backup.test"); err != nil {

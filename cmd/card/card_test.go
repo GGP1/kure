@@ -16,144 +16,250 @@ func TestCard(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
-	NewCmd(db)
-	t.Run("add", add(db))
-	t.Run("copy", copy(db))
-	t.Run("ls", ls(db))
-	t.Run("rm", rm(db))
+	NewCmd(db, nil)
+	t.Run("Add", add(db))
+	t.Run("Copy", copy(db))
+	t.Run("Ls", ls(db))
+	t.Run("Rm", rm(db))
 }
 
 func add(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		cases := map[string]struct {
+		cases := []struct {
+			desc string
 			name string
 			pass bool
 		}{
-			"Add one":      {name: "test", pass: true},
-			"Invalid name": {name: "", pass: false},
-			"Name too long": {name: `012345678901234567890123456789
-			0123456789012345678901234567890123456789`, pass: false},
+			{
+				desc: "Add",
+				name: "test",
+				pass: true,
+			},
+			{
+				desc: "Add2",
+				name: "test2",
+				pass: true,
+			},
+			{
+				desc: "Add within directory",
+				name: "directory/test",
+				pass: true,
+			},
+			{
+				desc: "Already exists",
+				name: "test",
+				pass: false,
+			},
+			{
+				desc: "Invalid name",
+				name: "",
+				pass: false,
+			},
 		}
 
 		cmd := addSubCmd(db, os.Stdin)
 
-		for k, tc := range cases {
-			args := []string{tc.name}
+		for _, tc := range cases {
+			t.Run(tc.desc, func(t *testing.T) {
+				args := []string{tc.name}
 
-			err := cmd.RunE(cmd, args)
-			assertError(t, k, "add", err, tc.pass)
-		}
-
-		// Test already exists separate to avoid "Add one" executing after it and fail
-		args := []string{"test"}
-		if err := cmd.RunE(cmd, args); err == nil {
-			t.Errorf("%q already exists and we expected an error but got nil", args[0])
+				err := cmd.RunE(cmd, args)
+				assertError(t, "add", err, tc.pass)
+			})
 		}
 	}
 }
 
 func copy(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		cases := map[string]struct {
+		cases := []struct {
+			desc    string
 			name    string
-			field   string
+			cvc     string
 			timeout string
 			pass    bool
 		}{
-			"Copy number":       {name: "test", field: "number", pass: true},
-			"Copy CVC":          {name: "test", field: "code", pass: true},
-			"Copy w/Timeout":    {name: "test", field: "number", timeout: "30ms", pass: true},
-			"Invalid name":      {name: "", pass: false},
-			"Invalid field":     {name: "test", field: "", pass: false},
-			"Non existent card": {name: "non-existent", pass: false},
+			{
+				desc: "Copy number",
+				name: "test",
+				cvc:  "false",
+				pass: true,
+			},
+			{
+				desc: "Copy CVC",
+				name: "test",
+				cvc:  "true",
+				pass: true,
+			},
+			{
+				desc:    "Copy w/Timeout",
+				name:    "test",
+				timeout: "30ms",
+				pass:    true,
+			},
+			{
+				desc: "Invalid name",
+				name: "",
+				pass: false,
+			},
+			{
+				desc: "Non existent card",
+				name: "non-existent",
+				pass: false,
+			},
 		}
 
 		cmd := copySubCmd(db)
 		f := cmd.Flags()
 
-		for k, tc := range cases {
-			args := []string{tc.name}
-			if tc.timeout != "" {
-				f.Set("timeout", tc.timeout)
-			}
-			f.Set("field", tc.field)
+		for _, tc := range cases {
+			t.Run(tc.desc, func(t *testing.T) {
+				args := []string{tc.name}
+				if tc.timeout != "" {
+					f.Set("timeout", tc.timeout)
+				}
+				f.Set("cvc", tc.cvc)
 
-			err := cmd.RunE(cmd, args)
-			assertError(t, k, "copy", err, tc.pass)
+				err := cmd.RunE(cmd, args)
+				assertError(t, "copy", err, tc.pass)
+			})
 		}
 	}
 }
 
 func ls(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		cases := map[string]struct {
+		cases := []struct {
+			desc   string
 			name   string
 			filter string
 			hide   string
 			pass   bool
 		}{
-			"List one":            {name: "test", pass: true},
-			"Filter by name":      {name: "test", filter: "true", pass: true},
-			"List all":            {name: "", pass: true},
-			"List one and hide":   {name: "test", hide: "true", pass: true},
-			"Card does not exist": {name: "non-existent", filter: "false", pass: false},
-			"No cards found":      {name: "non-existent", filter: "true", pass: false},
+			{
+				desc: "List one",
+				name: "test",
+				pass: true,
+			},
+			{
+				desc:   "Filter by name",
+				name:   "test",
+				filter: "true",
+				pass:   true,
+			},
+			{
+				desc: "List all",
+				name: "",
+				pass: true,
+			},
+			{
+				desc: "List one and hide",
+				name: "test",
+				hide: "true",
+				pass: true,
+			},
+			{
+				desc:   "Card does not exist",
+				name:   "non-existent",
+				filter: "false",
+				pass:   false,
+			},
+			{
+				desc:   "No cards found",
+				name:   "non-existent",
+				filter: "true",
+				pass:   false,
+			},
 		}
 
 		cmd := lsSubCmd(db)
 		f := cmd.Flags()
 
-		for k, tc := range cases {
-			args := []string{tc.name}
-			f.Set("filter", tc.filter)
-			f.Set("hide", tc.hide)
+		for _, tc := range cases {
+			t.Run(tc.desc, func(t *testing.T) {
+				args := []string{tc.name}
+				f.Set("filter", tc.filter)
+				f.Set("hide", tc.hide)
 
-			err := cmd.RunE(cmd, args)
-			assertError(t, k, "ls", err, tc.pass)
+				err := cmd.RunE(cmd, args)
+				assertError(t, "ls", err, tc.pass)
+			})
 		}
 	}
 }
 
 func rm(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		cases := map[string]struct {
+		cases := []struct {
+			desc  string
 			name  string
 			input string
+			dir   string
 			pass  bool
 		}{
-			"Remove":            {name: "test", input: "y", pass: true},
-			"Do not proceed":    {name: "quit", input: "n", pass: true},
-			"Invalid name":      {name: "", pass: false},
-			"Non existent card": {name: "non-existent", input: "y", pass: false},
+			{
+				desc:  "Remove",
+				name:  "test",
+				input: "y",
+				pass:  true,
+			},
+			{
+				desc:  "Remove directory",
+				name:  "directory",
+				input: "y",
+				dir:   "true",
+				pass:  true,
+			},
+			{
+				desc:  "Do not proceed",
+				name:  "test2",
+				input: "n",
+				pass:  true,
+			},
+			{
+				desc: "Invalid name",
+				name: "",
+				pass: false,
+			},
+			{
+				desc:  "Non existent card",
+				name:  "non-existent",
+				input: "y",
+				pass:  false,
+			},
 		}
 
-		for k, tc := range cases {
-			buf := bytes.NewBufferString(tc.input)
+		for _, tc := range cases {
+			t.Run(tc.desc, func(t *testing.T) {
+				buf := bytes.NewBufferString(tc.input)
 
-			cmd := rmSubCmd(db, buf)
-			args := []string{tc.name}
+				cmd := rmSubCmd(db, buf)
+				cmd.Flags().Set("dir", tc.dir)
+				args := []string{tc.name}
 
-			err := cmd.RunE(cmd, args)
-			assertError(t, k, "rm", err, tc.pass)
+				err := cmd.RunE(cmd, args)
+				assertError(t, "rm", err, tc.pass)
+			})
 		}
 	}
 }
 
-func TestCardAddInput(t *testing.T) {
+func TestInput(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
 	expected := &pb.Card{
-		Name:       "test",
-		Type:       "type",
-		Number:     "123456789",
-		CVC:        "1234",
-		ExpireDate: "2021/06",
+		Name:         "test",
+		Type:         "type",
+		Number:       "123456789",
+		SecurityCode: "1234",
+		ExpireDate:   "2021/06",
+		Notes:        "notes",
 	}
 
-	buf := bytes.NewBufferString("type\n123456789\n1234\n2021/06")
+	buf := bytes.NewBufferString("type\n123456789\n1234\n2021/06\nnotes")
 
-	got, err := cardInput(db, "Test", buf)
+	got, err := input(db, "test", buf)
 	if err != nil {
 		t.Fatalf("Failed creating the card: %v", err)
 	}
@@ -171,13 +277,17 @@ func TestPostRun(t *testing.T) {
 	ls := lsSubCmd(nil)
 	f2 := ls.PostRun
 	f2(ls, nil)
+
+	rm := rmSubCmd(nil, nil)
+	f3 := rm.PostRun
+	f3(ls, nil)
 }
 
-func assertError(t *testing.T, name, funcName string, err error, pass bool) {
+func assertError(t *testing.T, funcName string, err error, pass bool) {
 	if err != nil && pass {
-		t.Errorf("%s: failed running %s: %v", name, funcName, err)
+		t.Errorf("Failed running %s: %v", funcName, err)
 	}
 	if err == nil && !pass {
-		t.Errorf("%s: expected an error and got nil", name)
+		t.Error("Expected an error and got nil")
 	}
 }

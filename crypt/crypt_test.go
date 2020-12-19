@@ -1,6 +1,8 @@
 package crypt
 
 import (
+	"crypto/rand"
+	"crypto/subtle"
 	"testing"
 
 	"github.com/awnumar/memguard"
@@ -13,9 +15,7 @@ func TestCrypt(t *testing.T) {
 		password string
 	}{
 		{"kure cli password manager", "test1"},
-		{"encrypting and decrypting", "test2"},
-		{"chacha20-poly1305", "test3"},
-		{"sha-256", "test4"},
+		{"advanced standard encryption", "test2"},
 	}
 
 	for _, tc := range cases {
@@ -43,7 +43,19 @@ func TestCrypt(t *testing.T) {
 	}
 }
 
-func TestInvalidPasswordEncrypt(t *testing.T) {
+func TestCryptError(t *testing.T) {
+	_, err := Encrypt(nil)
+	if err == nil {
+		t.Error("Expected Encrypt() to fail but got nil")
+	}
+
+	_, err = Decrypt(nil)
+	if err == nil {
+		t.Error("Expected Decrypt() to fail but got nil")
+	}
+}
+
+func TestEncryptInvalidPassword(t *testing.T) {
 	viper.Reset()
 
 	_, err := Encrypt([]byte("test_fail"))
@@ -52,7 +64,7 @@ func TestInvalidPasswordEncrypt(t *testing.T) {
 	}
 }
 
-func TestInvalidPasswordDecrypt(t *testing.T) {
+func TestDecryptInvalidPassword(t *testing.T) {
 	viper.Reset()
 
 	defer func() {
@@ -62,4 +74,50 @@ func TestInvalidPasswordDecrypt(t *testing.T) {
 	}()
 
 	Decrypt([]byte("test_fail"))
+}
+
+func TestDeriveKey(t *testing.T) {
+	salt := make([]byte, 32)
+	_, err := rand.Read(salt)
+	if err != nil {
+		t.Fatalf("Failed generating salt: %v", err)
+	}
+
+	cases := []struct {
+		desc string
+		key  []byte
+		salt []byte
+	}{
+		{
+			desc: "Predefined random salt",
+			key:  []byte("test"),
+			salt: salt,
+		},
+		{
+			desc: "Generating random salt",
+			key:  []byte("test"),
+			salt: nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			password, salt, err := deriveKey(tc.key, tc.salt)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(password) != 32 {
+				t.Errorf("Expected a 32 byte long password, got %d bytes", len(password))
+			}
+
+			if len(salt) != 32 {
+				t.Errorf("Expected a 32 byte long salt, got %d bytes", len(salt))
+			}
+
+			if subtle.ConstantTimeCompare(password, tc.key) == 1 {
+				t.Error("KDF failed, expected a different password and got the same one")
+			}
+		})
+	}
 }
