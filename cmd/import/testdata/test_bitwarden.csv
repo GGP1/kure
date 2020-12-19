@@ -1,0 +1,2 @@
+Folder,Favorite,Type,Name,Notes,Fields,Login_uri,Login_username,Login_password,Login_totp
+test,,Login,bitwarden,Notes,,https://bitwarden.com/,test@bitwarden.com,bitwarden123,

@@ -1,0 +1,4 @@
+argon2:
+  iterations: 1
+  memory: 5000
+  threads: 6

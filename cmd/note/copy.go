@@ -1,11 +1,12 @@
-package wallet
+package note
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	cmdutil "github.com/GGP1/kure/cmd"
-	"github.com/GGP1/kure/db/wallet"
+	"github.com/GGP1/kure/db/note"
 
 	"github.com/atotto/clipboard"
 	"github.com/pkg/errors"
@@ -15,29 +16,27 @@ import (
 
 var timeout time.Duration
 
-var errWritingClipboard = errors.New("failed writing to the clipboard")
-
 var copyExample = `
-* Copy
-kure wallet copy walletName
+* Copy and clean after 30s
+kure note copy -t 30s`
 
-* Copy with a timeout of 1h
-kure wallet copy walletName -t 1h`
-
+// copySubCmd returns the copy subcommand
 func copySubCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "copy <name> [-t timeout]",
-		Short:   "Copy wallet public key",
-		Aliases: []string{"c"},
+		Use:     "copy <name>",
+		Short:   "Copy note text",
+		Aliases: []string{"cp"},
 		Example: copyExample,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runCopy(db),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			timeout = 0
 		},
 	}
 
-	cmd.Flags().DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
+	f := cmd.Flags()
+	f.DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
 
 	return cmd
 }
@@ -49,14 +48,16 @@ func runCopy(db *bolt.DB) cmdutil.RunEFunc {
 			return errInvalidName
 		}
 
-		wallet, err := wallet.Get(db, name)
+		note, err := note.Get(db, name)
 		if err != nil {
 			return err
 		}
 
-		if err := clipboard.WriteAll(wallet.PublicKey); err != nil {
-			return errWritingClipboard
+		if err := clipboard.WriteAll(note.Text); err != nil {
+			return errors.Wrap(err, "failed writing to the clipboard")
 		}
+
+		fmt.Println("Note copied to clipboard")
 
 		if timeout > 0 {
 			<-time.After(timeout)

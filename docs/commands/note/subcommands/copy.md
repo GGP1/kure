@@ -1,16 +1,16 @@
 ## Use 
 
-`kure wallet copy <name> [-t timeout]`
+`kure note copy <name> [-t timeout]`
 
-*Aliases*: copy, c.
+*Aliases*: copy, cp.
 
 ## Description
 
-Copy wallet public key.
+Copy note text.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |                     Usage                     |
+|  Name     | Shorthand |     Type      |    Default    |                  Description                  |
 |-----------|-----------|---------------|---------------|-----------------------------------------------|
 | timeout   | t         | duration      | 0             | Set a time until the clipboard is cleaned     |
 
@@ -20,12 +20,7 @@ Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
 ### Examples
 
-Copy wallet number:
+Copy note and clean after 15 minutes:
 ```
-kure wallet copy Satoshi
-```
-
-Copy wallet number with a timeout of 1 hour:
-```
-kure wallet copy Ether -t 1h
+kure note copy Sample -t 15m
 ```
