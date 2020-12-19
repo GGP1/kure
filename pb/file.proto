@@ -10,7 +10,3 @@ message File {
     string filename = 3;
     int64 created_at = 4;
 }
-
-message FileList {
-    string name = 1;
-}

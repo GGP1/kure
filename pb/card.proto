@@ -8,10 +8,7 @@ message Card {
     string name = 1;
     string type = 2;
     string number = 3;
-    string CVC = 4;
-    string expireDate = 5;
-}
-
-message CardList {
-    string name = 1;
+    string security_code = 4;
+    string expire_date = 5;
+    string notes = 6;
 }
