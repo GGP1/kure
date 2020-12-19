@@ -11,3 +11,8 @@ http:
 
 session:
   prefix: kure>
+
+argon2:
+  memory: 25000
+  iterations: 1
+  threads: 2

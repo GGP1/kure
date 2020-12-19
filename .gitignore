@@ -1,7 +1,16 @@
+# Test database
 *.db
+
+# Profiling files
 *.out
-*.exe
+*.pprof
+
+# Test binaries
+*.test
+
+# Configuration files
 config.yaml
 config.yml
 
+# TODO file
 TODO.txt
