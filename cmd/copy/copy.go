@@ -1,6 +1,7 @@
 package copy
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -28,13 +29,14 @@ kure copy entryName -u`
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "copy <name> [-t timeout] [-u username]",
-		Short:   "Copy entry credentials to clipboard",
+		Use:     "copy <name>",
+		Short:   "Copy entry credentials to the clipboard",
 		Aliases: []string{"cp"},
 		Example: example,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runCopy(db),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			timeout = 0
 			username = false
 		},
@@ -51,7 +53,7 @@ func runCopy(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		name := strings.Join(args, " ")
 		if name == "" {
-			return errors.New("error: invalid name")
+			return errors.New("invalid name")
 		}
 
 		entry, err := entry.Get(db, name)
@@ -59,15 +61,18 @@ func runCopy(db *bolt.DB) cmdutil.RunEFunc {
 			return err
 		}
 
+		field := "Password"
 		copy := entry.Password
-
 		if username {
+			field = "Username"
 			copy = entry.Username
 		}
 
 		if err := clipboard.WriteAll(copy); err != nil {
-			return errors.Errorf("couldn't copy the field to the clipboard: %v", err)
+			return errors.Wrap(err, "failed writing to the clipboard")
 		}
+
+		fmt.Printf("%s copied to clipboard\n", field)
 
 		if timeout > 0 {
 			<-time.After(timeout)

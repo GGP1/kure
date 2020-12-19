@@ -2,7 +2,6 @@ package stats
 
 import (
 	"fmt"
-	"strings"
 
 	cmdutil "github.com/GGP1/kure/cmd"
 
@@ -21,6 +20,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Use:     "stats",
 		Short:   "Show database statistics",
 		Example: example,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runStats(db),
 	}
 
@@ -29,10 +29,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 func runStats(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		if err := cmdutil.RequirePassword(db); err != nil {
-			return err
-		}
-
 		tx, err := db.Begin(false)
 		if err != nil {
 			return errors.Wrap(err, "transaction failed")
@@ -41,17 +37,9 @@ func runStats(db *bolt.DB) cmdutil.RunEFunc {
 		nCards := tx.Bucket([]byte("kure_card")).Stats().KeyN
 		nEntries := tx.Bucket([]byte("kure_entry")).Stats().KeyN
 		nFiles := tx.Bucket([]byte("kure_file")).Stats().KeyN
-		nWallets := tx.Bucket([]byte("kure_wallet")).Stats().KeyN
-		totalRecords := nCards + nEntries + nFiles + nWallets
+		nNotes := tx.Bucket([]byte("kure_note")).Stats().KeyN
+		totalElements := nCards + nEntries + nFiles + nNotes
 		tx.Rollback()
-
-		list, err := listOfBuckets(db)
-		if err != nil {
-			return err
-		}
-
-		totalBuckets := len(list)
-		buckets := strings.Join(list, ", ")
 
 		fmt.Printf(`
      STATISTICS
@@ -59,29 +47,11 @@ func runStats(db *bolt.DB) cmdutil.RunEFunc {
 Number of cards: %d
 Number of entries: %d
 Number of files: %d
-Number of wallets: %d
+Number of notes: %d
 
-Total records: %d
-Number of buckets: %d
-Buckets list: %s
-`, nCards, nEntries, nFiles, nWallets, totalRecords, totalBuckets, buckets)
+Total elements: %d
+`, nCards, nEntries, nFiles, nNotes, totalElements)
 
 		return nil
 	}
-}
-
-// listOfBuckets returns a list of the existing buckets.
-func listOfBuckets(db *bolt.DB) ([]string, error) {
-	var buckets []string
-	err := db.View(func(tx *bolt.Tx) error {
-		return tx.ForEach(func(name []byte, _ *bolt.Bucket) error {
-			buckets = append(buckets, string(name))
-			return nil
-		})
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed listing buckets")
-	}
-
-	return buckets, nil
 }

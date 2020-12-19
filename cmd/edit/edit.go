@@ -28,16 +28,17 @@ kure edit entryName -n`
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "edit <name> [-n name]",
+		Use:   "edit <name>",
 		Short: "Edit an entry",
 		Long: `Edit entry fields.
 		
 "-" = Clear field.
 "" (nothing) = Do not modify field.`,
 		Example: example,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runEdit(db, r),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			name = false
 		},
 	}
@@ -50,13 +51,16 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 func runEdit(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		name := strings.Join(args, " ")
+		if name == "" {
+			return errors.New("invalid name")
+		}
 
 		oldEntry, err := entry.Get(db, name)
 		if err != nil {
 			return err
 		}
 
-		newEntry, err := editEntryInput(oldEntry, r)
+		newEntry, err := input(oldEntry, r)
 		if err != nil {
 			return err
 		}
@@ -65,14 +69,13 @@ func runEdit(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return err
 		}
 
-		fmt.Printf("\nSuccessfully edited %q entry.\n", name)
-
+		fmt.Printf("\n%q edited\n", name)
 		return nil
 	}
 }
 
-func editEntryInput(entry *pb.Entry, r io.Reader) (*pb.Entry, error) {
-	fmt.Println("Use '-' to clear a field and '' (nothing) to keep it unchanged")
+func input(entry *pb.Entry, r io.Reader) (*pb.Entry, error) {
+	fmt.Println("Use '-' to clear a field and leave blank to keep it unchanged")
 	fmt.Print("\n")
 
 	scanner := bufio.NewScanner(r)

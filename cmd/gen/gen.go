@@ -5,6 +5,7 @@ import (
 	"math"
 
 	cmdutil "github.com/GGP1/kure/cmd"
+	"github.com/atotto/clipboard"
 
 	"github.com/GGP1/atoll"
 	"github.com/pkg/errors"
@@ -13,13 +14,13 @@ import (
 )
 
 var (
-	qr, repeat       bool
+	copy, qr, repeat bool
 	length           uint64
 	format           []int
 	include, exclude string
 )
 
-var errInvalidLength = errors.New("error: invalid length")
+var errInvalidLength = errors.New("invalid length")
 
 var example = `
 * Generate a random password
@@ -31,15 +32,12 @@ kure gen -l 20 -q`
 // NewCmd returns a new command.
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "gen [-l length] [-f format] [-i include] [-e exclude] [-r repeat] [-q qr]",
-		Short: "Generate a random password",
-		Long: `Generate a random password.
-		
-When using [-q qr] flag, make sure the terminal is bigger than the image or it will spoil.`,
+		Use:     "gen",
+		Short:   "Generate a random password",
 		Example: example,
 		RunE:    runGen(),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			length = 0
 			format = nil
 			include, exclude = "", ""
@@ -47,15 +45,16 @@ When using [-q qr] flag, make sure the terminal is bigger than the image or it w
 		},
 	}
 
+	cmd.AddCommand(phraseSubCmd())
+
 	f := cmd.Flags()
+	f.BoolVarP(&copy, "copy", "c", false, "copy the password to the clipboard")
 	f.Uint64VarP(&length, "length", "l", 0, "password length")
 	f.IntSliceVarP(&format, "format", "f", nil, "password format")
 	f.StringVarP(&include, "include", "i", "", "characters to include in the password")
 	f.StringVarP(&exclude, "exclude", "e", "", "characters to exclude from the password")
-	f.BoolVarP(&repeat, "repeat", "r", true, "allow duplicated characters or not (default false)")
+	f.BoolVarP(&repeat, "repeat", "r", true, "character repetition")
 	f.BoolVarP(&qr, "qr", "q", false, "show the QR code image on the terminal")
-
-	cmd.AddCommand(phraseSubCmd())
 
 	return cmd
 }
@@ -67,15 +66,15 @@ func runGen() cmdutil.RunEFunc {
 		}
 
 		if format == nil {
-			passFormat := viper.GetIntSlice("entry.format")
-			if len(passFormat) == 0 {
-				return errors.New("error: please specify a format")
+			f := viper.GetIntSlice("entry.format")
+			if len(f) == 0 {
+				return errors.New("please specify a format")
 			}
-			format = passFormat
+			format = f
 		}
 
-		if entryRepeat := viper.GetBool("entry.repeat"); entryRepeat != false {
-			repeat = entryRepeat
+		if r := viper.GetBool("entry.repeat"); r != false {
+			repeat = r
 		}
 
 		uFormat := make([]uint8, len(format))
@@ -92,9 +91,15 @@ func runGen() cmdutil.RunEFunc {
 			Repeat:  repeat,
 		}
 
-		password, err := p.Generate()
+		password, err := atoll.NewSecret(p)
 		if err != nil {
 			return err
+		}
+
+		if copy {
+			if err := clipboard.WriteAll(password); err != nil {
+				return errors.Wrap(err, "failed writing to the clipboard")
+			}
 		}
 
 		if qr {
@@ -131,7 +136,5 @@ func calculateEntropy(length uint64, format []uint8) float64 {
 		}
 	}
 
-	entropy := math.Log2(math.Pow(float64(poolLength), float64(length)))
-
-	return entropy
+	return math.Log2(math.Pow(float64(poolLength), float64(length)))
 }

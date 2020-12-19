@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -27,18 +28,19 @@ var example = `
 kure config
 
 * Create a config file and save it 
-kure config -c -p path/to/config`
+kure config -c -p path/to/file`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "config [-c create] [-p path]",
+		Use:     "config",
 		Short:   "Read or create the configuration file",
 		Aliases: []string{"cfg"},
 		Example: example,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runConfig(db, r),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			create = false
 			path = ""
 		},
@@ -47,6 +49,8 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	f := cmd.Flags()
 	f.StringVarP(&path, "path", "p", "", "set config file path")
 	f.BoolVarP(&create, "create", "c", false, "create a config file")
+
+	cmd.AddCommand(testSubCmd())
 
 	return cmd
 }
@@ -77,10 +81,6 @@ func runConfig(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return nil
 		}
 
-		if err := cmdutil.RequirePassword(db); err != nil {
-			return err
-		}
-
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
 			return errors.Errorf("failed reading config file: %v", err)
@@ -98,6 +98,9 @@ File location: %s
 }
 
 func setConfig(r io.Reader) error {
+	fmt.Println("Leave blank to use default value")
+	fmt.Print("\n")
+
 	scanner := bufio.NewScanner(r)
 
 	name := cmdutil.Scan(scanner, "Database name")
@@ -107,8 +110,22 @@ func setConfig(r io.Reader) error {
 	port := cmdutil.Scan(scanner, "Http port")
 	prefix := cmdutil.Scan(scanner, "Session prefix")
 	timeout := cmdutil.Scan(scanner, "Session timeout")
-	mem := cmdutil.Scan(scanner, "Argon2id memory")
-	iter := cmdutil.Scan(scanner, "Argon2id iterations")
+	mem := cmdutil.Scan(scanner, "Argon2 memory")
+	iter := cmdutil.Scan(scanner, "Argon2 iterations")
+	ths := cmdutil.Scan(scanner, "Argon2 threads")
+
+	if port == "" {
+		port = "4000"
+	}
+	if mem == "" {
+		mem = "1048576"
+	}
+	if iter == "" {
+		iter = "1"
+	}
+	if ths == "" {
+		ths = fmt.Sprintf("%d", runtime.NumCPU())
+	}
 
 	httpPort, err := strconv.Atoi(port)
 	if err != nil {
@@ -117,22 +134,18 @@ func setConfig(r io.Reader) error {
 
 	memory, err := strconv.Atoi(mem)
 	if err != nil {
-		return errors.New("invalid argon2id memory number")
+		return errors.New("invalid argon2 memory number")
 	}
 
 	iterations, err := strconv.Atoi(iter)
 	if err != nil {
-		return errors.New("invalid argon2id iteration number")
+		return errors.New("invalid argon2 iteration number")
 	}
 
-	viper.Set("database.name", name)
-	viper.Set("database.path", dbPath)
-	viper.Set("http.port", httpPort)
-	viper.Set("entry.repeat", repeat)
-	viper.Set("session.prefix", prefix)
-	viper.Set("session.timeout", timeout)
-	viper.Set("argon2id.memory", memory)
-	viper.Set("argon2id.iterations", iterations)
+	threads, err := strconv.Atoi(ths)
+	if err != nil {
+		return errors.New("invalid argon2 thread number")
+	}
 
 	levels := strings.Split(format, ",")
 
@@ -148,7 +161,16 @@ func setConfig(r io.Reader) error {
 		}
 	}
 
+	viper.Set("database.name", name)
+	viper.Set("database.path", dbPath)
 	viper.Set("entry.format", f)
+	viper.Set("http.port", httpPort)
+	viper.Set("entry.repeat", repeat)
+	viper.Set("session.prefix", prefix)
+	viper.Set("session.timeout", timeout)
+	viper.Set("argon2.memory", memory)
+	viper.Set("argon2.iterations", iterations)
+	viper.Set("argon2.threads", threads)
 
 	return nil
 }

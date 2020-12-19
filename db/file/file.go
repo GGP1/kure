@@ -1,6 +1,9 @@
 package file
 
 import (
+	"bytes"
+	"compress/gzip"
+	"io"
 	"strings"
 
 	"github.com/GGP1/kure/crypt"
@@ -18,16 +21,20 @@ var (
 
 // Create saves a new file into the database.
 func Create(db *bolt.DB, file *pb.File) error {
-	files, err := ListNames(db)
+	// Compress file
+	var gzipBuf bytes.Buffer
+	gw := gzip.NewWriter(&gzipBuf)
+
+	_, err := gw.Write(file.Content)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed compressing file")
 	}
 
-	for _, f := range files {
-		if f.Name == file.Name {
-			return errors.Errorf("already exists a file or folder named %q", file.Name)
-		}
+	if err := gw.Close(); err != nil {
+		return errors.Wrap(err, "failed closing gzip writer")
 	}
+
+	file.Content = gzipBuf.Bytes()
 
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(fileBucket)
@@ -81,6 +88,22 @@ func Get(db *bolt.DB, name string) (*pb.File, error) {
 		return nil, err
 	}
 
+	// Decompress
+	compressed := bytes.NewBuffer(file.Content)
+	gr, err := gzip.NewReader(compressed)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed decompressing file")
+	}
+	defer gr.Close()
+
+	var decompressed bytes.Buffer
+	_, err = io.Copy(&decompressed, gr)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed copying decompressed file")
+	}
+
+	file.Content = decompressed.Bytes()
+
 	return file, nil
 }
 
@@ -88,20 +111,13 @@ func Get(db *bolt.DB, name string) (*pb.File, error) {
 func List(db *bolt.DB) ([]*pb.File, error) {
 	var files []*pb.File
 
-	_, err := crypt.GetMasterPassword()
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(fileBucket)
 		if b == nil {
 			return errInvalidBucket
 		}
-		c := b.Cursor()
 
-		// Place cursor in the first line of the bucket and move it to the next one
-		for k, v := c.First(); k != nil; k, v = c.Next() {
+		return b.ForEach(func(k, v []byte) error {
 			file := &pb.File{}
 
 			decFile, err := crypt.Decrypt(v)
@@ -113,10 +129,25 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 				return errors.Wrap(err, "unmarshal file")
 			}
 
-			files = append(files, file)
-		}
+			// Decrompress
+			compressed := bytes.NewBuffer(file.Content)
+			gr, err := gzip.NewReader(compressed)
+			if err != nil {
+				return errors.Wrap(err, "failed decompressing file")
+			}
+			defer gr.Close()
 
-		return nil
+			var decompressed bytes.Buffer
+			_, err = io.Copy(&decompressed, gr)
+			if err != nil {
+				return errors.Wrap(err, "failed copying decompressed file")
+			}
+
+			file.Content = decompressed.Bytes()
+			files = append(files, file)
+
+			return nil
+		})
 	})
 	if err != nil {
 		return nil, err
@@ -125,58 +156,46 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 	return files, nil
 }
 
-// ListByName filters all the entries and returns those matching with the name passed.
-func ListByName(db *bolt.DB, name string) ([]*pb.File, error) {
-	var group []*pb.File
-	name = strings.TrimSpace(strings.ToLower(name))
+// ListFastest is used to check if the user entered the correct password
+// by trying to decrypt every record and returning the fastest result.
+func ListFastest(db *bolt.DB) bool {
+	succeed := make(chan bool)
 
-	files, err := List(db)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, f := range files {
-		if strings.Contains(f.Name, name) {
-			group = append(group, f)
+	decrypt := func(v []byte) {
+		_, err := crypt.Decrypt(v)
+		if err != nil {
+			succeed <- false
 		}
+
+		succeed <- true
 	}
 
-	return group, nil
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(fileBucket)
+
+		return b.ForEach(func(_, v []byte) error {
+			go decrypt(v)
+			return nil
+		})
+	})
+
+	return <-succeed
 }
 
 // ListNames returns a slice with all the files names.
-func ListNames(db *bolt.DB) ([]*pb.FileList, error) {
-	var files []*pb.FileList
+func ListNames(db *bolt.DB) ([]string, error) {
+	var files []string
 
-	_, err := crypt.GetMasterPassword()
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(fileBucket)
 		if b == nil {
 			return errInvalidBucket
 		}
-		c := b.Cursor()
 
-		// Place cursor in the first line of the bucket and move it to the next one
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			file := &pb.FileList{}
-
-			decFile, err := crypt.Decrypt(v)
-			if err != nil {
-				return errors.Wrap(err, "decrypt file")
-			}
-
-			if err := proto.Unmarshal(decFile, file); err != nil {
-				return errors.Wrap(err, "unmarshal file")
-			}
-
-			files = append(files, file)
-		}
-
-		return nil
+		return b.ForEach(func(k, _ []byte) error {
+			files = append(files, string(k))
+			return nil
+		})
 	})
 	if err != nil {
 		return nil, err
@@ -187,14 +206,17 @@ func ListNames(db *bolt.DB) ([]*pb.FileList, error) {
 
 // Remove removes a file from the database.
 func Remove(db *bolt.DB, name string) error {
-	_, err := Get(db, name)
-	if err != nil {
-		return err
-	}
-
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(fileBucket)
+		if b == nil {
+			return errInvalidBucket
+		}
 		name = strings.TrimSpace(strings.ToLower(name))
+
+		file := b.Get([]byte(name))
+		if file == nil {
+			return errors.Errorf("%q does not exist", name)
+		}
 
 		if err := b.Delete([]byte(name)); err != nil {
 			return errors.Wrap(err, "remove file")
@@ -206,20 +228,20 @@ func Remove(db *bolt.DB, name string) error {
 
 // Rename replaces an existing file name with the specified one.
 func Rename(db *bolt.DB, oldName, newName string) error {
+	oldName = strings.TrimSpace(strings.ToLower(oldName))
+	newName = strings.TrimSpace(strings.ToLower(newName))
+
 	file, err := Get(db, oldName)
 	if err != nil {
 		return err
 	}
 	file.Name = newName
 
-	oldName = strings.TrimSpace(strings.ToLower(oldName))
-	newName = strings.TrimSpace(strings.ToLower(newName))
-
 	err = db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(fileBucket)
 
-		encFile := b.Get([]byte(newName))
-		if encFile != nil {
+		exists := b.Get([]byte(newName))
+		if exists != nil {
 			return errors.Errorf("already exists a file named %q", newName)
 		}
 
@@ -237,5 +259,48 @@ func Rename(db *bolt.DB, oldName, newName string) error {
 	if err := Create(db, file); err != nil {
 		return errors.Wrap(err, "save new file")
 	}
+
 	return nil
+}
+
+// Restore is like Create but do not check for existing files.
+// Should be used in the "restore" command only.
+func Restore(db *bolt.DB, file *pb.File) error {
+	// Compress file
+	var gzipBuf bytes.Buffer
+	gw := gzip.NewWriter(&gzipBuf)
+
+	_, err := gw.Write(file.Content)
+	if err != nil {
+		return errors.Wrap(err, "failed compressing file")
+	}
+
+	if err := gw.Close(); err != nil {
+		return errors.Wrap(err, "failed closing gzip writer")
+	}
+
+	file.Content = gzipBuf.Bytes()
+
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(fileBucket)
+		if b == nil {
+			return errInvalidBucket
+		}
+
+		buf, err := proto.Marshal(file)
+		if err != nil {
+			return errors.Wrap(err, "marshal file")
+		}
+
+		encFile, err := crypt.Encrypt(buf)
+		if err != nil {
+			return errors.Wrap(err, "encrypt file")
+		}
+
+		if err := b.Put([]byte(file.Name), encFile); err != nil {
+			return errors.Wrap(err, "save file")
+		}
+
+		return nil
+	})
 }

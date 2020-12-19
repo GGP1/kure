@@ -22,7 +22,10 @@ var (
 	path  string
 )
 
-var errInvalidPath = errors.New("error: invalid path")
+var (
+	errInvalidPath = errors.New("invalid path")
+	errInvalidPort = errors.New("invalid port")
+)
 
 var example = `
 * Create a file backup
@@ -37,22 +40,22 @@ curl localhost:4000 > database.name`
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "backup [http] [path] [port]",
-		Short:   "Create database backups",
+		Use:     "backup",
+		Short:   "Create database backup",
 		Example: example,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runBackup(db),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			httpB = false
 			port = 4000
 			path = ""
 		},
-		SilenceErrors: true,
 	}
 
 	f := cmd.Flags()
 	f.BoolVar(&httpB, "http", false, "run a server and write the db file")
-	f.StringVar(&path, "path", "", "backup file path")
+	f.StringVar(&path, "path", "", "destination file path")
 	f.Uint16Var(&port, "port", 4000, "server port")
 
 	return cmd
@@ -60,32 +63,24 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 func runBackup(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		if err := cmdutil.RequirePassword(db); err != nil {
-			return err
-		}
-
+		// Serve on localhost
 		if httpB {
 			if p := viper.GetInt("http.port"); p > 0 {
 				port = uint16(p)
 			}
-			addr := fmt.Sprintf(":%d", port)
+			if port == 0 {
+				return errInvalidPort
+			}
 
 			http.HandleFunc("/", httpBackup(db))
 
-			fmt.Printf("Serving database on http://localhost%s (Press CTRL+C to quit)\n", addr)
-			if err := http.ListenAndServe(addr, nil); err != nil {
-				return err
-			}
-			return nil
+			addr := fmt.Sprintf(":%d", port)
+			fmt.Printf("Serving database on http://localhost%s (Press Ctrl+C to quit)\n", addr)
+			return http.ListenAndServe(addr, nil)
 		}
 
+		// Create a file backup
 		if path == "" {
-			return errInvalidPath
-		}
-
-		var err error
-		path, err = filepath.Abs(path)
-		if err != nil {
 			return errInvalidPath
 		}
 
@@ -99,16 +94,20 @@ func runBackup(db *bolt.DB) cmdutil.RunEFunc {
 			return errors.Wrap(err, "failed changing directory")
 		}
 
-		file, err := os.Create(filepath.Base(path))
+		f, err := os.Create(filepath.Base(path))
 		if err != nil {
 			return errors.Wrap(err, "failed opening file")
 		}
-		defer file.Close()
 
-		if err := writeTo(db, file); err != nil {
+		if err := writeTo(db, f); err != nil {
 			return err
 		}
 
+		if err := f.Close(); err != nil {
+			return errors.Wrap(err, "failed closing file")
+		}
+
+		fmt.Println("Backup created at", path)
 		return nil
 	}
 }
@@ -123,8 +122,7 @@ func httpBackup(db *bolt.DB) http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/octet-stream")
 			w.Header().Set("Content-Disposition", disposition)
 			w.Header().Set("Content-Length", strconv.Itoa(int(tx.Size())))
-			_, err := tx.WriteTo(w)
-			if err != nil {
+			if _, err := tx.WriteTo(w); err != nil {
 				return errors.Wrap(err, "write database")
 			}
 
@@ -139,8 +137,7 @@ func httpBackup(db *bolt.DB) http.HandlerFunc {
 // writeTo writes the entire database to a writer.
 func writeTo(db *bolt.DB, w io.Writer) error {
 	return db.View(func(tx *bolt.Tx) error {
-		_, err := tx.WriteTo(w)
-		if err != nil {
+		if _, err := tx.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write database")
 		}
 		return nil

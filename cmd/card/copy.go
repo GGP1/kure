@@ -1,6 +1,7 @@
 package card
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -14,47 +15,44 @@ import (
 )
 
 var (
-	field   string
+	cvc     bool
 	timeout time.Duration
 )
 
-var errWritingClipboard = errors.New("failed writing to the clipboard")
-
 var copyExample = `
 * Copy the number
-kure copy -f number
+kure card copy
 
-* Copy the CVC
-kure copy -f cvc
+* Copy the security code
+kure card copy -c
 
 * Copy and clean after 30s
-kure copy -t 30s`
+kure card copy -t 30s`
 
 // copySubCmd returns the copy subcommand
 func copySubCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "copy <name> [-t timeout] [-f field]",
-		Short:   "Copy card number or CVC",
-		Aliases: []string{"c"},
+		Use:     "copy <name>",
+		Short:   "Copy card number or security code",
+		Aliases: []string{"cp"},
 		Example: copyExample,
-		RunE:    runCopy(db),
+		PreRunE: cmdutil.RequirePassword(db),
+		RunE:    runCard(db),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
-			field = "number"
+			// Reset flags (session)
+			cvc = false
 			timeout = 0
 		},
-		SilenceErrors: true,
-		SilenceUsage:  true,
 	}
 
 	f := cmd.Flags()
-	f.StringVarP(&field, "field", "f", "number", "choose which field to copy")
+	f.BoolVarP(&cvc, "cvc", "c", false, "copy card security code")
 	f.DurationVarP(&timeout, "timeout", "t", 0, "clipboard cleaning timeout")
 
 	return cmd
 }
 
-func runCopy(db *bolt.DB) cmdutil.RunEFunc {
+func runCard(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		name := strings.Join(args, " ")
 		if name == "" {
@@ -63,24 +61,21 @@ func runCopy(db *bolt.DB) cmdutil.RunEFunc {
 
 		card, err := card.Get(db, name)
 		if err != nil {
-			return errors.Wrap(err, "error")
+			return err
 		}
 
-		var f string // change to locked buffer
-		field = strings.ToLower(field)
-
-		switch field {
-		case "number":
-			f = card.Number
-		case "code", "cvc":
-			f = card.CVC
-		default:
-			return errors.New("error: invalid card field, use \"number\" or \"code\"/\"cvc\"")
+		field := "Number"
+		copy := card.Number
+		if cvc {
+			field = "Security code"
+			copy = card.SecurityCode
 		}
 
-		if err := clipboard.WriteAll(f); err != nil {
-			return errors.Wrap(errWritingClipboard, "error")
+		if err := clipboard.WriteAll(copy); err != nil {
+			return errors.Wrap(err, "failed writing to the clipboard")
 		}
+
+		fmt.Printf("%s copied to clipboard\n", field)
 
 		if timeout > 0 {
 			<-time.After(timeout)

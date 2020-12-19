@@ -3,41 +3,42 @@ package file
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"sync"
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/file"
+	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
 
-var directory bool
+var dir bool
 
 var rmExample = `
 * Remove a file
 kure file rm fileName
 
-* Remove a directory using a maximum of 25 goroutines
-kure file rm directoryName -d -s 25`
+* Remove a directory
+kure file rm directoryName -d`
 
 func rmSubCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "rm <name> [-d directory] [-s semaphore]",
+		Use:     "rm <name>",
 		Short:   "Remove files from the database",
 		Example: rmExample,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runRm(db, r),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
-			directory = false
-			semaphore = 1
+			// Reset flags (session)
+			dir = false
 		},
 	}
 
 	f := cmd.Flags()
-	f.BoolVarP(&directory, "dir", "d", false, "remove a directory and all the files stored into it")
-	f.Uint32VarP(&semaphore, "semaphore", "s", 1, "maximum number of goroutines running concurrently")
+	f.BoolVarP(&dir, "dir", "d", false, "remove a directory and all the files stored into it")
 
 	return cmd
 }
@@ -49,51 +50,66 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return errInvalidName
 		}
 
+		name = strings.TrimSpace(strings.ToLower(name))
+
+		if err := cmdutil.Exists(db, name, "file"); err == nil {
+			return errors.Errorf("%q does not exist", name)
+		}
+
 		if !cmdutil.Proceed(r) {
 			return nil
 		}
 
-		if !directory {
+		// Remove single file
+		if !dir {
 			if err := file.Remove(db, name); err != nil {
 				return err
 			}
 
-			fmt.Printf("\nSuccessfully removed %q file.\n", name)
+			fmt.Printf("\n%q deleted\n", name)
 			return nil
 		}
 
-		// If the last rune of name is not a slash, add it
-		if name[len(name)-1] != '/' {
-			name += "/"
-		}
+		fmt.Printf("Removing %q directory...\n", name)
 
-		files, err := file.ListByName(db, name)
+		files, err := file.ListNames(db)
 		if err != nil {
 			return err
 		}
 
-		var wg sync.WaitGroup
-		sem := make(chan struct{}, semaphore)
+		// If the last rune of name is not a slash,
+		// add it to make sure to delete items under that folder only
+		if name[len(name)-1] != '/' {
+			name += "/"
+		}
 
-		fmt.Printf("\nRemoving %q directory...\n", name)
-
-		wg.Add(len(files))
+		var list []string
 		for _, f := range files {
-			go removeFile(db, f.Name, &wg, sem)
+			if strings.HasPrefix(f, name) {
+				list = append(list, f)
+			}
+		}
+
+		var wg sync.WaitGroup
+		sem := make(chan struct{}, 40)
+
+		wg.Add(len(list))
+		for _, l := range list {
+			go removeFile(db, l, &wg, sem)
 		}
 		wg.Wait()
-
-		fmt.Printf("\nSuccessfully removed %q directory and all its files.\n", name)
-
 		return nil
 	}
 }
 
+// Unlike the others objects' rm command, we use goroutines as a file folder may contain
+// subfolders and a lot of files in it, limit is set to 40 to not wake up too many goroutines.
 func removeFile(db *bolt.DB, name string, wg *sync.WaitGroup, sem chan struct{}) {
 	sem <- struct{}{}
 
+	fmt.Println("Remove:", name)
 	if err := file.Remove(db, name); err != nil {
-		fmt.Println("error:", err)
+		fmt.Fprintln(os.Stderr, "error:", err)
 	}
 
 	wg.Done()

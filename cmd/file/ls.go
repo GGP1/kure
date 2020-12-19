@@ -30,8 +30,8 @@ const (
 var filter bool
 
 var lsExample = `
-* List a file
-kure file ls fileName
+* List a file and copy its content to the clipboard
+kure file ls fileName -c
 
 * Filter files by name
 kure file ls fileName -f
@@ -41,19 +41,19 @@ kure file ls`
 
 func lsSubCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "ls <name> [-f filter]",
+		Use:     "ls <name>",
 		Short:   "List files",
 		Example: lsExample,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runLs(db),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			filter = false
 		},
-		SilenceErrors: true,
-		SilenceUsage:  true,
 	}
 
-	cmd.Flags().BoolVarP(&filter, "filter", "f", false, "filter files by name")
+	f := cmd.Flags()
+	f.BoolVarP(&filter, "filter", "f", false, "filter files by name")
 
 	return cmd
 }
@@ -61,51 +61,49 @@ func lsSubCmd(db *bolt.DB) *cobra.Command {
 func runLs(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		name := strings.Join(args, " ")
-		if name == "" {
+
+		switch name {
+		case "":
 			files, err := file.ListNames(db)
 			if err != nil {
-				return errors.Wrap(err, "error")
+				return err
+			}
+			tree.Print(files)
+
+		default:
+			if filter {
+				files, err := file.ListNames(db)
+				if err != nil {
+					return err
+				}
+
+				var list []string
+				for _, file := range files {
+					if strings.Contains(file, name) {
+						list = append(list, file)
+					}
+				}
+
+				if len(list) == 0 {
+					return errors.New("no files were found")
+				}
+
+				tree.Print(list)
+				break
 			}
 
-			paths := make([]string, len(files))
-
-			for i, file := range files {
-				paths[i] = file.Name
-			}
-
-			tree.Print(paths)
-			return nil
-		}
-
-		if filter {
-			files, err := file.ListByName(db, name)
+			file, err := file.Get(db, name)
 			if err != nil {
-				return errors.Wrap(err, "error")
+				return err
 			}
 
-			if len(files) == 0 {
-				return errors.New("error: no wallets were found")
-			}
-
-			for _, file := range files {
-				printFile(file)
-			}
-			return nil
+			printFile(file)
 		}
-
-		file, err := file.Get(db, name)
-		if err != nil {
-			return errors.Wrap(err, "error")
-		}
-
-		printFile(file)
 		return nil
 	}
 }
 
 func printFile(f *pb.File) {
-	cmdutil.PrintObjectName(f.Name)
-
 	t := time.Unix(f.CreatedAt, 0)
 	bytes := len(f.Content)
 	size := fmt.Sprintf("%d bytes", bytes)
@@ -121,11 +119,13 @@ func printFile(f *pb.File) {
 		size = fmt.Sprintf("%d KB", bytes/KB)
 	}
 
-	fmt.Printf(`│ Path       │ %s
-│ Filename   │ %s
-│ Size       │ %s
-│ Created at │ %s
-`, f.Name, f.Filename, size, t)
+	fields := map[string]string{
+		"Path":       f.Name,
+		"Filename":   f.Filename,
+		"Size":       size,
+		"Created at": fmt.Sprintf("%v", t),
+	}
 
-	fmt.Println("└────────────+────────────────────────────────────────────>")
+	box := cmdutil.BuildBox(f.Name, fields)
+	fmt.Println("\n" + box)
 }

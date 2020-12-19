@@ -8,6 +8,8 @@ import (
 	cmdutil "github.com/GGP1/kure/cmd"
 
 	"github.com/GGP1/atoll"
+	"github.com/atotto/clipboard"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -22,16 +24,13 @@ kure gen phrase -l 7 -q`
 
 func phraseSubCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "phrase [-l length] [-s separator] [-i include] [-e exclude] [list] [-q qr]",
-		Short: "Generate a random passphrase",
-		Long: `Generate a random passphrase.
-		
-When using [-q qr] flag, make sure the terminal is bigger than the image or it will spoil.`,
-		Aliases: []string{"p"},
+		Use:     "phrase",
+		Short:   "Generate a random passphrase",
+		Aliases: []string{"passphrase", "p"},
 		Example: phraseExample,
 		RunE:    runPhrase(),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			length = 0
 			separator, list = " ", "NoList"
 			incl, excl = nil, nil
@@ -40,12 +39,13 @@ When using [-q qr] flag, make sure the terminal is bigger than the image or it w
 	}
 
 	f := cmd.Flags()
+	f.BoolVarP(&copy, "copy", "c", false, "copy the passphrase to the clipboard")
 	f.Uint64VarP(&length, "length", "l", 0, "passphrase length")
-	f.StringVarP(&separator, "separator", "s", " ", "set the character that separates each word")
-	f.StringVar(&list, "list", "NoList", "choose passphrase generating method (NoList, WordList, SyllableList)")
+	f.StringVarP(&separator, "separator", "s", " ", "character that separates each word")
+	f.StringVar(&list, "list", "NoList", "passphrase list used {NoList|WordList|SyllableList}")
 	f.StringSliceVarP(&incl, "include", "i", nil, "characters to include in the passphrase")
 	f.StringSliceVarP(&excl, "exclude", "e", nil, "characters to exclude from the passphrase")
-	f.BoolVarP(&qr, "qr", "q", false, "create an image with the password QR code on the user home directory")
+	f.BoolVarP(&qr, "qr", "q", false, "show QR code on terminal")
 
 	return cmd
 }
@@ -56,24 +56,23 @@ func runPhrase() cmdutil.RunEFunc {
 			return errInvalidLength
 		}
 
-		var l func(*atoll.Passphrase)
-		var poolLength uint64
+		// https://github.com/GGP1/atoll#entropy
+		var poolLen uint64 = 18325
+		l := atoll.WordList
 
 		if list != "" {
 			list = strings.ReplaceAll(list, " ", "")
 			list = strings.ToLower(list)
 
-			// https://github.com/GGP1/atoll#entropy
 			switch list {
 			case "nolist", "no":
 				l = atoll.NoList
-				poolLength = uint64(math.Pow(26, float64(length)))
+				poolLen = uint64(math.Pow(26, float64(length)))
 			case "wordlist", "word":
 				l = atoll.WordList
-				poolLength = 18325
 			case "syllablelist", "syllable":
 				l = atoll.SyllableList
-				poolLength = 10129
+				poolLen = 10129
 			}
 		}
 
@@ -90,13 +89,19 @@ func runPhrase() cmdutil.RunEFunc {
 			return err
 		}
 
+		if copy {
+			if err := clipboard.WriteAll(passphrase); err != nil {
+				return errors.Wrap(err, "failed writing to the clipboard")
+			}
+		}
+
 		if qr {
 			if err := cmdutil.DisplayQRCode(passphrase); err != nil {
 				return err
 			}
 		}
 
-		entropy := math.Log2(math.Pow(float64(poolLength), float64(length)))
+		entropy := math.Log2(math.Pow(float64(poolLen), float64(length)))
 
 		fmt.Printf("Passphrase: %s\nBits of entropy: %.2f\n", passphrase, entropy)
 		return nil

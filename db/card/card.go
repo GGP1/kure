@@ -80,20 +80,13 @@ func Get(db *bolt.DB, name string) (*pb.Card, error) {
 func List(db *bolt.DB) ([]*pb.Card, error) {
 	var cards []*pb.Card
 
-	_, err := crypt.GetMasterPassword()
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(cardBucket)
 		if b == nil {
 			return errInvalidBucket
 		}
-		c := b.Cursor()
 
-		// Place cursor in the first line of the bucket and move it to the next one
-		for k, v := c.First(); k != nil; k, v = c.Next() {
+		return b.ForEach(func(k, v []byte) error {
 			card := &pb.Card{}
 
 			decCard, err := crypt.Decrypt(v)
@@ -106,9 +99,9 @@ func List(db *bolt.DB) ([]*pb.Card, error) {
 			}
 
 			cards = append(cards, card)
-		}
 
-		return nil
+			return nil
+		})
 	})
 	if err != nil {
 		return nil, err
@@ -117,58 +110,46 @@ func List(db *bolt.DB) ([]*pb.Card, error) {
 	return cards, nil
 }
 
-// ListByName filters all the entries and returns those matching with the name passed.
-func ListByName(db *bolt.DB, name string) ([]*pb.Card, error) {
-	var group []*pb.Card
-	name = strings.TrimSpace(strings.ToLower(name))
+// ListFastest is used to check if the user entered the correct password
+// by trying to decrypt every record and returning the fastest result.
+func ListFastest(db *bolt.DB) bool {
+	succeed := make(chan bool)
 
-	cards, err := List(db)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, c := range cards {
-		if strings.Contains(c.Name, name) {
-			group = append(group, c)
+	decrypt := func(v []byte) {
+		_, err := crypt.Decrypt(v)
+		if err != nil {
+			succeed <- false
 		}
+
+		succeed <- true
 	}
 
-	return group, nil
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(cardBucket)
+
+		return b.ForEach(func(_, v []byte) error {
+			go decrypt(v)
+			return nil
+		})
+	})
+
+	return <-succeed
 }
 
 // ListNames returns a list with all the cards names.
-func ListNames(db *bolt.DB) ([]*pb.CardList, error) {
-	var cards []*pb.CardList
+func ListNames(db *bolt.DB) ([]string, error) {
+	var cards []string
 
-	_, err := crypt.GetMasterPassword()
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(cardBucket)
 		if b == nil {
 			return errInvalidBucket
 		}
-		c := b.Cursor()
 
-		// Place cursor in the first line of the bucket and move it to the next one
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			card := &pb.CardList{}
-
-			decCard, err := crypt.Decrypt(v)
-			if err != nil {
-				return errors.Wrap(err, "decrypt card")
-			}
-
-			if err := proto.Unmarshal(decCard, card); err != nil {
-				return errors.Wrap(err, "unmarshal card")
-			}
-
-			cards = append(cards, card)
-		}
-
-		return nil
+		return b.ForEach(func(k, _ []byte) error {
+			cards = append(cards, string(k))
+			return nil
+		})
 	})
 	if err != nil {
 		return nil, err
@@ -179,14 +160,13 @@ func ListNames(db *bolt.DB) ([]*pb.CardList, error) {
 
 // Remove removes a card from the database.
 func Remove(db *bolt.DB, name string) error {
-	_, err := Get(db, name)
-	if err != nil {
-		return err
-	}
-
 	return db.Update(func(tx *bolt.Tx) error {
 		name = strings.TrimSpace(strings.ToLower(name))
+
 		b := tx.Bucket(cardBucket)
+		if b == nil {
+			return errInvalidBucket
+		}
 
 		if err := b.Delete([]byte(name)); err != nil {
 			return errors.Wrap(err, "remove card")

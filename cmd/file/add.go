@@ -21,9 +21,9 @@ import (
 )
 
 var (
-	ignore    bool
-	semaphore uint32
-	buffer    uint64
+	ignore     bool
+	semaphore  uint32
+	bufferSize uint64
 )
 
 var addExample = `
@@ -38,20 +38,24 @@ kure file add -p path/to/folder -i -b 4096`
 
 func addSubCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add <name> [-b buffer] [-i ignore] [-p path] [-s semaphore]",
+		Use:   "add <name>",
 		Short: "Add files to the database",
 		Long: `Add files to the database.
-	
+
 Path to a file must include its extension (in case it has).
-	
-The user can specify a path to a folder also, on this occasion, Kure will iterate over all the files in the folder and potential subfolders and store them into the database with the name "name/subfolders/filename".
-Use the -i flag to ignore subfolders and focus only on the folder's files.`,
+
+The user can specify a path to a folder as well, on this occasion, Kure will iterate over all the files in the folder and potential subfolders (if the -i flag is false) and store them into the database with the name "name/subfolders/filename".
+
+Default behavior in case the buffer flag is not used:
+   • file <= 200MB: read the entire file directly to memory.
+   • file > 200MB: use a 64MB buffer.`,
 		Aliases: []string{"a"},
 		Example: addExample,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runAdd(db),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
-			buffer = 0
+			// Reset flags (session)
+			bufferSize = 0
 			ignore = false
 			path = ""
 			semaphore = 1
@@ -59,9 +63,9 @@ Use the -i flag to ignore subfolders and focus only on the folder's files.`,
 	}
 
 	f := cmd.Flags()
-	f.Uint64VarP(&buffer, "buffer", "b", 0, "buffer size when reading files, by default it reads the entire file directly to memory")
+	f.Uint64VarP(&bufferSize, "buffer", "b", 0, "buffer size when reading files")
 	f.BoolVarP(&ignore, "ignore", "i", false, "ignore subfolders")
-	f.StringVarP(&path, "path", "p", "", "file/folder path")
+	f.StringVarP(&path, "path", "p", "", "path to the file/folder")
 	f.Uint32VarP(&semaphore, "semaphore", "s", 1, "maximum number of goroutines running concurrently")
 
 	return cmd
@@ -73,16 +77,17 @@ func runAdd(db *bolt.DB) cmdutil.RunEFunc {
 		if name == "" {
 			return errInvalidName
 		}
-		if !strings.Contains(name, "/") && len(name) > 57 {
-			return errors.New("file name must contain 57 letters or less")
-		}
 
 		if path == "" {
 			return errInvalidPath
 		}
 
 		if semaphore == 0 {
-			return errors.New("error: invalid semaphore quantity")
+			return errors.New("invalid semaphore quantity")
+		}
+
+		if err := cmdutil.Exists(db, name, "file"); err != nil {
+			return err
 		}
 
 		absolute, err := filepath.Abs(path)
@@ -91,20 +96,21 @@ func runAdd(db *bolt.DB) cmdutil.RunEFunc {
 		}
 		path = absolute
 
-		if err := cmdutil.RequirePassword(db); err != nil {
-			return err
-		}
-
-		file, err := os.Open(path)
+		f, err := os.Open(path)
 		if err != nil {
-			return errors.Errorf("failed reading %s: %v", path, err)
+			return errors.Wrap(err, "failed reading file")
 		}
-		defer file.Close()
+		defer f.Close()
 
-		dir, _ := file.Readdir(0)
-		// len(dir) = 0 means it's a file
+		dir, _ := f.Readdir(0)
+		// 0 means it's a file
 		if len(dir) == 0 {
-			if err := storeFile(db, path, name); err != nil {
+			fInfo, err := f.Stat()
+			if err != nil {
+				return errors.Wrap(err, "failed reading file stats")
+			}
+
+			if err := storeFile(db, path, name, fInfo.Size()); err != nil {
 				return err
 			}
 			return nil
@@ -118,36 +124,39 @@ func runAdd(db *bolt.DB) cmdutil.RunEFunc {
 	}
 }
 
-// storeFile saves the file in the database.
-func storeFile(db *bolt.DB, path, name string) error {
+// storeFile reads, compress and saves a file into the database.
+//
+// In case the user specified a buffer size, use os.Open instead of ioutil.ReadFile.
+func storeFile(db *bolt.DB, path, name string, size int64) error {
 	var content []byte
 
-	// Check if the last element of the name is not too long
-	fullname := strings.Split(name, "\\")
-	basename := fullname[len(fullname)-1]
-	if len(basename) > 57 {
-		return errors.Errorf("%q is longer than 57 characters", basename)
+	// If the file size is larger than 200MB and the user didn't specified a buffer, set it to 64MB
+	if size > (MB*200) && bufferSize == 0 {
+		bufferSize = MB * 64
 	}
 
-	switch buffer {
+	fmt.Printf("\nAdd: %s", filepath.Base(path))
+
+	switch bufferSize {
 	case 0:
-		file, err := ioutil.ReadFile(path)
+		f, err := ioutil.ReadFile(path)
 		if err != nil {
 			return errors.Wrap(err, "failed reading file")
 		}
-		content = file
+
+		content = f
 
 	default:
-		file, err := os.Open(path)
+		f, err := os.Open(path)
 		if err != nil {
 			return errors.Wrap(err, "failed opening file")
 		}
-		defer file.Close()
+		defer f.Close()
 
-		buf := make([]byte, buffer)
+		buf := make([]byte, bufferSize)
 
 		for {
-			n, err := file.Read(buf)
+			n, err := f.Read(buf)
 			if err == io.EOF {
 				break
 			}
@@ -160,13 +169,12 @@ func storeFile(db *bolt.DB, path, name string) error {
 	}
 
 	// Format fields
-	name = strings.ToLower(strings.ReplaceAll(name, "\\", "/"))
-	if filepath.Ext(name) == "" {
-		name += filepath.Ext(path)
-	}
-
-	filename := filepath.Base(path)
 	content = bytes.TrimSpace(content)
+	filename := filepath.Base(path)
+	name = strings.ToLower(name)
+	if filepath.Ext(name) == "" {
+		name += filepath.Ext(filename)
+	}
 
 	f := &pb.File{
 		Name:      name,
@@ -179,7 +187,6 @@ func storeFile(db *bolt.DB, path, name string) error {
 		return err
 	}
 
-	fmt.Printf("Added %q\n", filename)
 	return nil
 }
 
@@ -210,11 +217,13 @@ func checkFile(db *bolt.DB, file os.FileInfo, path, name string, wg *sync.WaitGr
 	}()
 
 	path = filepath.Join(path, file.Name())
-	name = filepath.Join(name, file.Name())
+	// Join the name provided by the user (in this case a folder) with the file name,
+	// prefer filepath.Join only when working with paths
+	name = fmt.Sprintf("%s/%s", name, file.Name())
 
 	if !file.IsDir() {
-		if err := storeFile(db, path, name); err != nil {
-			fmt.Println("error:", err)
+		if err := storeFile(db, path, name, file.Size()); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
 		}
 		return
 	}
@@ -226,7 +235,7 @@ func checkFile(db *bolt.DB, file os.FileInfo, path, name string, wg *sync.WaitGr
 
 	subdir, err := ioutil.ReadDir(path)
 	if err != nil {
-		fmt.Printf("error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: failed reading directory: %v\n", err)
 		return
 	}
 

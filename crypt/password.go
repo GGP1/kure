@@ -2,8 +2,8 @@ package crypt
 
 import (
 	"bytes"
+	"crypto/subtle"
 	"fmt"
-	"reflect"
 	"syscall"
 
 	"github.com/awnumar/memguard"
@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-// AskPassword returns the hash of the input password.
+// AskPassword returns the input password encrypted inside an Enclave.
 //
 // This function is not tested as stubbing terminal.ReadPassword() provides
 // almost no benefits.
@@ -24,11 +24,12 @@ func AskPassword(verify bool) (*memguard.Enclave, error) {
 	}
 	fmt.Print("\n")
 
-	if password == nil {
+	if subtle.ConstantTimeCompare(password, nil) == 1 {
 		return nil, errors.New("invalid password")
 	}
 
 	pwd := memguard.NewBufferFromBytes(bytes.TrimSpace(password))
+	zero(password)
 
 	if verify {
 		fmt.Print("Retype to verify: ")
@@ -38,9 +39,10 @@ func AskPassword(verify bool) (*memguard.Enclave, error) {
 		}
 		fmt.Print("\n")
 
-		if !bytes.Equal(pwd.Bytes(), bytes.TrimSpace(password2)) {
+		if subtle.ConstantTimeCompare(pwd.Bytes(), bytes.TrimSpace(password2)) != 1 {
 			return nil, errors.New("passwords must be equal")
 		}
+		zero(password2)
 	}
 
 	// Seal destroys the buffer
@@ -51,15 +53,9 @@ func AskPassword(verify bool) (*memguard.Enclave, error) {
 func GetMasterPassword() (*memguard.Enclave, error) {
 	password := viper.Get("user.password")
 
-	v := reflect.ValueOf(password)
-	switch v.Kind() {
-	case reflect.Ptr:
-		pwd, ok := password.(*memguard.Enclave)
-		if !ok {
-			return nil, errors.New("the struct must be an enclave")
-		}
-
-		return pwd, nil
+	switch password.(type) {
+	case *memguard.Enclave:
+		return password.(*memguard.Enclave), nil
 
 	default:
 		pwd, err := AskPassword(false)
@@ -70,5 +66,12 @@ func GetMasterPassword() (*memguard.Enclave, error) {
 		viper.Set("user.password", pwd)
 
 		return pwd, nil
+	}
+}
+
+// zero wipes the given byte slice.
+func zero(buf []byte) {
+	for i := range buf {
+		buf[i] = 0
 	}
 }

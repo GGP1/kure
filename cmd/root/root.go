@@ -24,7 +24,7 @@ func Cmd() *cobra.Command {
 // Execute sets each sub command flag and adds it to the root.
 func Execute(db *bolt.DB) {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "error:", err)
 		db.Close()
 		memguard.SafeExit(1)
 	}

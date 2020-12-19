@@ -27,15 +27,16 @@ kure clear -c`
 // NewCmd returns a new command.
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "clear [-b both] [-c clipboard] [-t terminal]",
-		Short: "Clear clipboard/terminal or both",
-		Long: `Manually clean clipboard, terminal (and its history) or both of them (kure clears all by default).
+		Use:   "clear",
+		Short: "Clear clipboard/terminal (and history) or both",
+		Long: `Manually clear clipboard, terminal (and its history) or both of them. Kure clears all by default.
+
 Windows users must clear the history manually with ALT+F7, executing "cmd" command 
 or by re-opening the cmd (as it saves session history only).`,
 		Example: example,
 		RunE:    runClear(),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			both, clip, term = true, false, false
 		},
 	}
@@ -50,6 +51,7 @@ or by re-opening the cmd (as it saves session history only).`,
 
 func runClear() cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
+		// In case the user wants only one option, set both to false (that is true by default)
 		if clip == true || term == true {
 			both = false
 		}

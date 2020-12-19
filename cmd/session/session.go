@@ -5,15 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/cmd/root"
 
-	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
@@ -32,12 +29,15 @@ kure session -p $
 kure session -t 1h
 
 * Show the session time left (once into one)
-timeout`
+timeout
+
+* Exit the session
+exit`
 
 // NewCmd returns a new command.
-func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
+func NewCmd(db *bolt.DB, r io.Reader, interrupt chan os.Signal) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "session [-p prefix] [-t timeout]",
+		Use:   "session",
 		Short: "Run a session",
 		Long: `Sessions are used for doing multiple operations by providing the master password once, it's encrypted
 and stored inside a locked buffer, decrypted when needed and destroyed right after it.
@@ -47,9 +47,10 @@ The user can set a timeout to automatically close the session after X amount of 
 Once into the session:
 • it's optional to use the word "kure" to run a command.
 • type "timeout" to see the time left.
-• type "exit" or press CTRL+C to quit.`,
+• type "exit" or press Ctrl+C to quit.`,
 		Example: example,
-		RunE:    runSession(db, r),
+		PreRunE: cmdutil.RequirePassword(db),
+		RunE:    runSession(db, r, interrupt),
 	}
 
 	f := cmd.Flags()
@@ -59,23 +60,17 @@ Once into the session:
 	return cmd
 }
 
-func runSession(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
+func runSession(db *bolt.DB, r io.Reader, interrupt chan os.Signal) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		zero := time.Duration(0)
+
 		if p := viper.GetString("session.prefix"); p != "" {
 			prefix = p
 		}
+		// Set the default only if it's not zero and the user haven't specified one
 		if t := viper.GetDuration("session.timeout"); t != zero && timeout == zero {
 			timeout = t
 		}
-
-		if err := cmdutil.RequirePassword(db); err != nil {
-			return err
-		}
-
-		interrupt := make(chan os.Signal, 1)
-		signal.Notify(interrupt, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
-		go sig(db, interrupt)
 
 		scanner := bufio.NewScanner(r)
 		start := time.Now()
@@ -84,21 +79,14 @@ func runSession(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 
 		if timeout == zero {
 			// Block forever
-			ch := make(chan struct{})
-			<-ch
+			block := make(chan struct{})
+			<-block
 		}
 
 		<-time.After(timeout)
 
 		return nil
 	}
-}
-
-// sig waits for a signal to release resources, delete any sensitive information and sig safely.
-func sig(db *bolt.DB, interrupt chan os.Signal) {
-	<-interrupt
-	db.Close()
-	memguard.SafeExit(1)
 }
 
 // startSession initializes the session.
@@ -110,13 +98,14 @@ func startSession(scanner *bufio.Scanner, start time.Time, zero time.Duration, i
 		text := strings.TrimSpace(scanner.Text())
 		args := strings.Split(text, " ")
 
-		// session commands
+		// Session commands
 		switch args[0] {
 		case "exit":
 			interrupt <- os.Interrupt
+			return
 
 		case "kure":
-			// make using "kure" optional
+			// Make using "kure" optional
 			args[0] = ""
 
 		case "timeout":
@@ -124,14 +113,14 @@ func startSession(scanner *bufio.Scanner, start time.Time, zero time.Duration, i
 				fmt.Println("The session has no timeout.")
 				continue
 			}
-			fmt.Printf("Time left: %.2f minutes\n", timeout.Minutes()-time.Since(start).Minutes())
+			fmt.Printf("Time left: %.2f minutes", timeout.Minutes()-time.Since(start).Minutes())
 			continue
 		}
 
 		r := root.Cmd()
 		r.SetArgs(args[:])
 		if err := r.Execute(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "error:", err)
 		}
 	}
 }

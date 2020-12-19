@@ -11,7 +11,7 @@ import (
 var errInvalidName = errors.New("invalid name")
 
 var example = `
-kure note {add|copy|ls|rm}`
+kure note (add|copy|ls|rm)`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {

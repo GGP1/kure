@@ -29,21 +29,20 @@ kure card ls`
 // lsSubCmd returns the copy subcommand
 func lsSubCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "ls <name> [-f filter] [-H hide]",
+		Use:     "ls <name>",
 		Short:   "List cards",
 		Example: lsExample,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runLs(db),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			filter, hide = false, false
 		},
-		SilenceErrors: true,
-		SilenceUsage:  true,
 	}
 
 	f := cmd.Flags()
 	f.BoolVarP(&filter, "filter", "f", false, "filter cards")
-	f.BoolVarP(&hide, "hide", "H", false, "hide card CVC")
+	f.BoolVarP(&hide, "hide", "H", false, "hide card security code")
 
 	return cmd
 }
@@ -52,60 +51,61 @@ func runLs(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		name := strings.Join(args, " ")
 
-		if name == "" {
+		switch name {
+		case "":
 			cards, err := card.ListNames(db)
 			if err != nil {
-				return errors.Wrap(err, "error")
+				return err
+			}
+			tree.Print(cards)
+
+		default:
+			if filter {
+				cards, err := card.ListNames(db)
+				if err != nil {
+					return err
+				}
+
+				var list []string
+				for _, card := range cards {
+					if strings.Contains(card, name) {
+						list = append(list, card)
+					}
+				}
+
+				if len(list) == 0 {
+					return errors.New("no cards were found")
+				}
+
+				tree.Print(list)
+				break
 			}
 
-			paths := make([]string, len(cards))
-
-			for i, card := range cards {
-				paths[i] = card.Name
-			}
-
-			tree.Print(paths)
-			return nil
-		}
-
-		if filter {
-			cards, err := card.ListByName(db, name)
+			card, err := card.Get(db, name)
 			if err != nil {
-				return errors.Wrap(err, "error")
+				return err
 			}
 
-			if len(cards) == 0 {
-				return errors.New("error: no cards were found")
-			}
-
-			for _, card := range cards {
-				printCard(card)
-			}
-			return nil
+			printCard(card)
 		}
 
-		card, err := card.Get(db, name)
-		if err != nil {
-			return errors.Wrap(err, "error")
-		}
-
-		printCard(card)
 		return nil
 	}
 }
 
 func printCard(c *pb.Card) {
-	cmdutil.PrintObjectName(c.Name)
-
 	if hide {
-		c.CVC = "••••"
+		c.SecurityCode = "••••"
 	}
 
-	fmt.Printf(`│ Type        │ %s
-│ Number      │ %s
-│ CVC         │ %s
-│ Expire Date │ %s
-`, c.Type, c.Number, c.CVC, c.ExpireDate)
+	fields := map[string]string{
+		"Type":          c.Type,
+		"Number":        c.Number,
+		"Security code": c.SecurityCode,
+		"Expire date":   c.ExpireDate,
+		"Notes":         c.Notes,
+	}
 
-	fmt.Println("└─────────────+───────────────────────────────────────────>")
+	box := cmdutil.BuildBox(c.Name, fields)
+	fmt.Println("\n" + box)
 }

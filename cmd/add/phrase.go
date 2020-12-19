@@ -20,32 +20,30 @@ var (
 )
 
 var phraseExample = `
-* Add an entry generating a customized random passphrase
-kure add phrase -l 6 -s $ -i atoll -e admin,login --list wordlist`
+* Add an entry generating a random passphrase
+kure add entry phrase entryName -l 6 -s $ -i atoll -e admin,login --list wordlist`
 
-// phraseSubCmd returns the phrase subcommand.
 func phraseSubCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "phrase <name> [-l length] [-s separator] [-i include] [-e exclude] [list]",
-		Short:   "Add an entry using a passphrase",
-		Aliases: []string{"p"},
+		Use:     "phrase <name>",
+		Short:   "Create an entry using a passphrase",
+		Aliases: []string{"passphrase", "p"},
 		Example: phraseExample,
+		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runPhrase(db, r),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flags defaults (session)
+			// Reset flags (session)
 			list, separator = "", ""
 			incl, excl = nil, nil
 		},
-		SilenceErrors: true,
-		SilenceUsage:  true,
 	}
 
 	f := cmd.Flags()
 	f.Uint64VarP(&length, "length", "l", 1, "passphrase length")
-	f.StringVarP(&separator, "separator", "s", " ", "set the character that separates each word")
+	f.StringVarP(&separator, "separator", "s", " ", "character that separates each word")
 	f.StringSliceVarP(&incl, "include", "i", nil, "list of words to include")
 	f.StringSliceVarP(&excl, "exclude", "e", nil, "list of words to exclude")
-	f.StringVar(&list, "list", "NoList", "choose passphrase generating method (NoList, WordList, SyllableList)")
+	f.StringVar(&list, "list", "NoList", "passphrase generating method {NoList|WordList|SyllableList}")
 
 	return cmd
 }
@@ -53,41 +51,26 @@ func phraseSubCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 func runPhrase(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		name := strings.Join(args, " ")
+		if name == "" {
+			return errInvalidName
+		}
 
 		if length < 1 || length > math.MaxUint64 {
 			return errInvalidLength
 		}
 
-		e, err := entryInput(db, name, custom, r)
+		name = strings.TrimSpace(strings.ToLower(name))
+
+		if err := cmdutil.Exists(db, name, "entry"); err != nil {
+			return err
+		}
+
+		e, err := input(db, name, false, r)
 		if err != nil {
 			return err
 		}
 
-		var l func(*atoll.Passphrase)
-
-		if list != "" {
-			list = strings.ReplaceAll(list, " ", "")
-			list = strings.ToLower(list)
-
-			switch list {
-			case "nolist", "no":
-				l = atoll.NoList
-			case "wordlist", "word":
-				l = atoll.WordList
-			case "syllablelist", "syllable":
-				l = atoll.SyllableList
-			}
-		}
-
-		p := &atoll.Passphrase{
-			Length:    length,
-			Separator: separator,
-			Include:   incl,
-			Exclude:   excl,
-			List:      l,
-		}
-
-		passphrase, err := atoll.NewSecret(p)
+		passphrase, err := genPassphrase(length, separator, list, incl, excl)
 		if err != nil {
 			return err
 		}
@@ -98,7 +81,41 @@ func runPhrase(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return err
 		}
 
-		fmt.Printf("\nSuccessfully created %q entry.", name)
+		fmt.Printf("\n%q added\n", name)
 		return nil
 	}
+}
+
+// genPassphrase returns a customized random passphrase.
+func genPassphrase(length uint64, separator, list string, incl, excl []string) (string, error) {
+	l := atoll.NoList
+
+	if list != "" {
+		list = strings.ReplaceAll(list, " ", "")
+		list = strings.ToLower(list)
+
+		switch list {
+		case "nolist", "no":
+			l = atoll.NoList
+		case "wordlist", "word":
+			l = atoll.WordList
+		case "syllablelist", "syllable":
+			l = atoll.SyllableList
+		}
+	}
+
+	p := &atoll.Passphrase{
+		Length:    length,
+		Separator: separator,
+		Include:   incl,
+		Exclude:   excl,
+		List:      l,
+	}
+
+	passphrase, err := atoll.NewSecret(p)
+	if err != nil {
+		return "", err
+	}
+
+	return passphrase, nil
 }

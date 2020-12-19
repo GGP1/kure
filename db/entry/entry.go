@@ -130,12 +130,7 @@ func List(db *bolt.DB) ([]*pb.Entry, error) {
 	expired := make(chan bool, 1)
 	errCh := make(chan error, 1)
 
-	_, err := crypt.GetMasterPassword()
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(entryBucket)
 		if b == nil {
 			return errInvalidBucket
@@ -143,6 +138,7 @@ func List(db *bolt.DB) ([]*pb.Entry, error) {
 		c := b.Cursor()
 
 		// Place cursor in the first line of the bucket and move it to the next one
+		// Do not use ForEach as this may modify the bucket content
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			entry := &pb.Entry{}
 
@@ -181,37 +177,39 @@ func List(db *bolt.DB) ([]*pb.Entry, error) {
 	return entries, nil
 }
 
-// ListByName filters all the entries and returns those matching with the name passed.
-func ListByName(db *bolt.DB, name string) ([]*pb.Entry, error) {
-	var group []*pb.Entry
-	name = strings.TrimSpace(strings.ToLower(name))
+// ListFastest is used to check if the user entered the correct password
+// by trying to decrypt every record and returning the fastest result.
+func ListFastest(db *bolt.DB) bool {
+	succeed := make(chan bool)
 
-	entries, err := List(db)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, e := range entries {
-		if strings.Contains(e.Name, name) {
-			group = append(group, e)
+	decrypt := func(v []byte) {
+		_, err := crypt.Decrypt(v)
+		if err != nil {
+			succeed <- false
 		}
+
+		succeed <- true
 	}
 
-	return group, nil
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(entryBucket)
+
+		return b.ForEach(func(_, v []byte) error {
+			go decrypt(v)
+			return nil
+		})
+	})
+
+	return <-succeed
 }
 
 // ListNames returns a list with all the entries names.
-func ListNames(db *bolt.DB) ([]*pb.EntryList, error) {
-	var entries []*pb.EntryList
+func ListNames(db *bolt.DB) ([]string, error) {
+	var entries []string
 	expired := make(chan bool, 1)
 	errCh := make(chan error, 1)
 
-	_, err := crypt.GetMasterPassword()
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(entryBucket)
 		if b == nil {
 			return errInvalidBucket
@@ -219,6 +217,7 @@ func ListNames(db *bolt.DB) ([]*pb.EntryList, error) {
 		c := b.Cursor()
 
 		// Place cursor in the first line of the bucket and move it to the next one
+		// Do not use ForEach as this may modify the bucket content
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			entry := &pb.EntryList{}
 
@@ -236,7 +235,7 @@ func ListNames(db *bolt.DB) ([]*pb.EntryList, error) {
 			select {
 			case e := <-expired:
 				if !e {
-					entries = append(entries, entry)
+					entries = append(entries, entry.Name)
 					continue
 				}
 
@@ -259,14 +258,13 @@ func ListNames(db *bolt.DB) ([]*pb.EntryList, error) {
 
 // Remove removes an entry from the database.
 func Remove(db *bolt.DB, name string) error {
-	_, err := Get(db, name)
-	if err != nil {
-		return err
-	}
-
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(entryBucket)
 		name = strings.TrimSpace(strings.ToLower(name))
+
+		b := tx.Bucket(entryBucket)
+		if b == nil {
+			return errInvalidBucket
+		}
 
 		if err := b.Delete([]byte(name)); err != nil {
 			return errors.Wrap(err, "remove entry")
@@ -287,14 +285,12 @@ func isExpired(expires string, expired chan<- bool, errCh chan<- error) {
 	expiration, err := time.Parse(time.RFC1123Z, expires)
 	if err != nil {
 		errCh <- errors.Wrap(err, "expiration parse")
+		return
 	}
 
-	now, err := time.Parse(time.RFC1123Z, time.Now().Format(time.RFC1123Z))
-	if err != nil {
-		errCh <- errors.Wrap(err, "now parse")
-	}
+	// This never fails
+	now, _ := time.Parse(time.RFC1123Z, time.Now().Format(time.RFC1123Z))
 
-	// Delete expired entries
 	if now.Sub(expiration) >= 0 {
 		expired <- true
 		return
