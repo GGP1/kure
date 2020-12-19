@@ -1,15 +1,14 @@
 package main
 
 import (
-	"path/filepath"
-	"time"
-
-	// jpeg and png imported for displaying images on the terminal
-	_ "image/jpeg"
-	_ "image/png"
+	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"path/filepath"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/GGP1/kure/cmd/add"
 	"github.com/GGP1/kure/cmd/backup"
@@ -18,16 +17,20 @@ import (
 	configcmd "github.com/GGP1/kure/cmd/config"
 	"github.com/GGP1/kure/cmd/copy"
 	"github.com/GGP1/kure/cmd/edit"
+	"github.com/GGP1/kure/cmd/export"
 	"github.com/GGP1/kure/cmd/file"
 	"github.com/GGP1/kure/cmd/gen"
+	importt "github.com/GGP1/kure/cmd/import"
 	"github.com/GGP1/kure/cmd/ls"
+	"github.com/GGP1/kure/cmd/note"
+	"github.com/GGP1/kure/cmd/restore"
 	"github.com/GGP1/kure/cmd/rm"
 	"github.com/GGP1/kure/cmd/root"
 	"github.com/GGP1/kure/cmd/session"
 	"github.com/GGP1/kure/cmd/stats"
-	"github.com/GGP1/kure/cmd/wallet"
 	"github.com/GGP1/kure/config"
 
+	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
@@ -43,7 +46,6 @@ func main() {
 	dbName := viper.GetString("database.name")
 
 	path := filepath.Join(dbPath, dbName)
-
 	if path == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -59,34 +61,51 @@ func main() {
 	defer db.Close()
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		buckets := [4]string{"kure_card", "kure_entry", "kure_file", "kure_wallet"}
+		buckets := [4]string{"kure_card", "kure_entry", "kure_file", "kure_note"}
 		for _, bucket := range buckets {
-			_, err := tx.CreateBucketIfNotExists([]byte(bucket))
-			if err != nil {
+			if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
 				return errors.Wrapf(err, "couldn't create %q bucket", bucket)
 			}
 		}
-
 		return nil
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
+	go signals(db, interrupt)
+
 	root.Register(add.NewCmd(db, os.Stdin))
 	root.Register(backup.NewCmd(db))
-	root.Register(card.NewCmd(db))
+	root.Register(card.NewCmd(db, os.Stdin))
 	root.Register(clear.NewCmd())
 	root.Register(configcmd.NewCmd(db, os.Stdin))
 	root.Register(copy.NewCmd(db))
 	root.Register(edit.NewCmd(db, os.Stdin))
-	root.Register(file.NewCmd(db))
+	root.Register(export.NewCmd(db))
+	root.Register(file.NewCmd(db, os.Stdin, os.Stdout))
 	root.Register(gen.NewCmd())
+	root.Register(importt.NewCmd(db))
 	root.Register(ls.NewCmd(db))
+	root.Register(note.NewCmd(db, os.Stdin))
+	root.Register(restore.NewCmd(db))
 	root.Register(rm.NewCmd(db, os.Stdin))
-	root.Register(session.NewCmd(db, os.Stdin))
+	root.Register(session.NewCmd(db, os.Stdin, interrupt))
 	root.Register(stats.NewCmd(db))
-	root.Register(wallet.NewCmd(db))
 
 	root.Execute(db)
+}
+
+// signals waits for a signal to release resources, delete any sensitive information and exit safely.
+//
+// The viper variable is used to avoid creating new cards, entries and notes while exiting,
+// it's used for these situations only.
+func signals(db *bolt.DB, interrupt chan os.Signal) {
+	<-interrupt
+	viper.Set("interrupt", true)
+	fmt.Fprint(os.Stderr, "\nExiting...\n")
+	db.Close()
+	memguard.SafeExit(0)
 }
