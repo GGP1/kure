@@ -16,47 +16,49 @@ func TestCard(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	c := &pb.Card{
-		Name:         "test",
-		Type:         "debit",
-		Number:       "4403650939814064",
-		SecurityCode: "1234",
-		ExpireDate:   "16/2024",
-	}
+	name := "test"
 
-	t.Run("Create", create(db, c))
-	t.Run("Get", get(db, c))
+	buf, c := pb.SecureCard()
+	c.Name = name
+	c.Type = "debit"
+	c.Number = "4403650939814064"
+	c.SecurityCode = "1234"
+	c.ExpireDate = "16/2024"
+
+	// Create destroys the buffer, hence we cannot use their fields anymore
+	t.Run("Create", create(db, buf, c))
+	t.Run("Get", get(db, name))
 	t.Run("List", list(db))
 	t.Run("List fastest", listFastest(db))
 	t.Run("List names", listNames(db))
-	t.Run("Remove", remove(db, c.Name))
+	t.Run("Remove", remove(db, name))
 }
 
-func create(db *bolt.DB, card *pb.Card) func(*testing.T) {
+func create(db *bolt.DB, buf *memguard.LockedBuffer, card *pb.Card) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Create(db, card); err != nil {
+		if err := Create(db, buf, card); err != nil {
 			t.Fatalf("Create() failed: %v", err)
 		}
 	}
 }
 
-func get(db *bolt.DB, card *pb.Card) func(*testing.T) {
+func get(db *bolt.DB, name string) func(*testing.T) {
 	return func(t *testing.T) {
-		got, err := Get(db, card.Name)
+		_, got, err := Get(db, name)
 		if err != nil {
 			t.Fatalf("Get() failed: %v", err)
 		}
 
 		// They aren't DeepEqual
-		if got.Name != card.Name {
-			t.Errorf("Expected %s, got %s", card.Name, got.Name)
+		if got.Name != name {
+			t.Errorf("Expected %s, got %s", name, got.Name)
 		}
 	}
 }
 
 func list(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		cards, err := List(db)
+		_, cards, err := List(db)
 		if err != nil {
 			t.Fatalf("List() failed: %v", err)
 		}
@@ -107,17 +109,9 @@ func TestCreateErrors(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	card := &pb.Card{Name: "test create errors"}
-	// Create the card to receive 'already exists' error
-	t.Run("Create", create(db, card))
-
-	if err := Create(db, &pb.Card{}); err == nil {
+	lockedBuf, c := pb.SecureCard()
+	if err := Create(db, lockedBuf, c); err == nil {
 		t.Error("Expected 'save card' error, got nil")
-	}
-
-	viper.Set("user.password", nil)
-	if err := Create(db, &pb.Card{}); err == nil {
-		t.Error("Expected List 'decrypt card' error, got nil")
 	}
 }
 
@@ -125,7 +119,7 @@ func TestGetError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	_, err := Get(db, "non-existent")
+	_, _, err := Get(db, "non-existent")
 	if err == nil {
 		t.Error("Expected 'does not exist' error, got nil")
 	}
@@ -135,21 +129,23 @@ func TestBucketError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	card := &pb.Card{Name: "nil bucket"}
+	name := "nil bucket"
+	buf, card := pb.SecureCard()
+	card.Name = name
 
 	db.Update(func(tx *bolt.Tx) error {
 		tx.DeleteBucket([]byte("kure_card"))
 		return nil
 	})
 
-	if err := Create(db, card); err == nil {
+	if err := Create(db, buf, card); err == nil {
 		t.Error("Create() didn't return 'invalid bucket' error")
 	}
-	_, err := Get(db, card.Name)
+	_, _, err := Get(db, name)
 	if err == nil {
 		t.Error("Get() didn't return 'invalid bucket' error")
 	}
-	_, err = List(db)
+	_, _, err = List(db)
 	if err == nil {
 		t.Error("List() didn't return 'invalid bucket' error")
 	}
@@ -157,7 +153,7 @@ func TestBucketError(t *testing.T) {
 	if err == nil {
 		t.Error("ListNames() didn't return 'invalid bucket' error")
 	}
-	if err := Remove(db, card.Name); err == nil {
+	if err := Remove(db, name); err == nil {
 		t.Error("Remove() didn't return 'invalid bucket' error")
 	}
 }
@@ -166,18 +162,21 @@ func TestDecryptError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	card := &pb.Card{Name: "test decrypt error"}
-	if err := Create(db, card); err != nil {
+	name := "test decrypt error"
+	buf, card := pb.SecureCard()
+	card.Name = name
+
+	if err := Create(db, buf, card); err != nil {
 		t.Fatal(err)
 	}
 
 	viper.Set("user.password", nil)
 
-	_, err := Get(db, card.Name)
+	_, _, err := Get(db, name)
 	if err == nil {
 		t.Error("Get() didn't return 'decrypt card' error")
 	}
-	_, err = List(db)
+	_, _, err = List(db)
 	if err == nil {
 		t.Error("List() didn't return 'decrypt card' error")
 	}
@@ -190,9 +189,10 @@ func TestKeyError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	card := &pb.Card{Name: ""}
+	buf, card := pb.SecureCard()
+	card.Name = ""
 
-	if err := Create(db, card); err == nil {
+	if err := Create(db, buf, card); err == nil {
 		t.Error("Create() didn't fail")
 	}
 }

@@ -16,19 +16,19 @@ import (
 var copy bool
 
 var catExample = `
-* Read one file
+* Write one file
 kure cat fileName
 
-* Read one file and copy content to the clipboard:
+* Write one file and copy content to the clipboard:
 kure cat fileName -c
 
-* Read multiple files
+* Write multiple files
 kure cat file1 file2 file3`
 
 func catSubCmd(db *bolt.DB, w io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "cat <name>",
-		Short:   "Read file and print to standard output",
+		Short:   "Read file and write to standard output",
 		Example: catExample,
 		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runCat(db, w),
@@ -42,7 +42,7 @@ func catSubCmd(db *bolt.DB, w io.Writer) *cobra.Command {
 func runCat(db *bolt.DB, w io.Writer) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		for _, name := range args {
-			f, err := file.Get(db, name)
+			lockedBuf, f, err := file.Get(db, name)
 			if err != nil {
 				return err
 			}
@@ -53,7 +53,8 @@ func runCat(db *bolt.DB, w io.Writer) cmdutil.RunEFunc {
 				}
 			}
 
-			buf := bytes.NewBuffer(f.Content)
+			buf := bytes.NewReader(f.Content)
+			lockedBuf.Destroy()
 
 			if _, err := io.Copy(w, buf); err != nil {
 				return errors.Wrap(err, "failed copying file content")

@@ -30,20 +30,20 @@ func TestFile(t *testing.T) {
 		t.Fatalf("Failed closing gzip writer")
 	}
 
-	file := &pb.File{
+	f := &pb.File{
 		Name:      "test",
 		Content:   buf.Bytes(),
-		Filename:  "test.txt",
 		CreatedAt: 0,
 	}
 
 	// Restore is tested separated
-	t.Run("Create", create(db, file))
-	t.Run("Get", get(db, file))
+	t.Run("Create", create(db, f))
+	t.Run("Get", get(db, f.Name))
+	t.Run("Get cheap", getCheap(db, f.Name))
 	t.Run("List", list(db))
 	t.Run("List fastest", listFastest(db))
 	t.Run("List names", listNames(db))
-	t.Run("Rename", rename(db, file.Name, "newtestname"))
+	t.Run("Rename", rename(db, f.Name, "newtestname"))
 	t.Run("Remove", remove(db, "newtestname"))
 }
 
@@ -55,23 +55,37 @@ func create(db *bolt.DB, file *pb.File) func(*testing.T) {
 	}
 }
 
-func get(db *bolt.DB, file *pb.File) func(*testing.T) {
+func get(db *bolt.DB, name string) func(*testing.T) {
 	return func(t *testing.T) {
-		got, err := Get(db, file.Name)
+		_, got, err := Get(db, name)
 		if err != nil {
 			t.Fatalf("Get() failed: %v", err)
 		}
 
 		// They aren't DeepEqual
-		if got.Name != file.Name {
-			t.Errorf("Expected %s, got %s", file.Name, got.Name)
+		if got.Name != name {
+			t.Errorf("Expected %s, got %s", name, got.Name)
+		}
+	}
+}
+
+func getCheap(db *bolt.DB, name string) func(*testing.T) {
+	return func(t *testing.T) {
+		_, got, err := GetCheap(db, name)
+		if err != nil {
+			t.Fatalf("Get() failed: %v", err)
+		}
+
+		// They aren't DeepEqual
+		if got.Name != name {
+			t.Errorf("Expected %s, got %s", name, got.Name)
 		}
 	}
 }
 
 func list(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		files, err := List(db)
+		_, files, err := List(db)
 		if err != nil {
 			t.Fatalf("List() failed: %v", err)
 		}
@@ -130,14 +144,13 @@ func TestRestore(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	file := &pb.File{
+	f := &pb.File{
 		Name:      "test",
 		Content:   []byte("Minas tirith"),
-		Filename:  "test.txt",
 		CreatedAt: 0,
 	}
 
-	if err := Restore(db, file); err != nil {
+	if err := Restore(db, f); err != nil {
 		t.Errorf("Restore() failed: %v", err)
 	}
 }
@@ -146,18 +159,8 @@ func TestCreateErrors(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	file := &pb.File{Name: "test create errors"}
-	// Create the file to receive 'already exists' error
-	t.Run("Create", create(db, file))
-
 	if err := Create(db, &pb.File{}); err == nil {
 		t.Error("Expected 'save file' error, got nil")
-	}
-
-	// Remove the file to not receive 'already exists' error
-	viper.Set("user.password", nil)
-	if err := Create(db, &pb.File{}); err == nil {
-		t.Error("Expected List 'decrypt file' error, got nil")
 	}
 }
 
@@ -165,7 +168,17 @@ func TestGetError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	_, err := Get(db, "non-existent")
+	_, _, err := Get(db, "non-existent")
+	if err == nil {
+		t.Error("Expected 'does not exist' error, got nil")
+	}
+}
+
+func TestGetCheapError(t *testing.T) {
+	db := setContext(t)
+	defer db.Close()
+
+	_, _, err := GetCheap(db, "non-existent")
 	if err == nil {
 		t.Error("Expected 'does not exist' error, got nil")
 	}
@@ -218,18 +231,24 @@ func TestBucketError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	file := &pb.File{Name: "nil bucket"}
+	f := &pb.File{
+		Name: "nil bucket",
+	}
 
 	db.Update(func(tx *bolt.Tx) error {
 		tx.DeleteBucket([]byte("kure_file"))
 		return nil
 	})
 
-	_, err := Get(db, file.Name)
+	_, _, err := Get(db, f.Name)
 	if err == nil {
 		t.Error("Get() didn't return 'invalid bucket'")
 	}
-	_, err = List(db)
+	_, _, err = GetCheap(db, f.Name)
+	if err == nil {
+		t.Error("GetCheap() didn't return 'invalid bucket'")
+	}
+	_, _, err = List(db)
 	if err == nil {
 		t.Error("List() didn't return 'invalid bucket'")
 	}
@@ -237,10 +256,10 @@ func TestBucketError(t *testing.T) {
 	if err == nil {
 		t.Error("ListNames() didn't return 'invalid bucket'")
 	}
-	if err := Remove(db, file.Name); err == nil {
+	if err := Remove(db, f.Name); err == nil {
 		t.Error("Remove() didn't return 'invalid bucket'")
 	}
-	if err := Restore(db, file); err == nil {
+	if err := Restore(db, f); err == nil {
 		t.Error("Restore() didn't return 'invalid bucket'")
 	}
 }
@@ -249,18 +268,25 @@ func TestDecryptError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	file := &pb.File{Name: "test decrypt error"}
-	if err := Create(db, file); err != nil {
+	f := &pb.File{
+		Name: "test decrypt error",
+	}
+
+	if err := Create(db, f); err != nil {
 		t.Fatal(err)
 	}
 
 	viper.Set("user.password", nil)
 
-	_, err := Get(db, file.Name)
+	_, _, err := Get(db, f.Name)
 	if err == nil {
 		t.Error("Get() didn't return 'decrypt file' error")
 	}
-	_, err = List(db)
+	_, _, err = GetCheap(db, f.Name)
+	if err == nil {
+		t.Error("GetCheap() didn't return 'decrypt file' error")
+	}
+	_, _, err = List(db)
 	if err == nil {
 		t.Error("List() didn't return 'decrypt file' error")
 	}
@@ -273,12 +299,11 @@ func TestKeyError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	file := &pb.File{Name: ""}
-
-	if err := Create(db, file); err == nil {
+	if err := Create(db, &pb.File{Name: ""}); err == nil {
 		t.Error("Create() didn't fail")
 	}
-	if err := Restore(db, file); err == nil {
+
+	if err := Restore(db, &pb.File{Name: ""}); err == nil {
 		t.Error("Restore() didn't fail")
 	}
 }

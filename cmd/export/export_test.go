@@ -7,11 +7,21 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/cmd"
+	"github.com/GGP1/kure/db/entry"
+	"github.com/GGP1/kure/pb"
 )
 
 func TestExport(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
+
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = "May the force be with you"
+	e.Expires = "Never"
+
+	if err := entry.Create(db, lockedBuf, e); err != nil {
+		t.Fatal(err)
+	}
 
 	cases := []struct {
 		manager  string
@@ -89,7 +99,6 @@ func TestExport(t *testing.T) {
 			}
 
 			// Cleanup
-			cmd.ResetFlags()
 			f.Close()
 			if err := os.Remove(tc.path); err != nil {
 				t.Errorf("Failed removing csv file: %v", err)
@@ -122,8 +131,6 @@ func TestInvalidExport(t *testing.T) {
 			if err := cmd.RunE(cmd, args); err == nil {
 				t.Fatalf("Expected test to fail but got nil")
 			}
-
-			cmd.ResetFlags()
 		})
 	}
 }

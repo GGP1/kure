@@ -3,17 +3,14 @@
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/GGP1/kure)](https://pkg.go.dev/github.com/GGP1/kure)
 [![Go Report Card](https://goreportcard.com/badge/github.com/GGP1/kure)](https://goreportcard.com/report/github.com/GGP1/kure)
 
-Kure is a command line password manager.
-
-It also offers storing cards, files and notes in a secure and simple way.
+Kure is a simple, secure and reliable command line password manager.
 
 - **Multi-Platform:** Linux, macOS, BSD and Windows supported.
 - **Offline:** Data is handled locally, no connection is established with 3rd parties.
-- **Secure:** All the information stored is encrypted using **AES** (Advanced Encryption Standard), a symmetric block cipher along with the **GCM** (Galois/Counter Mode) and a **256-bit** key. Furthermore, the user's master password is **never** stored **anywhere**, it's encrypted and kept **in-memory** inside a locked buffer, decrypted when it's required and destroyed immediately after it. The key derivation function used is Argon2 with the id version.
+- **Secure:** All the records are encrypted using **AES** (Advanced Encryption Standard), a symmetric block cipher along with the **GCM** (Galois/Counter Mode) and a **256-bit** key. Furthermore, the user's master password is **never** stored **anywhere**, it's encrypted and kept **in-memory** inside a locked buffer, decrypted when it's required and destroyed immediately after it. The key derivation function used is Argon2 with the id version.
 - **Easy to use:** Kure is extremely intuitive and does not require advanced technical skills.
 - **Portable:** Both Kure and the database compile to binary files and they can be easily carried around in an external device.
 - **Multiple formats:** Entries, bank cards, files of any type and notes.
-- **Customizable:** Tweak from the session timeout or the argon2 parameters to the buffer and the number of goroutines used in a file operation.
 
 ## Table of contents
 
@@ -26,13 +23,13 @@ It also offers storing cards, files and notes in a secure and simple way.
     * [Objects](#objects)
     * [Secret generation](#secret-generation)
     * [Master password](#master-password)
+    * [Memory security](#memory-security)
     * [Encryption](#encryption)
     * [Backups](#backups)
     * [Restore](#restore)
     * [Synchronization](#synchronization)
     * [Sessions](#sessions)
     * [Import/Export](#import/export)
-    * [Control over file operations](#control-over-file-operations)
 - [Recommendations](#recommendations)
     * [How to choose a secure master password](#how-to-choose-a-secure-master-password)
     * [Two factor authentication](#two-factor-authentication)
@@ -47,7 +44,7 @@ No releases yet.
 
 ## Configuration
 
-Kure will look for the `KURE_CONFIG` environment variable containing the path to the configuration file, which will contain the path to the database. If `KURE_CONFIG` is not set, the configuration file (.kure.yaml) and the database (kure.db) will be created in the user home directory ($HOME).
+Kure will look for the `KURE_CONFIG` environment variable pointing to a configuration file, which at the same time contains the name and path to the database. If the environment variable is not set, the configuration file (.kure.yaml) and the database (kure.db) will be created under the user home directory ($HOME).
 
 Switching between databases is as easy as changing the database name and path in the configuration file. If the file doesn't exist yet, Kure will create it.
 
@@ -76,12 +73,11 @@ Available Commands:
   clear       Clear clipboard/terminal (and history) or both
   config      Read or create the configuration file
   copy        Copy entry credentials to the clipboard
-  edit        Edit an entry
-  export      Export Kure entries to other password managers
+  export      Export entries
   file        File operations
   gen         Generate a random password
   help        Help about any command
-  import      Import entries from other password managers
+  import      Import entries
   ls          List entries
   note        Note operations
   restore     Restore the database
@@ -134,25 +130,38 @@ For generating secure random secrets we use [Atoll](https://www.github.com/GGP1/
 
 > The stronger your master password, the harder it will be for the attacker to get access to your information.
 
-Kure won't store your master password **anywhere**, it will be encrypted and kept in-memory in a protected buffer using [memguard](https://github.com/awnumar/memguard). Here are two interesting articles from its author talking about [memory security](https://spacetime.dev/memory-security-go) and [encrypting secrets in memory](https://spacetime.dev/encrypting-secrets-in-memory).
+Kure won't store your master password **anywhere**, it will be encrypted and kept in-memory in a protected buffer (see [memory security](#memory-security) for details).
 
 When the key is required for an operation, it's **decrypted** and sent into a key derivation function called [Argon2](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf) (winner of the Password Hashing Competition in 2015) with the **id** version. Right after this, the protected buffer is **destroyed**.
 
 This makes it secure even when the user is into a session and the password resides in the memory.
 
-> Argon2id key derivation is done with a 32 byte salt along with the master password, the number of logical threads usable and two parameters: *memory* and *iterations* (1024 MB and 1 by default) that can be adapted to your preferences in the configuration file. The final key is 256-bit long.
+Argon2id key derivation is done with a 32 byte salt along with the master password and three parameters: *memory*, *iterations* (1024 MB and 1 by default) and *threads* (the number of logical threads usable by default), these can be adapted to your preferences using the "kure restore argon2" command. The final key is 256-bit long.
+
+> When encrypting a record, the salt used by Argon2 is randomly generated and appended to the ciphertext, everytime the record is decrypted, the salt is extracted from the end of the ciphertext and used to derive the key.
 
 The Argon2id variant with 1 iteration and maximum available memory is recommended as a default setting for all environments. This setting is secure against side-channel attacks and maximizes adversarial costs on dedicated bruteforce hardware. 
 
 If one of the devices that will handle the database has lower than 1GB of memory, we recommend setting the *memory* value to the half of that device RAM availability. Otherwise, default values should be fine.
 
-**Test argon2 performance** with the `kure config test` command.
+##### Useful commands
 
-> If you want to change the password or the argon2 parameters use `kure restore argon2 [flags]`.
++ [kure config argon2 test](/docs/commands/config/subcommands/argon2/subcommands/test.md) to **test argon2 performance**. 
++ [kure config argon2](/docs/commands/config/subcommands/argon2/argon2.md) to see the values under which the password encrypted the records.
++ [kure restore argon2](/docs/commands/restore/subcommands/argon2.md) to change the parameters used by argon2.
++ [kure restore password](/docs/commands/restore/subcommands/password.md) to change the password.
+
+### Memory security
+
+> Kure attempts to protect sensitive information stored in-memory but it's not guaranteed.
+
+Go is a managed-memory language, which means we have little control over memory. That's why the approach taken to defend the users from potential attackers is to wipe any bytes that are not longer used and to store sensitive data inside locked buffers using [memguard](https://github.com/awnumar/memguard). Here are two interesting articles from its author talking about [memory security](https://spacetime.dev/memory-security-go) and [encrypting secrets in memory](https://spacetime.dev/encrypting-secrets-in-memory).
+
+> In cases where the data is not immediately needed (like the master password), the data is encrypted before stored in the locked buffer.
 
 ### Encryption
 
-Encryption is done using [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) (Advanced Encryption Standard), a symmetric block cipher along with [GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) (Galois/Counter Mode) and a 256-bit key.
+Encryption is done using a 256-bit key, the symmetric block cipher [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) (Advanced Encryption Standard) along with [GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) (Galois/Counter Mode) a cipher mode providing an [authenticated encryption](https://en.wikipedia.org/wiki/Authenticated_encryption) algorithm designed to ensure both data authenticity (integrity) and confidentiality.
 
 > The national institute of standards and technology (NIST) selected AES as the best algorithm in terms of security, cost, resilience, integrity and surveillance of the algorithm in October 2000.
 
@@ -172,7 +181,7 @@ The user can opt to **serve** the database on a **local server** or create a **f
 
 ### Restore
 
-**WARNING**: interrupting or exiting during a restoring process may cause an irreversible damage to the database data, use it with caution.
+> **WARNING**: interrupting or exiting during a restoring process may cause an irreversible damage to the database data, use it with caution.
 
 Kure provides the capability of restoring the database using different **argon2 parameters** or a **new password**. 
 
@@ -195,7 +204,7 @@ You can set a **timeout** using the [-t timeout] flag so it will **automatically
 
 ### Import/Export
 
-`kure import` reads other managers CSV files and stores the entries encrypting them with the master password previously passed.
+`kure import` reads other managers' CSV files and stores the entries encrypting them with the master password previously passed.
 
 `kure export` takes Kure's entries and formats them depending on the manager selected to generate a CSV file.
 
@@ -207,37 +216,27 @@ Password managers supported:
   • Lastpass
   • 1Password
 
-### Control over file operations
-
-File operations are the highest memory demanding commands in Kure, that's why we offer the users to regulate their consumption by modifying *buffer* and *semaphore* flags. They could also be used to improve performance.
-
-+ **Buffer**: set the size of the buffer used when reading files. By default it sends the entire file directly into memory.
-+ **Semaphore**: maximum number of [goroutines](/docs/commands/file/subcommands/add.md#goroutines) running concurrently. Default is 1.
-
-To sum up, these flags will help you adapt Kure to your requirements.
-
 ## Recommendations
 
 #### How to choose a secure master password
 
-Every password manager need at least one password to encrypt/decrypt all the records, this is why it is crucial that you choose a **strong master password** to make it as hard as possible to guess. 
+Every password manager need at least one password to encrypt/decrypt all the records and it is crucial to pick a **strong master password** to make it as hard as possible to guess. 
 
-A **good password** is a random combination of upper and lower case letters, numbers and special characters. We recommend choosing a password/passphrase consisting of 20 or more characters (the longer, the better). You should **avoid** picking words that can be found in a dictionary and forget using names or dates of birth.
+The password strength depends on the security level that the user requires but in most situations a random combination of upper and lower case letters, numbers and special characters consisting of 20 or more of these (the longer, the better) could be considered strong enough. You should **avoid** picking words that can be found in a dictionary and forget using names or dates of birth.
 
 It's important to note that it shouldn't be stored anywhere and the user must remember it, forgetting the master password will leave you without access to all your data.
 
 #### Two-factor authentication
 
-Two-factor authentication is a type, or subset, of multi-factor authentication. It is a method of confirming users' claimed identities by using a combination of **two different factors** (usually 1 and 2): 1. something you know (account credentials), 2. something you have (devices), or 3. something you are.
+We higly encourage the usage of Two-factor, a method of confirming users' claimed identities by using a combination of **two different factors** (usually 1 and 2): 1. something you know (account credentials), 2. something you have (devices), or 3. something you are.
 
-In case an attacker gets access to the secrets, he will still need the **constantly refreshing code** to get into the account, making it, not impossible, but much more complicated.
+It adds another layer of security. In case an attacker gets access to the secrets, he will still need the **constantly refreshing code** to get into the account making it, not impossible, but much more complicated.
 
 ## Caveats and limitations
 
 + Kure cannot provide complete protection against a compromised operating system with malware, keyloggers or viruses.
 + There isn't any backdoor or key that can open your database. There is no way of recovering your data if you forget your master password.
 + **Windows users** have to clean the terminal history manually, however, closing and opening a new one is a quick solution as it stores the session history only. Moreover, Cygwin/mintty/git-bash are not supported on this platform because they are unable to reach down to the OS API.
-+ Mobile devices are not supported **yet**.
 + Sharing keys is not implemented as there is no connection with the internet.
 + Kure doesn't validate passwords, is up to the user to use strong ones.
 
@@ -258,13 +257,13 @@ In case an attacker gets access to the secrets, he will still need the **constan
 
 ## Feedback
 
-We would really appreciate your feedback, feel free to leave your comment [here](https://github.com/GGP1/kure/discussions?discussions_q=category%3AFeedback).
+We would really appreciate your feedback, feel free to leave your comment [here](https://github.com/GGP1/kure/discussions/categories/feedback).
 
 ## Contributing
 
 Any contribution is welcome. We appreciate your time and help. Please follow these steps to do it:
 
-> If planning on adding new features, create an issue first.
+> Do not hesitate to leave any ideas [here](https://github.com/GGP1/kure/discussions/categories/ideas).
 
 1. **Fork** the repository on Github
 2. **Clone** your fork by executing: `git clone github.com/<your_username>/kure.git`

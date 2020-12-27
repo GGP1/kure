@@ -8,6 +8,7 @@ import (
 
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/pb"
+	"github.com/awnumar/memguard"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/pkg/errors"
@@ -19,7 +20,7 @@ var (
 	errInvalidBucket = errors.New("invalid bucket")
 )
 
-// Create saves a new file into the database.
+// Create a new file.
 func Create(db *bolt.DB, file *pb.File) error {
 	// Compress file
 	var gzipBuf bytes.Buffer
@@ -38,6 +39,9 @@ func Create(db *bolt.DB, file *pb.File) error {
 
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(fileBucket)
+		if b == nil {
+			return errInvalidBucket
+		}
 
 		buf, err := proto.Marshal(file)
 		if err != nil {
@@ -58,8 +62,8 @@ func Create(db *bolt.DB, file *pb.File) error {
 }
 
 // Get retrieves the file with the specified name.
-func Get(db *bolt.DB, name string) (*pb.File, error) {
-	file := &pb.File{}
+func Get(db *bolt.DB, name string) (*memguard.LockedBuffer, *pb.File, error) {
+	lockedBuf, file := pb.SecureFile()
 
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(fileBucket)
@@ -85,31 +89,65 @@ func Get(db *bolt.DB, name string) (*pb.File, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Decompress
 	compressed := bytes.NewBuffer(file.Content)
 	gr, err := gzip.NewReader(compressed)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed decompressing file")
+		return nil, nil, errors.Wrap(err, "failed decompressing file")
 	}
 	defer gr.Close()
 
 	var decompressed bytes.Buffer
 	_, err = io.Copy(&decompressed, gr)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed copying decompressed file")
+		return nil, nil, errors.Wrap(err, "failed copying decompressed file")
 	}
 
 	file.Content = decompressed.Bytes()
 
-	return file, nil
+	return lockedBuf, file, nil
+}
+
+// GetCheap is like Get but it doesn't handle the file content.
+func GetCheap(db *bolt.DB, name string) (*memguard.LockedBuffer, *pb.FileCheap, error) {
+	lockedBuf, file := pb.SecureFileCheap()
+
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(fileBucket)
+		if b == nil {
+			return errInvalidBucket
+		}
+		name = strings.TrimSpace(strings.ToLower(name))
+
+		encFile := b.Get([]byte(name))
+		if encFile == nil {
+			return errors.Errorf("%q does not exist", name)
+		}
+
+		decFile, err := crypt.Decrypt(encFile)
+		if err != nil {
+			return errors.Wrap(err, "decrypt file")
+		}
+
+		if err := proto.Unmarshal(decFile, file); err != nil {
+			return errors.Wrap(err, "unmarshal file")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return lockedBuf, file, nil
 }
 
 // List returns a slice with all the files stored in the file bucket.
-func List(db *bolt.DB) ([]*pb.File, error) {
-	var files []*pb.File
+func List(db *bolt.DB) (*memguard.LockedBuffer, []*pb.File, error) {
+	lockedBuf, files := pb.SecureFileSlice()
 
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(fileBucket)
@@ -150,10 +188,10 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 		})
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return files, nil
+	return lockedBuf, files, nil
 }
 
 // ListFastest is used to check if the user entered the correct password
@@ -231,10 +269,11 @@ func Rename(db *bolt.DB, oldName, newName string) error {
 	oldName = strings.TrimSpace(strings.ToLower(oldName))
 	newName = strings.TrimSpace(strings.ToLower(newName))
 
-	file, err := Get(db, oldName)
+	oldBuf, file, err := Get(db, oldName)
 	if err != nil {
 		return err
 	}
+	defer oldBuf.Destroy()
 	file.Name = newName
 
 	err = db.Update(func(tx *bolt.Tx) error {
@@ -259,12 +298,13 @@ func Rename(db *bolt.DB, oldName, newName string) error {
 	if err := Create(db, file); err != nil {
 		return errors.Wrap(err, "save new file")
 	}
-
 	return nil
 }
 
 // Restore is like Create but do not check for existing files.
 // Should be used in the "restore" command only.
+//
+// Do not pass a locked buffer since the file passed comes from a protected slice.
 func Restore(db *bolt.DB, file *pb.File) error {
 	// Compress file
 	var gzipBuf bytes.Buffer

@@ -20,7 +20,7 @@ var example = `
 kure rm entryName
 
 * Remove a directory
-kure card rm dirName -d`
+kure rm dirName -d`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {

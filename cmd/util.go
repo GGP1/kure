@@ -15,6 +15,7 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/db/note"
+	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
 	"github.com/awnumar/memguard"
 
@@ -40,14 +41,14 @@ const (
 type RunEFunc func(cmd *cobra.Command, args []string) error
 
 // BuildBox constructs an object box used to display its information.
-// TODO: use ordered map
 //
 // ┌──── Sample ────┐
 // │ Key  │ Value   │
 // └────────────────┘
-func BuildBox(name string, fields map[string]string) string {
-	var sb strings.Builder
+func BuildBox(name string, mp *orderedmap.Map) (*memguard.LockedBuffer, string) {
+	defer mp.Destroy() // Destroy map's key/value pairs after finishing
 
+	lockedBuf, sb := pb.SecureStringBuilder()
 	// Do not use folders as part of the name
 	name = filepath.Base(name)
 
@@ -60,20 +61,24 @@ func BuildBox(name string, fields map[string]string) string {
 	longestValue := lenName
 
 	// Range to take the longest key and value
-	for k, v := range fields {
+	// Keys will always be 1 byte characters
+	// Values may be 1, 2 or 3 bytes, to take the length use len([]rune(v))
+	for _, k := range mp.Keys() {
+		v := mp.Get(k) // Get key's value
+
 		// Take map's longest key
 		if len(k) > longestKey {
 			longestKey = len(k)
 		}
 
-		// Split each value by a new line
-		parts := strings.Split(v, "\n")
-		for _, p := range parts {
-			lenP := len([]rune(p))
+		// Split each value by a new line (fields like Notes contain multiple lines)
+		values := strings.Split(v, "\n")
+		for _, v := range values {
+			lenV := len([]rune(v))
 
 			// Take map's longest value
-			if lenP > longestValue {
-				longestValue = lenP
+			if lenV > longestValue {
+				longestValue = lenV
 			}
 		}
 	}
@@ -102,13 +107,14 @@ func BuildBox(name string, fields map[string]string) string {
 	sb.WriteString("\n")
 
 	// Body
-	for k, v := range fields {
+	for _, k := range mp.Keys() {
+		v := mp.Get(k) // Get key's value
 		// Start
 		sb.WriteString(vBar)
 
 		// Key
 		sb.WriteString(fmt.Sprintf(" %s ", k))
-		sb.WriteString(strings.Repeat(" ", longestKey-len([]rune(k)))) // Padding
+		sb.WriteString(strings.Repeat(" ", longestKey-len(k))) // Padding
 
 		// Middle
 		sb.WriteString(vBar)
@@ -146,7 +152,7 @@ func BuildBox(name string, fields map[string]string) string {
 	sb.WriteString(strings.Repeat(hBar, lenFooter))
 	sb.WriteString(bRight)
 
-	return sb.String()
+	return lockedBuf, sb.String()
 }
 
 // DisplayQRCode creates a qr code with the password provided and writes it to the terminal.
@@ -194,7 +200,7 @@ func Exists(db *bolt.DB, name, objectType string) error {
 		records, err = note.ListNames(db)
 
 	default:
-		return errors.Errorf("%q is not a Kure object", objectType)
+		return errors.Errorf("%q is not a Kure's object", objectType)
 	}
 	if err != nil {
 		return err
@@ -289,6 +295,7 @@ func RequirePassword(db *bolt.DB) RunEFunc {
 			return err
 		}
 
+		// Fetch only one record (the fastest) to decrypt it and make sure the password is correct
 		if cards > 0 {
 			if !card.ListFastest(db) {
 				return errInvalidMasterPassword
@@ -321,11 +328,8 @@ func RequirePassword(db *bolt.DB) RunEFunc {
 // Scan scans a single line and returns the input.
 func Scan(scanner *bufio.Scanner, field string) string {
 	fmt.Printf("%s: ", field)
-
 	scanner.Scan()
-	text := scanner.Text()
-
-	return strings.TrimSpace(text)
+	return strings.TrimSpace(scanner.Text())
 }
 
 // Scanlns scans multiple lines and returns the input.
@@ -347,6 +351,7 @@ func Scanlns(scanner *bufio.Scanner, field string) string {
 
 	text := strings.Join(lines, "\n")
 	text = strings.ReplaceAll(text, "!end", "")
+	defer memguard.WipeBytes([]byte(text))
 
 	return strings.TrimSpace(text)
 }
@@ -359,9 +364,7 @@ func SetContext(t *testing.T, path string) *bolt.DB {
 	}
 
 	viper.Reset()
-	password := memguard.NewBufferFromBytes([]byte("test"))
-	viper.Set("user.password", password.Seal())
-
+	viper.Set("user.password", memguard.NewEnclave([]byte("test")))
 	// Reduce argon2 parameters to speed up tests
 	viper.Set("argon2.memory", 1)
 	viper.Set("argon2.iterations", 1)
@@ -369,7 +372,7 @@ func SetContext(t *testing.T, path string) *bolt.DB {
 	err = db.Update(func(tx *bolt.Tx) error {
 		buckets := [4]string{"kure_card", "kure_entry", "kure_file", "kure_note"}
 		for _, bucket := range buckets {
-			tx.DeleteBucket([]byte(bucket))
+			tx.DeleteBucket([]byte(bucket)) // Ignore error on purpose
 			if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
 				return errors.Wrapf(err, "couldn't create %q bucket", bucket)
 			}
@@ -377,15 +380,6 @@ func SetContext(t *testing.T, path string) *bolt.DB {
 		return nil
 	})
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	e := &pb.Entry{
-		Name:    "May the force be with you",
-		Expires: "Never",
-	}
-
-	if err := entry.Create(db, e); err != nil {
 		t.Fatal(err)
 	}
 

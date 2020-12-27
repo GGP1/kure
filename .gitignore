@@ -4,6 +4,7 @@
 # Profiling files
 *.out
 *.pprof
+*.prof
 
 # Test binaries
 *.test

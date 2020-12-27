@@ -6,6 +6,7 @@ import (
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/note"
+	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
 	"github.com/GGP1/kure/tree"
 
@@ -80,23 +81,25 @@ func runLs(db *bolt.DB) cmdutil.RunEFunc {
 				break
 			}
 
-			note, err := note.Get(db, name)
+			noteBuf, note, err := note.Get(db, name)
 			if err != nil {
 				return err
 			}
 
-			printNote(note)
+			printNote(name, note)
+			noteBuf.Destroy()
 		}
 
 		return nil
 	}
 }
 
-func printNote(n *pb.Note) {
-	fields := map[string]string{
-		"Text": n.Text,
-	}
+func printNote(name string, n *pb.Note) {
+	// Map's key/value pairs are stored inside locked buffers
+	oMap := orderedmap.New(1)
+	oMap.Set("Text", n.Text)
 
-	box := cmdutil.BuildBox(n.Name, fields)
+	lockedBuf, box := cmdutil.BuildBox(name, oMap)
 	fmt.Println("\n" + box)
+	lockedBuf.Destroy()
 }

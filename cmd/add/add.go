@@ -11,6 +11,7 @@ import (
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
+	"github.com/awnumar/memguard"
 
 	"github.com/GGP1/atoll"
 	"github.com/pkg/errors"
@@ -33,10 +34,10 @@ var (
 
 var example = `
 * Add an entry using a custom password
-kure add entry entryName -c
+kure add entryName -c
 
 * Add an entry generating a random password
-kure add entry entryName -l 27 -f 1,2,3,4,5 -i & -e / -r`
+kure add entryName -l 27 -f 1,2,3,4,5 -i & -e / -r`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
@@ -88,7 +89,7 @@ func runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return err
 		}
 
-		e, err := input(db, name, custom, r)
+		lockedBuf, e, err := input(db, r, name, custom)
 		if err != nil {
 			return err
 		}
@@ -101,7 +102,7 @@ func runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			}
 		}
 
-		if err := entry.Create(db, e); err != nil {
+		if err := entry.Create(db, lockedBuf, e); err != nil {
 			return err
 		}
 
@@ -110,20 +111,22 @@ func runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 	}
 }
 
-func input(db *bolt.DB, name string, custom bool, r io.Reader) (*pb.Entry, error) {
-	var password string
-
+func input(db *bolt.DB, r io.Reader, name string, custom bool) (*memguard.LockedBuffer, *pb.Entry, error) {
 	s := bufio.NewScanner(r)
-	username := cmdutil.Scan(s, "Username")
+
+	lockedBuf, entry := pb.SecureEntry()
+	entry.Name = name
+	entry.Username = cmdutil.Scan(s, "Username")
 	if custom {
-		password = cmdutil.Scan(s, "Password")
+		entry.Password = cmdutil.Scan(s, "Password")
 	}
-	url := cmdutil.Scan(s, "URL")
-	notes := cmdutil.Scanlns(s, "Notes")
+	entry.URL = cmdutil.Scan(s, "URL")
+	entry.Notes = cmdutil.Scanlns(s, "Notes")
+
 	expires := cmdutil.Scan(s, "Expires")
 
 	if err := s.Err(); err != nil {
-		return nil, errors.Wrap(err, "scanning failed")
+		return nil, nil, errors.Wrap(err, "scanning failed")
 	}
 
 	expires = strings.ToLower(expires)
@@ -140,46 +143,31 @@ func input(db *bolt.DB, name string, custom bool, r io.Reader) (*pb.Entry, error
 		if err != nil {
 			exp, err = time.Parse("02/01/2006", expires)
 			if err != nil {
-				return nil, errors.New("invalid time format. Valid formats: d/m/y or y/m/d")
+				return nil, nil, errors.New("invalid time format. Valid formats: d/m/y or y/m/d")
 			}
 		}
 
 		expires = exp.Format(time.RFC1123Z)
 	}
 
-	// This is the easiest way to avoid creating an entry after a signal,
-	// however, it may not be the best solution
-	if viper.GetBool("interrupt") {
-		block := make(chan struct{})
-		<-block
-	}
+	entry.Expires = expires
+	memguard.WipeBytes([]byte(expires))
 
-	entry := &pb.Entry{
-		Name:     name,
-		Username: username,
-		URL:      url,
-		Notes:    notes,
-		Expires:  expires,
-	}
-	if password != "" {
-		entry.Password = password
-	}
-
-	return entry, nil
+	return lockedBuf, entry, nil
 }
 
 // genPassword returns a customized random password or an error.
 func genPassword(length uint64, format []int, include, exclude string, repeat bool) (string, error) {
 	// If the user didn't specify format levels, use default
-	if format == nil {
-		if f := viper.GetIntSlice("entry.format"); len(f) > 0 {
-			format = f
+	if len(format) == 0 {
+		f := viper.GetIntSlice("entry.format")
+		if len(f) == 0 {
+			return "", errors.New("please specify a format")
 		}
-	}
-	if r := viper.GetBool("entry.repeat"); r != false {
-		repeat = r
+		format = f
 	}
 
+	// Convert int slice to uint8 slice
 	uFormat := make([]uint8, len(format))
 	for i := range format {
 		uFormat[i] = uint8(format[i])

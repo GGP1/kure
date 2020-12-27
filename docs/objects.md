@@ -27,7 +27,7 @@
 |  Field      | Value                 
 | -------     | ------                 
 | Name        | x
-| Filename    | x
+| Content     | x
 | Size        | x
 | Created at  | x
 

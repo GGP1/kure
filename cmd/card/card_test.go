@@ -259,7 +259,7 @@ func TestInput(t *testing.T) {
 
 	buf := bytes.NewBufferString("type\n123456789\n1234\n2021/06\nnotes")
 
-	got, err := input(db, "test", buf)
+	_, got, err := input(db, "test", buf)
 	if err != nil {
 		t.Fatalf("Failed creating the card: %v", err)
 	}

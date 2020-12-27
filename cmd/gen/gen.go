@@ -5,9 +5,10 @@ import (
 	"math"
 
 	cmdutil "github.com/GGP1/kure/cmd"
-	"github.com/atotto/clipboard"
+	"github.com/awnumar/memguard"
 
 	"github.com/GGP1/atoll"
+	"github.com/atotto/clipboard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -65,7 +66,7 @@ func runGen() cmdutil.RunEFunc {
 			return errInvalidLength
 		}
 
-		if format == nil {
+		if len(format) == 0 {
 			f := viper.GetIntSlice("entry.format")
 			if len(f) == 0 {
 				return errors.New("please specify a format")
@@ -73,12 +74,8 @@ func runGen() cmdutil.RunEFunc {
 			format = f
 		}
 
-		if r := viper.GetBool("entry.repeat"); r != false {
-			repeat = r
-		}
-
+		// Convert int slice to uint8 slice
 		uFormat := make([]uint8, len(format))
-
 		for i := range format {
 			uFormat[i] = uint8(format[i])
 		}
@@ -96,21 +93,24 @@ func runGen() cmdutil.RunEFunc {
 			return err
 		}
 
+		pwdBuf := memguard.NewBufferFromBytes([]byte(password))
+		defer pwdBuf.Destroy()
+
 		if copy {
-			if err := clipboard.WriteAll(password); err != nil {
+			if err := clipboard.WriteAll(pwdBuf.String()); err != nil {
 				return errors.Wrap(err, "failed writing to the clipboard")
 			}
 		}
 
 		if qr {
-			if err := cmdutil.DisplayQRCode(password); err != nil {
+			if err := cmdutil.DisplayQRCode(pwdBuf.String()); err != nil {
 				return err
 			}
 		}
 
 		entropy := calculateEntropy(length, uFormat)
 
-		fmt.Printf("Password: %s\nBits of entropy: %.2f\n", password, entropy)
+		fmt.Printf("Password: %s\nBits of entropy: %.2f\n", pwdBuf.String(), entropy)
 		return nil
 	}
 }

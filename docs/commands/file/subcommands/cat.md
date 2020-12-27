@@ -4,7 +4,7 @@
 
 ## Description
 
-Read file and print to standard output
+Read file and write to standard output
 
 ## Flags 
 
@@ -14,17 +14,17 @@ Read file and print to standard output
 
 ### Examples
 
-Read one file:
+Write one file:
 ```
 kure cat fileName
 ```
 
-Read one file and copy content to the clipboard:
+Write one file and copy content to the clipboard:
 ```
 kure cat fileName -c
 ```
 
-Read multiple files:
+Write multiple files:
 ```
 kure cat file1 file2 file3
 ```

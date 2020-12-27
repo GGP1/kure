@@ -7,6 +7,15 @@ package pb;
 message File {
     string name = 1;
     bytes content = 2;
-    string filename = 3;
+    int64 size = 3;
+    int64 created_at = 4;
+}
+
+// Used to display single files on the terminal without handling the content.
+//
+// Fields and numbers must match with File ones.
+message FileCheap {
+    string name = 1;
+    int64 size = 3;
     int64 created_at = 4;
 }

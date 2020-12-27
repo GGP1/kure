@@ -77,10 +77,11 @@ func runTouch(db *bolt.DB) cmdutil.RunEFunc {
 
 		// Create all
 		if len(args) == 0 {
-			files, err := file.List(db)
+			filesBuf, files, err := file.List(db)
 			if err != nil {
 				return err
 			}
+			defer filesBuf.Destroy()
 
 			fmt.Printf("Creating files at %s\n", path)
 
@@ -90,6 +91,7 @@ func runTouch(db *bolt.DB) cmdutil.RunEFunc {
 					fmt.Fprintln(os.Stderr, "error:", err)
 				}
 			}
+
 			return nil
 		}
 
@@ -100,34 +102,45 @@ func runTouch(db *bolt.DB) cmdutil.RunEFunc {
 
 			// Assume the user wants to recreate an entire directory
 			if filepath.Ext(name) == "" {
-				files, err := file.List(db)
+				filesBuf, files, err := file.List(db)
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "error:", err)
 					continue
 				}
 
-				var dir []*pb.File
-				for _, file := range files {
-					if strings.Contains(file.Name, name) {
-						dir = append(dir, file)
+				// If the last rune of name is not a slash,
+				// add it to make sure to create items under that folder only
+				if name[len(name)-1] != '/' {
+					name += "/"
+				}
+
+				dirBuf, dir := pb.SecureFileSlice()
+
+				for _, f := range files {
+					if strings.Contains(f.Name, name) {
+						dir = append(dir, f)
 					}
 				}
+				filesBuf.Destroy()
 
 				if len(dir) == 0 {
 					fmt.Fprintf(os.Stderr, "error: there is no folder named %q\n", name)
+					dirBuf.Destroy()
 					continue
 				}
 
-				for _, file := range dir {
-					if err := createFiles(file, path); err != nil {
+				for _, f := range dir {
+					if err := createFiles(f, path); err != nil {
 						fmt.Fprintln(os.Stderr, "error:", err)
 					}
 				}
+
+				dirBuf.Destroy()
 				continue
 			}
 
 			// Create single file
-			f, err := file.Get(db, name)
+			fileBuf, f, err := file.Get(db, name)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
@@ -137,6 +150,7 @@ func runTouch(db *bolt.DB) cmdutil.RunEFunc {
 				fmt.Fprintln(os.Stderr, "error:", err)
 				continue
 			}
+			fileBuf.Destroy()
 		}
 
 		return nil
@@ -147,17 +161,13 @@ func runTouch(db *bolt.DB) cmdutil.RunEFunc {
 func createFile(file *pb.File, overwrite bool) error {
 	filename := filepath.Base(file.Name)
 
-	if filepath.Ext(filename) == "" {
-		filename += filepath.Ext(file.Filename)
-	}
-
 	// Create if it doesn't exist or if we are allowed to overwrite it
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) || overwrite {
-		fmt.Println("Create:", file.Name)
 		if err := ioutil.WriteFile(filename, file.Content, 0644); err != nil {
 			return errors.Wrapf(err, "failed writing %q", filename)
 		}
+		fmt.Println("Create:", file.Name)
 		return nil
 	}
 

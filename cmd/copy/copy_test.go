@@ -11,72 +11,93 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func TestCopy(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+func TestCopyPassword(t *testing.T) {
+	db := createEntry(t)
 	defer db.Close()
 
-	if err := entry.Create(db, &pb.Entry{Name: "test", Expires: "Never"}); err != nil {
-		t.Fatal(err)
+	cmd := NewCmd(db)
+	args := []string{"test"}
+
+	if err := cmd.RunE(cmd, args); err != nil {
+		t.Fatalf("Failed to copy password to clipboard: %v", err)
 	}
 
-	t.Run("Copy password", copyPassword(db))
-	t.Run("Copy username", copyUsername(db))
-	t.Run("Invalid copy", copyErrors(db))
-}
+	got, err := clipboard.ReadAll()
+	if err != nil {
+		t.Fatalf("Failed reading from clipboard: %v", err)
+	}
 
-func copyPassword(db *bolt.DB) func(*testing.T) {
-	return func(t *testing.T) {
-		cmd := NewCmd(db)
-		cmd.Flags().Set("timeout", "30ms")
-		args := []string{"test"}
-
-		err := cmd.RunE(cmd, args)
-		if err != nil {
-			t.Fatalf("Failed to copy password to clipboard: %v", err)
-		}
-
-		clip, err := clipboard.ReadAll()
-		if err != nil {
-			t.Fatalf("Failed reading from clipboard: %v", err)
-		}
-
-		if clip != "" {
-			t.Errorf("Didn't copy from clipboard")
-		}
+	if got != "Gopher" {
+		t.Errorf("Expected Gopher, got %s", got)
 	}
 }
 
-func copyUsername(db *bolt.DB) func(*testing.T) {
-	return func(t *testing.T) {
-		cmd := NewCmd(db)
-		args := []string{"test"}
-		cmd.Flags().Set("username", "true")
+func TestCopyUsername(t *testing.T) {
+	db := createEntry(t)
+	defer db.Close()
 
-		err := cmd.RunE(cmd, args)
-		if err != nil {
-			t.Fatalf("Failed to copy username to clipboard: %v", err)
-		}
+	cmd := NewCmd(db)
+	args := []string{"test"}
+	cmd.Flags().Set("username", "true")
 
-		clip, err := clipboard.ReadAll()
-		if err != nil {
-			t.Fatalf("Failed reading from clipboard: %v", err)
-		}
+	if err := cmd.RunE(cmd, args); err != nil {
+		t.Fatalf("Failed to copy username to clipboard: %v", err)
+	}
 
-		if clip != "" {
-			t.Errorf("Didn't copy from clipboard")
-		}
+	got, err := clipboard.ReadAll()
+	if err != nil {
+		t.Fatalf("Failed reading from clipboard: %v", err)
+	}
+
+	if got != "Go" {
+		t.Errorf("Expected Go, got %s", got)
 	}
 }
 
-func copyErrors(db *bolt.DB) func(*testing.T) {
-	return func(t *testing.T) {
-		cmd := NewCmd(db)
-		args := []string{"non-existent"}
+func TestCopyWithTimeout(t *testing.T) {
+	db := createEntry(t)
+	defer db.Close()
 
-		err := cmd.RunE(cmd, args)
-		if err == nil {
-			t.Error("Expected to return an error and got nil")
-		}
+	cmd := NewCmd(db)
+	args := []string{"test"}
+	cmd.Flags().Set("timeout", "1ms")
+
+	if err := cmd.RunE(cmd, args); err != nil {
+		t.Fatalf("Failed to copy password to clipboard: %v", err)
+	}
+
+	got, err := clipboard.ReadAll()
+	if err != nil {
+		t.Fatalf("Failed reading from clipboard: %v", err)
+	}
+
+	if got != "" {
+		t.Errorf("Expected clipboard to be empty but got %s", got)
+	}
+}
+
+func TestCopyErrors(t *testing.T) {
+	db := createEntry(t)
+	defer db.Close()
+
+	cases := []struct {
+		desc string
+		name string
+	}{
+		{desc: "Non-existent", name: "non-existent"},
+		{desc: "Invalid name", name: ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			cmd := NewCmd(db)
+			args := []string{tc.name}
+
+			err := cmd.RunE(cmd, args)
+			if err == nil {
+				t.Error("Expected to return an error and got nil")
+			}
+		})
 	}
 }
 
@@ -85,4 +106,20 @@ func TestPostRun(t *testing.T) {
 	f := cmd.PostRun
 
 	f(cmd, nil)
+}
+
+func createEntry(t *testing.T) *bolt.DB {
+	db := cmdutil.SetContext(t, "../../db/testdata/database")
+
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = "test"
+	e.Username = "Go"
+	e.Password = "Gopher"
+	e.Expires = "Never"
+
+	if err := entry.Create(db, lockedBuf, e); err != nil {
+		t.Fatal(err)
+	}
+
+	return db
 }

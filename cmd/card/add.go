@@ -9,10 +9,10 @@ import (
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
-
+	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
+
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -46,12 +46,12 @@ func runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return err
 		}
 
-		c, err := input(db, name, r)
+		lockedBuf, c, err := input(db, name, r)
 		if err != nil {
 			return err
 		}
 
-		if err := card.Create(db, c); err != nil {
+		if err := card.Create(db, lockedBuf, c); err != nil {
 			return err
 		}
 
@@ -60,33 +60,20 @@ func runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 	}
 }
 
-func input(db *bolt.DB, name string, r io.Reader) (*pb.Card, error) {
+func input(db *bolt.DB, name string, r io.Reader) (*memguard.LockedBuffer, *pb.Card, error) {
 	s := bufio.NewScanner(r)
-	cType := cmdutil.Scan(s, "Type")
-	num := cmdutil.Scan(s, "Number")
-	secCode := cmdutil.Scan(s, "Security code")
-	expDate := cmdutil.Scan(s, "Expire date")
-	notes := cmdutil.Scanlns(s, "Notes")
+
+	lockedBuf, card := pb.SecureCard()
+	card.Name = name
+	card.Type = cmdutil.Scan(s, "Type")
+	card.Number = cmdutil.Scan(s, "Number")
+	card.SecurityCode = cmdutil.Scan(s, "Security code")
+	card.ExpireDate = cmdutil.Scan(s, "Expire date")
+	card.Notes = cmdutil.Scanlns(s, "Notes")
 
 	if err := s.Err(); err != nil {
-		return nil, errors.Wrap(err, "failed scanning")
+		return nil, nil, errors.Wrap(err, "failed scanning")
 	}
 
-	// This is the easiest way to avoid creating a card after a signal,
-	// however, it may not be the best solution
-	if viper.GetBool("interrupt") {
-		block := make(chan struct{})
-		<-block
-	}
-
-	card := &pb.Card{
-		Name:         name,
-		Type:         cType,
-		Number:       num,
-		SecurityCode: secCode,
-		ExpireDate:   expDate,
-		Notes:        notes,
-	}
-
-	return card, nil
+	return lockedBuf, card, nil
 }

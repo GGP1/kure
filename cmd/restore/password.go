@@ -1,11 +1,8 @@
 package restore
 
 import (
-	"bytes"
-	"crypto/subtle"
 	"fmt"
 	"sync"
-	"syscall"
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/crypt"
@@ -14,12 +11,9 @@ import (
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/db/note"
 
-	"github.com/awnumar/memguard"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 func passwordSubCmd(db *bolt.DB) *cobra.Command {
@@ -29,7 +23,8 @@ func passwordSubCmd(db *bolt.DB) *cobra.Command {
 		Long: `Re-encrypt all the records with a new password.
 		
 Interrupting this process may cause irreversible damage to your information, please do not exit after typing the new password.`,
-		RunE: runPassword(db),
+		PreRunE: cmdutil.RequirePassword(db),
+		RunE:    runPassword(db),
 	}
 
 	return cmd
@@ -38,23 +33,19 @@ Interrupting this process may cause irreversible damage to your information, ple
 // There should be no errors, that's why they are omitted when creating or removing elements.
 func runPassword(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		if err := oldPassword(); err != nil {
-			return err
-		}
-
-		cards, err := card.List(db)
+		cardsBuf, cards, err := card.List(db)
 		if err != nil {
 			return err
 		}
-		entries, err := entry.List(db)
+		entriesBuf, entries, err := entry.List(db)
 		if err != nil {
 			return err
 		}
-		files, err := file.List(db)
+		filesBuf, files, err := file.List(db)
 		if err != nil {
 			return err
 		}
-		notes, err := note.List(db)
+		notesBuf, notes, err := note.List(db)
 		if err != nil {
 			return err
 		}
@@ -73,32 +64,14 @@ func runPassword(db *bolt.DB) cmdutil.RunEFunc {
 
 		// Overwrite objects encrypted with the new password
 		// Errors are omitted as there shouldn't be any
-		createCards(db, cards, &wg)
-		createEntries(db, entries, &wg)
-		createFiles(db, files, &wg)
-		createNotes(db, notes, &wg)
+		createCards(db, cardsBuf, cards, &wg)
+		createEntries(db, entriesBuf, entries, &wg)
+		createFiles(db, filesBuf, files, &wg)
+		createNotes(db, notesBuf, notes, &wg)
 
 		wg.Wait()
 
 		fmt.Print("\nPassword updated successfully")
 		return nil
 	}
-}
-
-func oldPassword() error {
-	fmt.Print("Enter old password: ")
-	password, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return errors.Wrap(err, "reading password")
-	}
-	fmt.Print("\n")
-
-	if subtle.ConstantTimeCompare(password, nil) == 1 {
-		return errors.New("invalid password")
-	}
-
-	pwd := memguard.NewBufferFromBytes(bytes.TrimSpace(password))
-	viper.Set("user.password", pwd.Seal())
-
-	return nil
 }

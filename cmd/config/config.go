@@ -50,7 +50,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	f.StringVarP(&path, "path", "p", "", "set config file path")
 	f.BoolVarP(&create, "create", "c", false, "create a config file")
 
-	cmd.AddCommand(testSubCmd())
+	cmd.AddCommand(argon2SubCmd(db))
 
 	return cmd
 }
@@ -106,7 +106,6 @@ func setConfig(r io.Reader) error {
 	name := cmdutil.Scan(scanner, "Database name")
 	dbPath := cmdutil.Scan(scanner, "Database path")
 	format := cmdutil.Scan(scanner, "Entry format")
-	repeat := cmdutil.Scan(scanner, "Repeat characters")
 	port := cmdutil.Scan(scanner, "Http port")
 	prefix := cmdutil.Scan(scanner, "Session prefix")
 	timeout := cmdutil.Scan(scanner, "Session timeout")
@@ -165,7 +164,6 @@ func setConfig(r io.Reader) error {
 	viper.Set("database.path", dbPath)
 	viper.Set("entry.format", f)
 	viper.Set("http.port", httpPort)
-	viper.Set("entry.repeat", repeat)
 	viper.Set("session.prefix", prefix)
 	viper.Set("session.timeout", timeout)
 	viper.Set("argon2.memory", memory)

@@ -13,8 +13,12 @@ func TestRm(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = "test"
+	e.Expires = "Never"
+
 	// Create the entry that is going to be removed
-	if err := entry.Create(db, &pb.Entry{Name: "test", Expires: "Never"}); err != nil {
+	if err := entry.Create(db, lockedBuf, e); err != nil {
 		t.Fatal(err)
 	}
 
@@ -28,7 +32,7 @@ func TestRm(t *testing.T) {
 	}
 
 	// Check if the entry was removed successfully
-	if _, err := entry.Get(db, "test"); err == nil {
+	if _, _, err := entry.Get(db, "test"); err == nil {
 		t.Error("Expected Get() to fail but it didn't")
 	}
 }
@@ -38,10 +42,18 @@ func TestRmDir(t *testing.T) {
 	defer db.Close()
 
 	// Create the entries inside a folder to remove them
-	if err := entry.Create(db, &pb.Entry{Name: "test/entry1", Expires: "Never"}); err != nil {
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = "test/entry1"
+	e.Expires = "Never"
+	if err := entry.Create(db, lockedBuf, e); err != nil {
 		t.Fatal(err)
 	}
-	if err := entry.Create(db, &pb.Entry{Name: "test/entry2", Expires: "Never"}); err != nil {
+
+	lockedBuf2, e2 := pb.SecureEntry()
+	e.Name = "test/entry2"
+	e.Expires = "Never"
+
+	if err := entry.Create(db, lockedBuf2, e2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -56,10 +68,10 @@ func TestRmDir(t *testing.T) {
 	}
 
 	// Check if the entries were removed successfully
-	if _, err := entry.Get(db, "test/entry1"); err == nil {
+	if _, _, err := entry.Get(db, "test/entry1"); err == nil {
 		t.Error("Expected Get() to fail but it didn't")
 	}
-	if _, err := entry.Get(db, "test/entry2"); err == nil {
+	if _, _, err := entry.Get(db, "test/entry2"); err == nil {
 		t.Error("Expected Get() to fail but it didn't")
 	}
 }
@@ -68,10 +80,20 @@ func TestRmAbort(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
+	name := "May the force be with you"
+
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = name
+	e.Expires = "Never"
+
+	if err := entry.Create(db, lockedBuf, e); err != nil {
+		t.Fatal(err)
+	}
+
 	buf := bytes.NewBufferString("n") // Abort operation
 
 	cmd := NewCmd(db, buf)
-	args := []string{"May the force be with you"}
+	args := []string{name}
 
 	if err := cmd.RunE(cmd, args); err != nil {
 		t.Errorf("Rm() failed: %v", err)

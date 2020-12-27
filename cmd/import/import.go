@@ -11,6 +11,7 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
 
+	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
@@ -25,7 +26,7 @@ kure import <manager-name> -p path/to/file`
 func NewCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "import <manager-name>",
-		Short: "Import entries from other password managers",
+		Short: "Import entries",
 		Long: `Import entries from other password managers. Format: CSV.
 
 Supported:
@@ -72,79 +73,78 @@ func runImport(db *bolt.DB) cmdutil.RunEFunc {
 			return errors.Wrap(err, "failed reading csv data")
 		}
 
-		var entries []*pb.Entry
 		// [1:] used to avoid headers
 		switch strings.ToLower(manager) {
 		case "keepass", "kp":
 			for _, record := range records[:][1:] {
-				e := &pb.Entry{
-					Name:     strings.ToLower(record[0]),
-					Username: record[1],
-					Password: record[2],
-					URL:      record[3],
-					Notes:    record[4],
-					Expires:  "Never",
-				}
+				lockedBuf, e := pb.SecureEntry()
+				e.Name = strings.ToLower(record[0])
+				e.Username = record[1]
+				e.Password = record[2]
+				e.URL = record[3]
+				e.Notes = record[4]
+				e.Expires = "Never"
 
-				entries = append(entries, e)
+				if err := entry.Create(db, lockedBuf, e); err != nil {
+					fmt.Fprintln(os.Stderr, "error:", err)
+				}
 			}
 
 		case "1password", "onepassword", "1p":
 			for _, record := range records[:][1:] {
 				notes := fmt.Sprintf("%s. Member number: %s. Recovery Codes: %s", record[4], record[5], record[6])
 
-				e := &pb.Entry{
-					Name:     strings.ToLower(record[0]),
-					Username: record[2],
-					Password: record[3],
-					URL:      record[1],
-					Notes:    notes,
-					Expires:  "Never",
-				}
+				lockedBuf, e := pb.SecureEntry()
+				e.Name = strings.ToLower(record[0])
+				e.Username = record[2]
+				e.Password = record[3]
+				e.URL = record[1]
+				e.Notes = notes
+				e.Expires = "Never"
+				memguard.WipeBytes([]byte(notes))
 
-				entries = append(entries, e)
+				if err := entry.Create(db, lockedBuf, e); err != nil {
+					fmt.Fprintln(os.Stderr, "error:", err)
+				}
 			}
 
 		case "lastpass", "lp":
 			for _, record := range records[:][1:] {
-				e := &pb.Entry{
-					// Join folder with name
-					Name:     strings.ToLower(fmt.Sprintf("%s/%s", record[5], record[4])),
-					Username: record[1],
-					Password: record[2],
-					URL:      record[0],
-					Notes:    record[3],
-					Expires:  "Never",
-				}
+				lockedBuf, e := pb.SecureEntry()
+				// Join folder and name
+				e.Name = strings.ToLower(fmt.Sprintf("%s/%s", record[5], record[4]))
+				e.Username = record[1]
+				e.Password = record[2]
+				e.URL = record[0]
+				e.Notes = record[3]
+				e.Expires = "Never"
 
-				entries = append(entries, e)
+				if err := entry.Create(db, lockedBuf, e); err != nil {
+					fmt.Fprintln(os.Stderr, "error:", err)
+				}
 			}
 
 		case "bitwarden", "bw":
 			for _, record := range records[:][1:] {
-				e := &pb.Entry{
-					// Join folder with name
-					Name:     strings.ToLower(fmt.Sprintf("%s/%s", record[0], record[3])),
-					Username: record[7],
-					Password: record[8],
-					URL:      record[6],
-					Notes:    record[4],
-					Expires:  "Never",
-				}
+				lockedBuf, e := pb.SecureEntry()
+				// Join folder and name
+				e.Name = strings.ToLower(fmt.Sprintf("%s/%s", record[0], record[3]))
+				e.Username = record[7]
+				e.Password = record[8]
+				e.URL = record[6]
+				e.Notes = record[4]
+				e.Expires = "Never"
 
-				entries = append(entries, e)
+				if err := entry.Create(db, lockedBuf, e); err != nil {
+					fmt.Fprintln(os.Stderr, "error:", err)
+				}
 			}
 
 		default:
 			return errors.Errorf("%q is not supported", manager)
 		}
 
-		for _, e := range entries {
-			if err := entry.Create(db, e); err != nil {
-				return err
-			}
-		}
-
+		fmt.Printf("Sucessfully imported the entries from %s\n", manager)
 		return nil
 	}
 }

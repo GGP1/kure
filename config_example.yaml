@@ -4,13 +4,13 @@ database:
   path: absolute/path/to/folder
 
 entry:
-  format:
-  - 1
-  - 2
-  - 3
-  - 4
-  - 5
-  repeat: true
+  format: # Represents the types of characters to be included in the secret pool
+  - 1  # Lowercase
+  - 2  # Uppercase 
+  - 3  # Digits
+  - 4  # Space
+  - 5  # Special
+  - 6  # Extended UTF-8 (this may mess up the terminal)
 
 http:
   port: 4000
@@ -21,19 +21,21 @@ session:
 
 # In this case, each iteration consumes 1024 MB (1 GB) of RAM, repeats the process 1 time and uses 6 threads.
 #
-# We higly recommend using the "kure config test" command to adapt them to your needs.
+# We higly recommend using the "kure config argon2 test" command to adapt argon2 parameters to your needs.
 #
-# Records encrypted using certain values won't be decryptable if they are changed later,
-# this parameters should be set only once when starting to use Kure and never modified. Hovewer, we
-# may include a command to allow re-encrypting records with new ones.
+# To modify these values use "kure restore argon2" command, it will re-encrypt every value with the parameters
+# passed as flags, do not change them manually as you won't be able to decrypt your information.
+#
+# Execute the "kure config argon2" command to display the values under which the password encrypted the records
+# (useful when the parameters were changed unintentionally and you can't remember them).
 argon2:
-  # Amount of memory allowed by algorithm. There is no "insecure" value for this parameter, though clearly the more memory the
-  # better. The value is represented in kibibytes, 1 kibibyte = 1024 bytes. Default is 1048576 kibibytes (1 GB).
+  # Amount of memory the algorithm is allowed to use. Again, there is no "insecure" value for this parameter, 
+  # though clearly  the more memory the better. The value is represented in kibibytes, 1 kibibyte = 1024 bytes. 
+  # Default is 1048576 kibibytes (1 GB).
   memory: 1048576
 
-  # Number of passes over the memory. The running time depends linearly on this parameter. We expect
-  # that the user chooses this number according to the time constraints on the application. Again, there is
-  # no "insecure value". Default is 1.
+  # Number of passes over the memory. The running time depends linearly on this parameter. There is
+  # no "insecure" value. Default is 1.
   iterations: 1
 
   # Number of threads running in parallel. Default is the maximum number of logical CPUs usable.

@@ -20,8 +20,7 @@ func TestCrypt(t *testing.T) {
 
 	for _, tc := range cases {
 		viper.Reset()
-		password := memguard.NewBufferFromBytes([]byte(tc.password))
-		viper.Set("user.password", password.Seal())
+		viper.Set("user.password", memguard.NewEnclave([]byte(tc.password)))
 
 		ciphertext, err := Encrypt([]byte(tc.data))
 		if err != nil {
@@ -83,19 +82,21 @@ func TestDeriveKey(t *testing.T) {
 		t.Fatalf("Failed generating salt: %v", err)
 	}
 
+	key := memguard.NewEnclave([]byte("test"))
+
 	cases := []struct {
 		desc string
-		key  []byte
+		key  *memguard.Enclave
 		salt []byte
 	}{
 		{
 			desc: "Predefined random salt",
-			key:  []byte("test"),
+			key:  key,
 			salt: salt,
 		},
 		{
 			desc: "Generating random salt",
-			key:  []byte("test"),
+			key:  key,
 			salt: nil,
 		},
 	}
@@ -115,7 +116,12 @@ func TestDeriveKey(t *testing.T) {
 				t.Errorf("Expected a 32 byte long salt, got %d bytes", len(salt))
 			}
 
-			if subtle.ConstantTimeCompare(password, tc.key) == 1 {
+			keyBuf, err := tc.key.Open()
+			if err != nil {
+				t.Errorf("Failed opening key enclave: %v", err)
+			}
+
+			if subtle.ConstantTimeCompare(password, keyBuf.Bytes()) == 1 {
 				t.Error("KDF failed, expected a different password and got the same one")
 			}
 		})

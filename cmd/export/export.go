@@ -24,7 +24,7 @@ kure export <manager-name> -p path/to/file`
 func NewCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export <manager-name>",
-		Short: "Export Kure entries to other password managers",
+		Short: "Export entries",
 		Long: `Export entries to other password managers. Format: CSV.
 
 Supported:
@@ -60,47 +60,9 @@ func runExport(db *bolt.DB) cmdutil.RunEFunc {
 			path += ".csv"
 		}
 
-		entries, err := entry.List(db)
+		headers, records, err := formatEntries(db, manager)
 		if err != nil {
 			return err
-		}
-
-		headers := make([]string, 1)
-		records := make([][]string, len(entries))
-
-		switch strings.ToLower(manager) {
-		case "keepass", "kp":
-			headers = []string{"Account", "Login Name", "Password", "Web Site", "Comments"}
-
-			for i, entry := range entries {
-				records[i] = []string{entry.Name, entry.Username, entry.Password, entry.URL, entry.Notes}
-			}
-
-		case "1password", "onepassword", "1p":
-			headers = []string{"Title", "Website", "Username", "Password", "Notes", "Member Number", "Recovery Codes"}
-
-			for i, entry := range entries {
-				records[i] = []string{entry.Name, entry.URL, entry.Username, entry.Password, entry.Notes, "", ""}
-			}
-
-		case "lastpass", "lp":
-			headers = []string{"URL", "Username", "Password", "Extra", "Name", "Grouping", "Fav"}
-
-			for i, entry := range entries {
-				name, folders := splitName(entry.Name)
-				records[i] = []string{entry.URL, entry.Username, entry.Password, entry.Notes, name, folders, ""}
-			}
-
-		case "bitwarden", "bw":
-			headers = []string{"Folder", "Favorite", "Type", "Name", "Notes", "Fields", "Login_uri", "Login_username", "Login_password", "Login_totp"}
-
-			for i, entry := range entries {
-				name, folders := splitName(entry.Name)
-				records[i] = []string{folders, "", "login", name, entry.Notes, "", entry.URL, entry.Username, entry.Password, ""}
-			}
-
-		default:
-			return errors.Errorf("%q is not supported", manager)
 		}
 
 		f, err := os.Create(path)
@@ -121,13 +83,63 @@ func runExport(db *bolt.DB) cmdutil.RunEFunc {
 			return errors.Wrap(err, "failed closing file")
 		}
 
-		fmt.Printf("\nCreated CSV file at %s\n", path)
+		fmt.Printf("Created CSV file at %s\n", path)
 		return nil
 	}
 }
 
-// splitName takes a path and returns the name and the folders separated.
-func splitName(path string) (string, string) {
+// formatEntries takes all the entries in the database and formats them
+// in headers and records to meet each manager requirements.
+func formatEntries(db *bolt.DB, manager string) ([]string, [][]string, error) {
+	lockedBuf, entries, err := entry.List(db)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer lockedBuf.Destroy()
+
+	headers := make([]string, 1)
+	records := make([][]string, len(entries))
+
+	switch strings.ToLower(manager) {
+	case "keepass", "kp":
+		headers = []string{"Account", "Login Name", "Password", "Web Site", "Comments"}
+
+		for i, entry := range entries {
+			records[i] = []string{entry.Name, entry.Username, entry.Password, entry.URL, entry.Notes}
+		}
+
+	case "1password", "onepassword", "1p":
+		headers = []string{"Title", "Website", "Username", "Password", "Notes", "Member Number", "Recovery Codes"}
+
+		for i, entry := range entries {
+			records[i] = []string{entry.Name, entry.URL, entry.Username, entry.Password, entry.Notes, "", ""}
+		}
+
+	case "lastpass", "lp":
+		headers = []string{"URL", "Username", "Password", "Extra", "Name", "Grouping", "Fav"}
+
+		for i, entry := range entries {
+			name, folders := splitName(entry.Name)
+			records[i] = []string{entry.URL, entry.Username, entry.Password, entry.Notes, name, folders, ""}
+		}
+
+	case "bitwarden", "bw":
+		headers = []string{"Folder", "Favorite", "Type", "Name", "Notes", "Fields", "Login_uri", "Login_username", "Login_password", "Login_totp"}
+
+		for i, entry := range entries {
+			name, folders := splitName(entry.Name)
+			records[i] = []string{folders, "", "login", name, entry.Notes, "", entry.URL, entry.Username, entry.Password, ""}
+		}
+
+	default:
+		return nil, nil, errors.Errorf("%q is not supported", manager)
+	}
+
+	return headers, records, nil
+}
+
+// splitName takes a path and returns the basename and the folders separated.
+func splitName(path string) (basename, folders string) {
 	split := strings.Split(path, "/")
 	if len(split) == 1 {
 		return path, ""

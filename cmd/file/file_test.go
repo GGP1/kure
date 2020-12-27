@@ -34,7 +34,6 @@ func add(db *bolt.DB) func(*testing.T) {
 		cases := []struct {
 			desc      string
 			name      string
-			buffer    string
 			ignore    string
 			path      string
 			semaphore string
@@ -43,15 +42,13 @@ func add(db *bolt.DB) func(*testing.T) {
 			{
 				desc:      "Add a file",
 				name:      "test",
-				buffer:    "0",
 				path:      "testdata/test_file.txt",
 				semaphore: "1",
 				pass:      true,
 			},
 			{
-				desc:      "Add all files using a buffer",
+				desc:      "Add all files synchronously",
 				name:      "testAll",
-				buffer:    "4000",
 				path:      "testdata/",
 				semaphore: "1",
 				pass:      true,
@@ -59,23 +56,13 @@ func add(db *bolt.DB) func(*testing.T) {
 			{
 				desc:      "Add all files using goroutines",
 				name:      "testAll2",
-				buffer:    "0",
 				path:      "testdata/",
 				semaphore: "8",
 				pass:      true,
 			},
 			{
-				desc:      "Add all files using a buffer and goroutines",
-				name:      "testAll3",
-				buffer:    "2000",
-				path:      "testdata/",
-				semaphore: "10",
-				pass:      true,
-			},
-			{
 				desc:      "Add all files ignoring subfolders",
-				name:      "testAll4",
-				buffer:    "0",
+				name:      "testAll3",
 				ignore:    "true",
 				path:      "testdata/",
 				semaphore: "3",
@@ -99,15 +86,22 @@ func add(db *bolt.DB) func(*testing.T) {
 				semaphore: "0",
 				pass:      false,
 			},
+			{
+				desc:      "Non-existent",
+				name:      "non-existent",
+				semaphore: "1",
+				path:      "testdata/non-existent.txt",
+				pass:      false,
+			},
 		}
 
 		cmd := addSubCmd(db)
-		f := cmd.Flags()
 
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
 				args := []string{tc.name}
-				f.Set("buffer", tc.buffer)
+
+				f := cmd.Flags()
 				f.Set("ignore", tc.ignore)
 				f.Set("path", tc.path)
 				f.Set("semaphore", tc.semaphore)
@@ -119,8 +113,6 @@ func add(db *bolt.DB) func(*testing.T) {
 				if err == nil && !tc.pass {
 					t.Error("Expected an error and got nil")
 				}
-
-				cmd.ResetFlags()
 			})
 		}
 	}
@@ -129,7 +121,7 @@ func add(db *bolt.DB) func(*testing.T) {
 func cat(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
 		file1 := "test.txt"
-		file2 := "testall/subfolder/file.txt"
+		file2 := "testall2/subfolder/file.txt"
 
 		cases := []struct {
 			desc     string
@@ -178,8 +170,6 @@ func cat(db *bolt.DB) func(*testing.T) {
 						t.Errorf("Expected %q, got %q", tc.expected, gotClip)
 					}
 				}
-
-				cmd.ResetFlags()
 			})
 		}
 
@@ -220,11 +210,11 @@ func touch(db *bolt.DB, rootDir string) func(*testing.T) {
 		}
 
 		cmd := touchSubCmd(db)
-		f := cmd.Flags()
 
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
 				args := tc.names
+				f := cmd.Flags()
 				f.Set("path", tc.path)
 
 				if err := cmd.RunE(cmd, args); err != nil {
@@ -235,8 +225,6 @@ func touch(db *bolt.DB, rootDir string) func(*testing.T) {
 				if err := os.Chdir(rootDir); err != nil {
 					t.Fatal(err)
 				}
-
-				cmd.ResetFlags()
 			})
 		}
 
@@ -285,11 +273,11 @@ func ls(db *bolt.DB) func(*testing.T) {
 		}
 
 		cmd := lsSubCmd(db)
-		f := cmd.Flags()
 
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
 				args := []string{tc.name}
+				f := cmd.Flags()
 				f.Set("filter", tc.filter)
 
 				err := cmd.RunE(cmd, args)
@@ -331,9 +319,10 @@ func rename(db *bolt.DB) func(*testing.T) {
 			},
 		}
 
+		cmd := renameSubCmd(db, nil)
+
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
-				cmd := renameSubCmd(db, nil)
 				args := []string{tc.name, tc.newName}
 
 				err := cmd.RunE(cmd, args)
@@ -394,11 +383,10 @@ func rm(db *bolt.DB) func(*testing.T) {
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
 				buf := bytes.NewBufferString(tc.input)
-
 				cmd := rmSubCmd(db, buf)
-				f := cmd.Flags()
 
 				args := []string{tc.name}
+				f := cmd.Flags()
 				f.Set("dir", tc.dir)
 
 				err := cmd.RunE(cmd, args)

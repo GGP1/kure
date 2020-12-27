@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	cmdutil "github.com/GGP1/kure/cmd"
+	"github.com/awnumar/memguard"
 
 	"github.com/GGP1/atoll"
 	"github.com/atotto/clipboard"
@@ -89,21 +90,24 @@ func runPhrase() cmdutil.RunEFunc {
 			return err
 		}
 
+		phraseBuf := memguard.NewBufferFromBytes([]byte(passphrase))
+		defer phraseBuf.Destroy()
+
 		if copy {
-			if err := clipboard.WriteAll(passphrase); err != nil {
+			if err := clipboard.WriteAll(phraseBuf.String()); err != nil {
 				return errors.Wrap(err, "failed writing to the clipboard")
 			}
 		}
 
 		if qr {
-			if err := cmdutil.DisplayQRCode(passphrase); err != nil {
+			if err := cmdutil.DisplayQRCode(phraseBuf.String()); err != nil {
 				return err
 			}
 		}
 
 		entropy := math.Log2(math.Pow(float64(poolLen), float64(length)))
 
-		fmt.Printf("Passphrase: %s\nBits of entropy: %.2f\n", passphrase, entropy)
+		fmt.Printf("Passphrase: %s\nBits of entropy: %.2f\n", phraseBuf.String(), entropy)
 		return nil
 	}
 }

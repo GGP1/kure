@@ -21,13 +21,15 @@ var (
 )
 
 var testExample = `
-kure config test -m 500000 -i 2 -t 4`
+kure config argon2 test -m 500000 -i 2 -t 4`
 
 func testSubCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Test argon2 performance",
-		Long: `The Argon2id variant with 1 iteration and maximum available memory is recommended as a default setting for all environments. This setting is secure against side-channel attacks and maximizes adversarial costs on dedicated bruteforce hardware.
+		Long: `Test how is argon2 going to perform with the parameters passed.
+		
+The Argon2id variant with 1 iteration and maximum available memory is recommended as a default setting for all environments. This setting is secure against side-channel attacks and maximizes adversarial costs on dedicated bruteforce hardware.
 
 If one of the devices that will handle the database has lower than 1GB of memory, we recommend setting the memory value to the half of that device RAM availability. Otherwise, default values should be fine.
 
@@ -54,7 +56,7 @@ If one of the devices that will handle the database has lower than 1GB of memory
 
 func runTest() cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		if iterations|memory < 1 {
+		if iterations < 1 || memory < 1 {
 			return errors.New("iterations and memory should be higher than 0")
 		}
 		if threads < 1 {

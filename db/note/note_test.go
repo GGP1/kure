@@ -16,47 +16,50 @@ func TestNote(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	c := &pb.Note{
-		Name: "test",
-		Text: "text",
-	}
+	name := "test"
+	text := "text"
 
-	t.Run("Create", create(db, c))
-	t.Run("Get", get(db, c))
+	buf, n := pb.SecureNote()
+	n.Name = name
+	n.Text = text
+
+	// Create destroys the buffer, hence we cannot use their fields anymore
+	t.Run("Create", create(db, buf, n))
+	t.Run("Get", get(db, name, text))
 	t.Run("List", list(db))
 	t.Run("List fastest", listFastest(db))
 	t.Run("List names", listNames(db))
-	t.Run("Remove", remove(db, c.Name))
+	t.Run("Remove", remove(db, name))
 }
 
-func create(db *bolt.DB, note *pb.Note) func(*testing.T) {
+func create(db *bolt.DB, buf *memguard.LockedBuffer, note *pb.Note) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Create(db, note); err != nil {
+		if err := Create(db, buf, note); err != nil {
 			t.Fatalf("Create() failed: %v", err)
 		}
 	}
 }
 
-func get(db *bolt.DB, note *pb.Note) func(*testing.T) {
+func get(db *bolt.DB, name, text string) func(*testing.T) {
 	return func(t *testing.T) {
-		got, err := Get(db, note.Name)
+		_, got, err := Get(db, name)
 		if err != nil {
 			t.Fatalf("Get() failed: %v", err)
 		}
 
-		if got.Name != note.Name {
-			t.Errorf("Expected %s, got %s", note.Name, got.Name)
+		if got.Name != name {
+			t.Errorf("Expected %s, got %s", name, got.Name)
 		}
 
-		if got.Text != note.Text {
-			t.Errorf("Expected %s, got %s", note.Text, got.Text)
+		if got.Text != text {
+			t.Errorf("Expected %s, got %s", text, got.Text)
 		}
 	}
 }
 
 func list(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		notes, err := List(db)
+		_, notes, err := List(db)
 		if err != nil {
 			t.Fatalf("List() failed: %v", err)
 		}
@@ -107,17 +110,9 @@ func TestCreateErrors(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	note := &pb.Note{Name: "test create errors"}
-	// Create the note to receive 'already exists' error
-	t.Run("Create", create(db, note))
-
-	if err := Create(db, &pb.Note{}); err == nil {
+	lockedBuf, n := pb.SecureNote()
+	if err := Create(db, lockedBuf, n); err == nil {
 		t.Error("Expected 'save note' error, got nil")
-	}
-
-	viper.Set("user.password", nil)
-	if err := Create(db, &pb.Note{}); err == nil {
-		t.Error("Expected List 'decrypt note' error, got nil")
 	}
 }
 
@@ -125,7 +120,7 @@ func TestGetError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	_, err := Get(db, "non-existent")
+	_, _, err := Get(db, "non-existent")
 	if err == nil {
 		t.Error("Expected 'does not exist' error, got nil")
 	}
@@ -135,21 +130,23 @@ func TestBucketError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	note := &pb.Note{Name: "nil bucket"}
+	name := "nil bucket"
+	buf, note := pb.SecureNote()
+	note.Name = name
 
 	db.Update(func(tx *bolt.Tx) error {
 		tx.DeleteBucket([]byte("kure_note"))
 		return nil
 	})
 
-	if err := Create(db, note); err == nil {
+	if err := Create(db, buf, note); err == nil {
 		t.Error("Create() didn't return 'invalid bucket' error")
 	}
-	_, err := Get(db, note.Name)
+	_, _, err := Get(db, name)
 	if err == nil {
 		t.Error("Get() didn't return 'invalid bucket' error")
 	}
-	_, err = List(db)
+	_, _, err = List(db)
 	if err == nil {
 		t.Error("List() didn't return 'invalid bucket' error")
 	}
@@ -157,7 +154,7 @@ func TestBucketError(t *testing.T) {
 	if err == nil {
 		t.Error("ListNames() didn't return 'invalid bucket' error")
 	}
-	if err := Remove(db, note.Name); err == nil {
+	if err := Remove(db, name); err == nil {
 		t.Error("Remove() didn't return 'invalid bucket' error")
 	}
 }
@@ -166,18 +163,21 @@ func TestDecryptError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	note := &pb.Note{Name: "test decrypt error"}
-	if err := Create(db, note); err != nil {
+	name := "test decrypt error"
+	buf, note := pb.SecureNote()
+	note.Name = name
+
+	if err := Create(db, buf, note); err != nil {
 		t.Fatal(err)
 	}
 
 	viper.Set("user.password", nil)
 
-	_, err := Get(db, note.Name)
+	_, _, err := Get(db, name)
 	if err == nil {
 		t.Error("Get() didn't return 'decrypt note' error")
 	}
-	_, err = List(db)
+	_, _, err = List(db)
 	if err == nil {
 		t.Error("List() didn't return 'decrypt note' error")
 	}
@@ -190,9 +190,10 @@ func TestKeyError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	note := &pb.Note{Name: ""}
+	buf, note := pb.SecureNote()
+	note.Name = ""
 
-	if err := Create(db, note); err == nil {
+	if err := Create(db, buf, note); err == nil {
 		t.Error("Create() didn't fail")
 	}
 }

@@ -19,7 +19,7 @@ Generate a random password.
 | format    | f         | []string      | nil           | Password format (1,2,3,4,5)                  |
 | include   | i         | string        | ""            | Characters to include in the password        |
 | exclude   | e         | string        | ""            | Characters to exclude from the password      |
-| repeat    | r         | bool          | false         | Character repetition                         |
+| repeat    | r         | bool          | true          | Character repetition                         |
 | qr        | q         | bool          | false         | Show QR code image on the terminal           |
 
 ### Format levels

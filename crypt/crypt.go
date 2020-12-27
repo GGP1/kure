@@ -7,6 +7,7 @@ import (
 	"io"
 	"runtime"
 
+	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/argon2"
@@ -31,13 +32,7 @@ func Encrypt(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	lockedBuf, err := password.Open()
-	if err != nil {
-		return nil, errEncrypt
-	}
-
-	key, salt, err := deriveKey(lockedBuf.Bytes(), nil)
-	lockedBuf.Destroy()
+	key, salt, err := deriveKey(password, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +47,7 @@ func Encrypt(data []byte) ([]byte, error) {
 		return nil, errEncrypt
 	}
 
+	// make 12 byte long nonce
 	nonce := make([]byte, gcm.NonceSize())
 
 	_, err = io.ReadFull(rand.Reader, nonce)
@@ -59,6 +55,7 @@ func Encrypt(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	// Encrypt, authenticate and append the salt to the end of it
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
 	ciphertext = append(ciphertext, salt...)
 
@@ -71,6 +68,7 @@ func Decrypt(data []byte) ([]byte, error) {
 		return nil, errDecrypt
 	}
 
+	// Split salt (last 32 bytes) from the data
 	salt, data := data[len(data)-saltSize:], data[:len(data)-saltSize]
 
 	password, err := GetMasterPassword()
@@ -78,13 +76,7 @@ func Decrypt(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	lockedBuf, err := password.Open()
-	if err != nil {
-		return nil, errDecrypt
-	}
-
-	key, _, err := deriveKey(lockedBuf.Bytes(), salt)
-	lockedBuf.Destroy()
+	key, _, err := deriveKey(password, salt)
 	if err != nil {
 		return nil, err
 	}
@@ -99,11 +91,13 @@ func Decrypt(data []byte) ([]byte, error) {
 		return nil, errDecrypt
 	}
 
+	// nonceSize = 12 bytes
 	nonceSize := gcm.NonceSize()
 	if len(data) < nonceSize {
 		return nil, errDecrypt
 	}
 
+	// Decrypt and authenticate ciphertext
 	plaintext, err := gcm.Open(nil, data[:nonceSize], data[nonceSize:], nil)
 	if err != nil {
 		return nil, errDecrypt
@@ -114,7 +108,7 @@ func Decrypt(data []byte) ([]byte, error) {
 
 // deriveKey derives the key from the password, salt and other parameters using
 // the key derivation function argon2id. Use parameters from the configuration file if they exist.
-func deriveKey(key []byte, salt []byte) ([]byte, []byte, error) {
+func deriveKey(key *memguard.Enclave, salt []byte) ([]byte, []byte, error) {
 	var (
 		iters uint32 = 1
 		// memory is measured in kibibytes, 1 kibibyte = 1024 bytes.
@@ -132,6 +126,7 @@ func deriveKey(key []byte, salt []byte) ([]byte, []byte, error) {
 		threads = uint8(t)
 	}
 
+	// When decrypting the salt is taken from the encrypted data and when encrypting it's randomly generated
 	if salt == nil {
 		salt = make([]byte, saltSize)
 		if _, err := rand.Read(salt); err != nil {
@@ -139,7 +134,14 @@ func deriveKey(key []byte, salt []byte) ([]byte, []byte, error) {
 		}
 	}
 
-	password := argon2.IDKey(key, salt, iters, memory, threads, 32)
+	// Decrypt enclave and save it in a locked buffer
+	keyBuf, err := key.Open()
+	if err != nil {
+		return nil, nil, errors.New("failed decrypting key")
+	}
+
+	password := argon2.IDKey(keyBuf.Bytes(), salt, iters, memory, threads, 32)
+	keyBuf.Destroy()
 
 	return password, salt, nil
 }

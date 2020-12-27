@@ -6,6 +6,7 @@ import (
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/card"
+	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
 	"github.com/GGP1/kure/tree"
 
@@ -81,31 +82,33 @@ func runLs(db *bolt.DB) cmdutil.RunEFunc {
 				break
 			}
 
-			card, err := card.Get(db, name)
+			lockedBuf, card, err := card.Get(db, name)
 			if err != nil {
 				return err
 			}
 
-			printCard(card)
+			printCard(name, card)
+			lockedBuf.Destroy()
 		}
 
 		return nil
 	}
 }
 
-func printCard(c *pb.Card) {
+func printCard(name string, c *pb.Card) {
 	if hide {
 		c.SecurityCode = "••••"
 	}
 
-	fields := map[string]string{
-		"Type":          c.Type,
-		"Number":        c.Number,
-		"Security code": c.SecurityCode,
-		"Expire date":   c.ExpireDate,
-		"Notes":         c.Notes,
-	}
+	// Map's key/value  pairs are stored inside locked buffers
+	oMap := orderedmap.New(5)
+	oMap.Set("Type", c.Type)
+	oMap.Set("Number", c.Number)
+	oMap.Set("Security code", c.SecurityCode)
+	oMap.Set("Expire date", c.ExpireDate)
+	oMap.Set("Notes", c.Notes)
 
-	box := cmdutil.BuildBox(c.Name, fields)
+	lockedBuf, box := cmdutil.BuildBox(name, oMap)
 	fmt.Println("\n" + box)
+	lockedBuf.Destroy()
 }

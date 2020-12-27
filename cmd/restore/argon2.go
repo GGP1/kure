@@ -60,24 +60,24 @@ func runArgon2(db *bolt.DB) cmdutil.RunEFunc {
 			return errors.New("the number of threads must be higher than 0")
 		}
 
-		cards, err := card.List(db)
+		cardsBuf, cards, err := card.List(db)
 		if err != nil {
 			return err
 		}
-		entries, err := entry.List(db)
+		entriesBuf, entries, err := entry.List(db)
 		if err != nil {
 			return err
 		}
-		files, err := file.List(db)
+		filesBuf, files, err := file.List(db)
 		if err != nil {
 			return err
 		}
-		notes, err := note.List(db)
+		notesBuf, notes, err := note.List(db)
 		if err != nil {
 			return err
 		}
 
-		if err := updateConfig(); err != nil {
+		if err := updateConfig(db); err != nil {
 			return err
 		}
 
@@ -86,33 +86,54 @@ func runArgon2(db *bolt.DB) cmdutil.RunEFunc {
 
 		// Overwrite objects encrypted with the new configuration
 		// Errors are omitted as there shouldn't be any
-		createCards(db, cards, &wg)
-		createEntries(db, entries, &wg)
-		createFiles(db, files, &wg)
-		createNotes(db, notes, &wg)
+		createCards(db, cardsBuf, cards, &wg)
+		createEntries(db, entriesBuf, entries, &wg)
+		createFiles(db, filesBuf, files, &wg)
+		createNotes(db, notesBuf, notes, &wg)
 
 		wg.Wait()
 
-		fmt.Print("\nArgon2 parameters updated successfully")
+		fmt.Printf(`
+Argon2 parameters updated successfully
+Iterations: %d
+Memory: %d
+Threads: %d
+`, iterations, memory, threads)
 		return nil
 	}
 }
 
-func updateConfig() error {
+func updateConfig(db *bolt.DB) error {
+	// Update the argon2 parameters being used
+	err := db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte("kure_argon2"))
+		if err != nil {
+			return errors.Wrap(err, "failed creating bucket")
+		}
+
+		if err := b.Put([]byte("iterations"), []byte(fmt.Sprintf("%d", iterations))); err != nil {
+			return err
+		}
+		if err := b.Put([]byte("memory"), []byte(fmt.Sprintf("%d", memory))); err != nil {
+			return err
+		}
+		if err := b.Put([]byte("threads"), []byte(fmt.Sprintf("%d", threads))); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	path, err := cmdutil.GetConfigPath()
 	if err != nil {
 		return err
 	}
 
-	if iterations != 0 {
-		viper.Set("argon2.iterations", iterations)
-	}
-	if memory != 0 {
-		viper.Set("argon2.memory", memory)
-	}
-	if threads != 0 {
-		viper.Set("argon2.threads", threads)
-	}
+	viper.Set("argon2.iterations", iterations)
+	viper.Set("argon2.memory", memory)
+	viper.Set("argon2.threads", threads)
 
 	// Unset password so the field it's not stored in the config file
 	password := viper.Get("user.password")

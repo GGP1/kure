@@ -9,10 +9,10 @@ import (
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/note"
 	"github.com/GGP1/kure/pb"
+	"github.com/awnumar/memguard"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -46,12 +46,12 @@ func runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return err
 		}
 
-		c, err := input(db, name, r)
+		lockedBuf, n, err := input(db, name, r)
 		if err != nil {
 			return err
 		}
 
-		if err := note.Create(db, c); err != nil {
+		if err := note.Create(db, lockedBuf, n); err != nil {
 			return err
 		}
 
@@ -60,25 +60,16 @@ func runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 	}
 }
 
-func input(db *bolt.DB, name string, r io.Reader) (*pb.Note, error) {
+func input(db *bolt.DB, name string, r io.Reader) (*memguard.LockedBuffer, *pb.Note, error) {
 	s := bufio.NewScanner(r)
-	text := cmdutil.Scanlns(s, "Text")
+
+	lockedBuf, note := pb.SecureNote()
+	note.Name = name
+	note.Text = cmdutil.Scanlns(s, "Text")
 
 	if err := s.Err(); err != nil {
-		return nil, errors.Wrap(err, "failed scanning")
+		return nil, nil, errors.Wrap(err, "failed scanning")
 	}
 
-	// This is the easiest way to avoid creating a note after a signal,
-	// however, it may not be the best solution
-	if viper.GetBool("interrupt") {
-		block := make(chan struct{})
-		<-block
-	}
-
-	note := &pb.Note{
-		Name: name,
-		Text: text,
-	}
-
-	return note, nil
+	return lockedBuf, note, nil
 }

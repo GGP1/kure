@@ -9,6 +9,7 @@ import (
 	"github.com/GGP1/atoll"
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/entry"
+	"github.com/awnumar/memguard"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
@@ -21,7 +22,7 @@ var (
 
 var phraseExample = `
 * Add an entry generating a random passphrase
-kure add entry phrase entryName -l 6 -s $ -i atoll -e admin,login --list wordlist`
+kure add phrase entryName -l 6 -s $ -i atoll -e admin,login --list wordlist`
 
 func phraseSubCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
@@ -65,7 +66,7 @@ func runPhrase(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return err
 		}
 
-		e, err := input(db, name, false, r)
+		lockedBuf, e, err := input(db, r, name, false)
 		if err != nil {
 			return err
 		}
@@ -76,8 +77,9 @@ func runPhrase(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 		}
 
 		e.Password = passphrase
+		memguard.WipeBytes([]byte(passphrase))
 
-		if err := entry.Create(db, e); err != nil {
+		if err := entry.Create(db, lockedBuf, e); err != nil {
 			return err
 		}
 

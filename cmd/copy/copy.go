@@ -7,6 +7,7 @@ import (
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/entry"
+	"github.com/awnumar/memguard"
 
 	"github.com/atotto/clipboard"
 	"github.com/pkg/errors"
@@ -56,7 +57,7 @@ func runCopy(db *bolt.DB) cmdutil.RunEFunc {
 			return errors.New("invalid name")
 		}
 
-		entry, err := entry.Get(db, name)
+		lockedBuf, entry, err := entry.Get(db, name)
 		if err != nil {
 			return err
 		}
@@ -67,10 +68,12 @@ func runCopy(db *bolt.DB) cmdutil.RunEFunc {
 			field = "Username"
 			copy = entry.Username
 		}
+		lockedBuf.Destroy()
 
 		if err := clipboard.WriteAll(copy); err != nil {
 			return errors.Wrap(err, "failed writing to the clipboard")
 		}
+		memguard.WipeBytes([]byte(copy))
 
 		fmt.Printf("%s copied to clipboard\n", field)
 

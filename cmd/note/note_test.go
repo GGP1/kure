@@ -241,9 +241,9 @@ func TestInput(t *testing.T) {
 		Text: "text",
 	}
 
-	buf := bytes.NewBufferString("text\n!end")
+	buf := bytes.NewBufferString("text!end\n")
 
-	got, err := input(db, "test", buf)
+	_, got, err := input(db, "test", buf)
 	if err != nil {
 		t.Fatalf("Failed creating the note: %v", err)
 	}

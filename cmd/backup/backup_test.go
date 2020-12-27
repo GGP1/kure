@@ -16,17 +16,24 @@ func TestBackup(t *testing.T) {
 
 	cases := []struct {
 		desc string
+		port string
+		http string
 		path string
 		pass bool
 	}{
-		{desc: "Backup", path: "backup.test", pass: true},
+		{desc: "File", path: "backup.test", pass: true},
+		{desc: "HTTP", http: "true", port: "0", pass: false},
 		{desc: "Invalid path", path: "", pass: false},
 	}
 
+	cmd := NewCmd(db)
+
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cmd := NewCmd(db)
-			cmd.Flags().Set("path", tc.path)
+			f := cmd.Flags()
+			f.Set("path", tc.path)
+			f.Set("http", tc.http)
+			f.Set("port", tc.port)
 
 			err := cmd.RunE(cmd, nil)
 			if err != nil && tc.pass {
@@ -35,8 +42,6 @@ func TestBackup(t *testing.T) {
 			if err == nil && !tc.pass {
 				t.Error("Expected and error but got nil")
 			}
-
-			cmd.ResetFlags()
 		})
 	}
 
@@ -88,7 +93,5 @@ func TestWriteTo(t *testing.T) {
 
 func TestPostRun(t *testing.T) {
 	cmd := NewCmd(nil)
-	f := cmd.PostRun
-
-	f(cmd, nil)
+	cmd.PostRun(cmd, nil)
 }

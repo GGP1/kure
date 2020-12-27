@@ -14,15 +14,25 @@ func TestGen(t *testing.T) {
 		repeat string
 		qr     string
 	}{
-		{desc: "Generate", length: "16", format: "1,2,3", repeat: "true"},
-		{desc: "QR code", length: "4", format: "1,2,3,4,5,6", qr: "true"},
+		{
+			desc:   "Generate",
+			length: "16",
+			format: "1,2,3",
+			repeat: "true",
+		},
+		{
+			desc:   "QR code",
+			length: "4",
+			format: "1,2,3,4,5,6",
+			qr:     "true",
+		},
 	}
 
 	cmd := NewCmd()
-	f := cmd.Flags()
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			f := cmd.Flags()
 			f.Set("length", tc.length)
 			f.Set("format", tc.format)
 			f.Set("repeat", tc.repeat)
@@ -31,8 +41,6 @@ func TestGen(t *testing.T) {
 			if err := cmd.RunE(cmd, nil); err != nil {
 				t.Errorf("Failed generating a password: %v", err)
 			}
-
-			cmd.ResetFlags()
 		})
 	}
 }
@@ -48,12 +56,11 @@ func TestPostRun(t *testing.T) {
 }
 
 func TestGenDefaults(t *testing.T) {
-	length := "10"
+	// Set default
 	viper.Set("entry.format", []int{1, 2, 3})
-	viper.Set("entry.repeat", true)
 
 	cmd := NewCmd()
-	cmd.Flags().Set("length", length)
+	cmd.Flags().Set("length", "10")
 
 	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Errorf("Failed generating a password with default values: %v", err)
@@ -61,7 +68,6 @@ func TestGenDefaults(t *testing.T) {
 
 	// Cleanup
 	viper.Set("entry.format", nil)
-	viper.Set("entry.repeat", nil)
 }
 
 func TestGenErrors(t *testing.T) {
@@ -103,10 +109,10 @@ func TestGenErrors(t *testing.T) {
 	}
 
 	cmd := NewCmd()
-	f := cmd.Flags()
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			f := cmd.Flags()
 			f.Set("length", tc.length)
 			f.Set("format", tc.format)
 			f.Set("repeat", tc.repeat)
@@ -117,8 +123,6 @@ func TestGenErrors(t *testing.T) {
 			if err := cmd.RunE(cmd, nil); err == nil {
 				t.Error("Expected an error and got nil")
 			}
-
-			cmd.ResetFlags()
 		})
 	}
 }
@@ -156,10 +160,10 @@ func TestGenPhrase(t *testing.T) {
 	}
 
 	cmd := phraseSubCmd()
-	f := cmd.Flags()
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			f := cmd.Flags()
 			f.Set("length", tc.length)
 			f.Set("separator", tc.separator)
 			f.Set("list", tc.list)
@@ -168,8 +172,6 @@ func TestGenPhrase(t *testing.T) {
 			if err := cmd.RunE(cmd, nil); err != nil {
 				t.Errorf("Failed generating a passphrase: %v", err)
 			}
-
-			cmd.ResetFlags()
 		})
 	}
 }
@@ -204,10 +206,10 @@ func TestGenPhraseErrors(t *testing.T) {
 	}
 
 	cmd := phraseSubCmd()
-	f := cmd.Flags()
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			f := cmd.Flags()
 			f.Set("length", tc.length)
 			f.Set("include", tc.include)
 			f.Set("exclude", tc.exclude)
@@ -216,8 +218,6 @@ func TestGenPhraseErrors(t *testing.T) {
 			if err := cmd.RunE(cmd, nil); err == nil {
 				t.Error("Expected an error and got nil")
 			}
-
-			cmd.ResetFlags()
 		})
 	}
 }

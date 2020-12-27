@@ -6,6 +6,7 @@ import (
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/entry"
+	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
 	"github.com/GGP1/kure/tree"
 
@@ -89,7 +90,7 @@ func runLs(db *bolt.DB) cmdutil.RunEFunc {
 				break
 			}
 
-			e, err := entry.Get(db, name)
+			lockedBuf, e, err := entry.Get(db, name)
 			if err != nil {
 				return err
 			}
@@ -101,26 +102,28 @@ func runLs(db *bolt.DB) cmdutil.RunEFunc {
 				fmt.Print("\n") // used to avoid messing up the entry print
 			}
 
-			printEntry(e)
+			printEntry(name, e)
+			lockedBuf.Destroy()
 		}
 
 		return nil
 	}
 }
 
-func printEntry(e *pb.Entry) {
+func printEntry(name string, e *pb.Entry) {
 	if hide {
 		e.Password = "•••••••••••••••"
 	}
 
-	fields := map[string]string{
-		"Username": e.Username,
-		"Password": e.Password,
-		"URL":      e.URL,
-		"Expires":  e.Expires,
-		"Notes":    e.Notes,
-	}
+	// Map's key/value pairs are stored inside locked buffers
+	oMap := orderedmap.New(5)
+	oMap.Set("Username", e.Username)
+	oMap.Set("Password", e.Password)
+	oMap.Set("URL", e.URL)
+	oMap.Set("Expires", e.Expires)
+	oMap.Set("Notes", e.Notes)
 
-	box := cmdutil.BuildBox(e.Name, fields)
+	lockedBuf, box := cmdutil.BuildBox(name, oMap)
 	fmt.Println("\n" + box)
+	lockedBuf.Destroy()
 }

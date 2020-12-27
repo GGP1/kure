@@ -6,6 +6,7 @@ import (
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/pb"
 
+	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
@@ -16,9 +17,11 @@ var (
 	errInvalidBucket = errors.New("invalid bucket")
 )
 
-// Create creates a new bank note.
-func Create(db *bolt.DB, note *pb.Note) error {
+// Create a new note. It destroys the locked buffer passed.
+func Create(db *bolt.DB, lockedBuf *memguard.LockedBuffer, note *pb.Note) error {
 	return db.Update(func(tx *bolt.Tx) error {
+		defer lockedBuf.Destroy()
+
 		b := tx.Bucket(noteBucket)
 		if b == nil {
 			return errInvalidBucket
@@ -37,14 +40,13 @@ func Create(db *bolt.DB, note *pb.Note) error {
 		if err := b.Put([]byte(note.Name), encNote); err != nil {
 			return errors.Wrap(err, "save note")
 		}
-
 		return nil
 	})
 }
 
 // Get retrieves the note with the specified name.
-func Get(db *bolt.DB, name string) (*pb.Note, error) {
-	c := &pb.Note{}
+func Get(db *bolt.DB, name string) (*memguard.LockedBuffer, *pb.Note, error) {
+	buf, n := pb.SecureNote()
 
 	err := db.View(func(tx *bolt.Tx) error {
 		name = strings.TrimSpace(strings.ToLower(name))
@@ -63,22 +65,22 @@ func Get(db *bolt.DB, name string) (*pb.Note, error) {
 			return errors.Wrap(err, "decrypt note")
 		}
 
-		if err := proto.Unmarshal(decNote, c); err != nil {
+		if err := proto.Unmarshal(decNote, n); err != nil {
 			return errors.Wrap(err, "unmarshal note")
 		}
 
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return c, nil
+	return buf, n, nil
 }
 
 // List returns a list with all the notes.
-func List(db *bolt.DB) ([]*pb.Note, error) {
-	var notes []*pb.Note
+func List(db *bolt.DB) (*memguard.LockedBuffer, []*pb.Note, error) {
+	buf, notes := pb.SecureNoteSlice()
 
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(noteBucket)
@@ -99,15 +101,14 @@ func List(db *bolt.DB) ([]*pb.Note, error) {
 			}
 
 			notes = append(notes, note)
-
 			return nil
 		})
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return notes, nil
+	return buf, notes, nil
 }
 
 // ListFastest is used to check if the user entered the correct password

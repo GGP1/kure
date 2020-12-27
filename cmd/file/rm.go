@@ -70,6 +70,7 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return nil
 		}
 
+		// Remove directory
 		fmt.Printf("Removing %q directory...\n", name)
 
 		files, err := file.ListNames(db)
@@ -91,7 +92,7 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 		}
 
 		var wg sync.WaitGroup
-		sem := make(chan struct{}, 40)
+		sem := make(chan struct{}, 25)
 
 		wg.Add(len(list))
 		for _, l := range list {
@@ -107,11 +108,11 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 func removeFile(db *bolt.DB, name string, wg *sync.WaitGroup, sem chan struct{}) {
 	sem <- struct{}{}
 
-	fmt.Println("Remove:", name)
 	if err := file.Remove(db, name); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 	}
 
+	fmt.Println("Remove:", name)
 	wg.Done()
 	<-sem
 }

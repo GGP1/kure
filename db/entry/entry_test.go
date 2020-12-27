@@ -16,64 +16,47 @@ func TestEntry(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	entry := &pb.Entry{
-		Name:     "test",
-		Username: "testing",
-		URL:      "golang.org",
-		Notes:    "",
-		Expires:  "Never",
-	}
+	name := "test"
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = name
+	e.Username = "testing"
+	e.URL = "golang.org"
+	e.Expires = "Never"
+	e.Notes = ""
 
-	t.Run("Create", create(db, entry))
-	t.Run("Edit", edit(db, entry.Name))
-	t.Run("Get", get(db, entry))
+	t.Run("Create", create(db, lockedBuf, e))
+	t.Run("Get", get(db, name))
 	t.Run("List", list(db))
 	t.Run("List fastest", listFastest(db))
 	t.Run("List names", listNames(db))
-	t.Run("Remove", remove(db, entry.Name))
+	t.Run("Remove", remove(db, name))
 }
 
-func create(db *bolt.DB, entry *pb.Entry) func(*testing.T) {
+func create(db *bolt.DB, buf *memguard.LockedBuffer, entry *pb.Entry) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Create(db, entry); err != nil {
+		if err := Create(db, buf, entry); err != nil {
 			t.Fatalf("Create() failed: %v", err)
 		}
 	}
 }
 
-func edit(db *bolt.DB, name string) func(*testing.T) {
+func get(db *bolt.DB, name string) func(*testing.T) {
 	return func(t *testing.T) {
-		entry := &pb.Entry{
-			Name:     "test",
-			Username: "edit username",
-			URL:      "golang.org",
-			Notes:    "",
-			Expires:  "Never",
-		}
-
-		if err := Edit(db, name, entry); err != nil {
-			t.Fatalf("Edit() failed: %v", err)
-		}
-	}
-}
-
-func get(db *bolt.DB, entry *pb.Entry) func(*testing.T) {
-	return func(t *testing.T) {
-		got, err := Get(db, entry.Name)
+		_, got, err := Get(db, name)
 		if err != nil {
 			t.Fatalf("Get() failed: %v", err)
 		}
 
 		// They aren't DeepEqual
-		if got.Name != entry.Name {
-			t.Errorf("Expected %s, got %s", entry.Name, got.Name)
+		if got.Name != name {
+			t.Errorf("Expected %s, got %s", name, got.Name)
 		}
 	}
 }
 
 func list(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		entries, err := List(db)
+		_, entries, err := List(db)
 		if err != nil {
 			t.Fatalf("List() failed: %v", err)
 		}
@@ -124,19 +107,24 @@ func TestListExpired(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	entry := &pb.Entry{
-		Name:    "test expired",
-		Expires: "Mon, 10 Jan 2020 15:04:05 -0700",
-	}
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = "test expired"
+	e.Expires = "Mon, 10 Jan 2020 15:04:05 -0700"
 
-	t.Run("Create", create(db, entry))
-	_, err := List(db)
+	t.Run("Create", create(db, lockedBuf, e))
+
+	_, _, err := List(db)
 	if err != nil {
 		t.Errorf("List() failed: %v", err)
 	}
 
 	// Recreate as it was deleted by List()
-	t.Run("Create", create(db, entry))
+	lockedBuf2, e2 := pb.SecureEntry()
+	e2.Name = "test expired"
+	e2.Expires = "Mon, 10 Jan 2020 15:04:05 -0700"
+
+	t.Run("Create", create(db, lockedBuf2, e2))
+
 	_, err = ListNames(db)
 	if err != nil {
 		t.Errorf("List() failed: %v", err)
@@ -165,9 +153,9 @@ func TestCreateErrors(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	// Remove the entry to not receive 'already exists' error
+	lockedBuf, e := pb.SecureEntry()
 	viper.Set("user.password", nil)
-	if err := Create(db, &pb.Entry{}); err == nil {
+	if err := Create(db, lockedBuf, e); err == nil {
 		t.Error("Expected 'encrypt entry' error, got nil")
 	}
 }
@@ -176,21 +164,16 @@ func TestGetErrors(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	cases := []*pb.Entry{
-		{
-			Name:    "test expired",
-			Expires: "Mon, 10 Jan 2020 15:04:05 -0700",
-		},
-		{
-			Name: "non-existent",
-		},
-	}
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = "test expired"
+	e.Expires = "Mon, 10 Jan 2020 15:04:05 -0700"
 
-	// Create only the first entry
-	t.Run("Create", create(db, cases[0]))
+	t.Run("Create", create(db, lockedBuf, e))
 
-	for _, tc := range cases {
-		_, err := Get(db, tc.Name)
+	names := []string{"test expired", "non-existent"}
+
+	for _, name := range names {
+		_, _, err := Get(db, name)
 		if err == nil {
 			t.Error("Expected an error, got nil")
 		}
@@ -216,7 +199,10 @@ func TestBucketError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	entry := &pb.Entry{Name: "nil bucket"}
+	name := "nil bucket"
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = name
+	e.Expires = "Never"
 
 	err := db.Update(func(tx *bolt.Tx) error {
 		tx.DeleteBucket([]byte("kure_entry"))
@@ -226,17 +212,14 @@ func TestBucketError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Create(db, entry); err == nil {
+	if err := Create(db, lockedBuf, e); err == nil {
 		t.Error("Edit() didn't return 'invalid bucket'")
 	}
-	if err := Edit(db, entry.Name, entry); err == nil {
-		t.Error("Edit() didn't return 'invalid bucket'")
-	}
-	_, err = Get(db, entry.Name)
+	_, _, err = Get(db, name)
 	if err == nil {
 		t.Error("Get() didn't return 'invalid bucket'")
 	}
-	_, err = List(db)
+	_, _, err = List(db)
 	if err == nil {
 		t.Error("List() didn't return 'invalid bucket'")
 	}
@@ -244,7 +227,7 @@ func TestBucketError(t *testing.T) {
 	if err == nil {
 		t.Error("ListAllNames() didn't return 'invalid bucket'")
 	}
-	if err := Remove(db, entry.Name); err == nil {
+	if err := Remove(db, name); err == nil {
 		t.Error("Remove() didn't return 'invalid bucket'")
 	}
 }
@@ -253,18 +236,22 @@ func TestDecryptError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	entry := &pb.Entry{Name: "test decrypt error"}
-	if err := Create(db, entry); err != nil {
+	name := "test decrypt error"
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = name
+	e.Expires = "Never"
+
+	if err := Create(db, lockedBuf, e); err != nil {
 		t.Fatal(err)
 	}
 
 	viper.Set("user.password", nil)
 
-	_, err := Get(db, entry.Name)
+	_, _, err := Get(db, name)
 	if err == nil {
 		t.Error("Get() didn't return 'decrypt entry' error")
 	}
-	_, err = List(db)
+	_, _, err = List(db)
 	if err == nil {
 		t.Error("List() didn't return 'decrypt entry' error")
 	}
@@ -277,13 +264,11 @@ func TestKeyError(t *testing.T) {
 	db := setContext(t)
 	defer db.Close()
 
-	entry := &pb.Entry{Name: ""}
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = ""
 
-	if err := Create(db, entry); err == nil {
+	if err := Create(db, lockedBuf, e); err == nil {
 		t.Error("Create() didn't fail")
-	}
-	if err := Edit(db, entry.Name, entry); err == nil {
-		t.Error("Edit() didn't fail")
 	}
 }
 

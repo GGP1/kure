@@ -48,7 +48,7 @@ func runCopy(db *bolt.DB) cmdutil.RunEFunc {
 			return errInvalidName
 		}
 
-		note, err := note.Get(db, name)
+		lockedBuf, note, err := note.Get(db, name)
 		if err != nil {
 			return err
 		}
@@ -56,6 +56,7 @@ func runCopy(db *bolt.DB) cmdutil.RunEFunc {
 		if err := clipboard.WriteAll(note.Text); err != nil {
 			return errors.Wrap(err, "failed writing to the clipboard")
 		}
+		lockedBuf.Destroy()
 
 		fmt.Println("Note copied to clipboard")
 

@@ -22,7 +22,8 @@ clear [-b both] [-c clipboard] [-t terminal]
 #### Config
 ```
 config [-c create] [-p path]
-  test
+  argon2
+    test [-i iterations] [-m memory] [-t threads]
 ```
 
 #### Copy
@@ -49,11 +50,11 @@ export <manager-name> [-p path]
 #### File
 ```
 file
-  add <name> [-b buffer] [-i ignore] [-p path] [-s semaphore]
+  add <name> [-i ignore] [-p path] [-s semaphore]
   cat <name> [-c copy]
   ls <name> [-f filter]
   rm <name> [-d dir]
-  rename <oldName> <newName>
+  rename <old-name> <new-name>
   touch <name> [-o overwrite] [-p path]
 ```
 

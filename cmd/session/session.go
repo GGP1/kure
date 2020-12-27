@@ -47,7 +47,8 @@ The user can set a timeout to automatically close the session after X amount of 
 Once into the session:
 • it's optional to use the word "kure" to run a command.
 • type "timeout" to see the time left.
-• type "exit" or press Ctrl+C to quit.`,
+• type "exit" or press Ctrl+C to quit.
+• type "pwd" to get the current working directory.`,
 		Example: example,
 		PreRunE: cmdutil.RequirePassword(db),
 		RunE:    runSession(db, r, interrupt),
@@ -107,6 +108,11 @@ func startSession(scanner *bufio.Scanner, start time.Time, zero time.Duration, i
 		case "kure":
 			// Make using "kure" optional
 			args[0] = ""
+
+		case "pwd":
+			dir, _ := os.Getwd()
+			fmt.Println(dir)
+			continue
 
 		case "timeout":
 			if timeout == zero {

@@ -6,6 +6,7 @@ import (
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/pb"
 
+	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
@@ -16,9 +17,11 @@ var (
 	errInvalidBucket = errors.New("invalid bucket")
 )
 
-// Create creates a new bank card.
-func Create(db *bolt.DB, card *pb.Card) error {
+// Create a new bank card. It destroys the locked buffer passed.
+func Create(db *bolt.DB, lockedBuf *memguard.LockedBuffer, card *pb.Card) error {
 	return db.Update(func(tx *bolt.Tx) error {
+		defer lockedBuf.Destroy()
+
 		b := tx.Bucket(cardBucket)
 		if b == nil {
 			return errInvalidBucket
@@ -43,8 +46,8 @@ func Create(db *bolt.DB, card *pb.Card) error {
 }
 
 // Get retrieves the card with the specified name.
-func Get(db *bolt.DB, name string) (*pb.Card, error) {
-	c := &pb.Card{}
+func Get(db *bolt.DB, name string) (*memguard.LockedBuffer, *pb.Card, error) {
+	buf, c := pb.SecureCard()
 
 	err := db.View(func(tx *bolt.Tx) error {
 		name = strings.TrimSpace(strings.ToLower(name))
@@ -70,15 +73,15 @@ func Get(db *bolt.DB, name string) (*pb.Card, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return c, nil
+	return buf, c, nil
 }
 
 // List returns a list with all the cards.
-func List(db *bolt.DB) ([]*pb.Card, error) {
-	var cards []*pb.Card
+func List(db *bolt.DB) (*memguard.LockedBuffer, []*pb.Card, error) {
+	cardsBuf, cards := pb.SecureCardSlice()
 
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(cardBucket)
@@ -99,15 +102,14 @@ func List(db *bolt.DB) ([]*pb.Card, error) {
 			}
 
 			cards = append(cards, card)
-
 			return nil
 		})
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return cards, nil
+	return cardsBuf, cards, nil
 }
 
 // ListFastest is used to check if the user entered the correct password

@@ -12,6 +12,7 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/db/note"
+	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/spf13/cobra"
@@ -26,19 +27,17 @@ func TestBuildBox(t *testing.T) {
 │ Wizard │ Harry │
 └────────────────┘`
 
-	// The iteration order it's not guaranteed and the test
-	// may fail until the use of an ordered map
-	mp := map[string]string{
-		"Jedi": "Luke",
-		"Hobbit": `Frodo
-Sam`,
-		"Wizard": "Harry",
-	}
+	oMap := orderedmap.New(3)
+	oMap.Set("Jedi", "Luke")
+	oMap.Set("Hobbit", `Frodo
+Sam`)
+	oMap.Set("Wizard", "Harry")
 
-	got := BuildBox("test/test", mp)
+	lockedBuf, got := BuildBox("test/test", oMap)
 	if got != expected {
 		t.Errorf("Expected %s, got %s", expected, got)
 	}
+	lockedBuf.Destroy()
 }
 
 func TestDisplayQRCode(t *testing.T) {
@@ -66,25 +65,36 @@ func TestExistsTrue(t *testing.T) {
 	db := SetContext(t, "../db/testdata/database")
 	defer db.Close()
 
+	name := "test"
+	cBuf, c := pb.SecureCard()
+	c.Name = name
+
+	eBuf, e := pb.SecureEntry()
+	e.Name = name
+	e.Expires = "Never"
+
+	nBuf, n := pb.SecureNote()
+	n.Name = name
+
 	cases := []struct {
-		name   string
 		object string
 		create func() error
 	}{
 		{
-			name:   "test",
 			object: "card",
-			create: func() error { return card.Create(db, &pb.Card{Name: "test"}) },
+			create: func() error { return card.Create(db, cBuf, c) },
 		},
 		{
-			name:   "test",
 			object: "entry",
-			create: func() error { return entry.Create(db, &pb.Entry{Name: "test", Expires: "Never"}) },
+			create: func() error { return entry.Create(db, eBuf, e) },
 		},
 		{
-			name:   "test",
+			object: "file",
+			create: func() error { return file.Create(db, &pb.File{Name: name}) },
+		},
+		{
 			object: "note",
-			create: func() error { return note.Create(db, &pb.Note{Name: "test"}) },
+			create: func() error { return note.Create(db, nBuf, n) },
 		},
 	}
 
@@ -94,7 +104,7 @@ func TestExistsTrue(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := Exists(db, tc.name, tc.object); err == nil {
+			if err := Exists(db, name, tc.object); err == nil {
 				t.Error("Expected exists to fail but got nil")
 			}
 		})
@@ -157,7 +167,7 @@ func TestGetConfigPath(t *testing.T) {
 				t.Errorf("Expected a path to the file and got %q", path)
 			}
 
-			filename := ".kure.yaml"
+			filename := "kure.yaml"
 			if !strings.Contains(path, filename) {
 				t.Errorf("Invalid path, expected it to contain %q but got: %q", filename, path)
 			}
@@ -211,7 +221,29 @@ func TestRequirePassword(t *testing.T) {
 	db := SetContext(t, "../db/testdata/database")
 	defer db.Close()
 
+	// Delete the entry created by the context
+	err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("kure_entry"))
+		if err := b.Delete([]byte("May the force be with you")); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	name := "require_password_test"
+
+	cBuf, c := pb.SecureCard()
+	c.Name = name
+
+	eBuf, e := pb.SecureEntry()
+	e.Name = name
+	e.Expires = "Never"
+
+	nBuf, n := pb.SecureNote()
+	n.Name = name
 
 	cases := []struct {
 		desc   string
@@ -220,12 +252,12 @@ func TestRequirePassword(t *testing.T) {
 	}{
 		{
 			desc:   "Card",
-			create: func() error { return card.Create(db, &pb.Card{Name: name}) },
+			create: func() error { return card.Create(db, cBuf, c) },
 			remove: func() error { return card.Remove(db, name) },
 		},
 		{
 			desc:   "Entry",
-			create: func() error { return entry.Create(db, &pb.Entry{Name: name, Expires: "Never"}) },
+			create: func() error { return entry.Create(db, eBuf, e) },
 			remove: func() error { return entry.Remove(db, name) },
 		},
 		{
@@ -235,7 +267,7 @@ func TestRequirePassword(t *testing.T) {
 		},
 		{
 			desc:   "Note",
-			create: func() error { return note.Create(db, &pb.Note{Name: name}) },
+			create: func() error { return note.Create(db, nBuf, n) },
 			remove: func() error { return note.Remove(db, name) },
 		},
 	}

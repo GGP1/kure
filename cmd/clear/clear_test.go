@@ -18,9 +18,9 @@ func TestClear(t *testing.T) {
 	}
 
 	cmd := NewCmd()
-	f := cmd.Flags()
 	for _, tc := range cases {
 		t.Run("Clear "+tc.flag, func(t *testing.T) {
+			f := cmd.Flags()
 			f.Set(tc.flag, tc.value)
 
 			if err := cmd.RunE(cmd, nil); err != nil {
@@ -34,8 +34,6 @@ func TestClear(t *testing.T) {
 					t.Errorf("Expected clipboard to be empty but got: %s", got)
 				}
 			}
-
-			cmd.ResetFlags()
 		})
 	}
 }

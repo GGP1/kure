@@ -19,7 +19,7 @@ kure file rename oldName newName`
 
 func renameSubCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "rename <oldName> <newName>",
+		Use:   "rename <old-name> <new-name>",
 		Short: "Rename a file",
 		Long: `Rename a file.
 
@@ -40,7 +40,7 @@ func runRename(db *bolt.DB) cmdutil.RunEFunc {
 		newName := args[1]
 
 		if oldName == "" || newName == "" {
-			return errors.New("invalid format, use: <oldName> <newName>")
+			return errors.New("invalid format, use: kure file rename <oldName> <newName>")
 		}
 
 		if filepath.Ext(newName) == "" {

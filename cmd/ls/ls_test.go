@@ -12,7 +12,12 @@ func TestLs(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
 
-	if err := entry.Create(db, &pb.Entry{Name: "test", Password: "top secret", Expires: "Never"}); err != nil {
+	lockedBuf, e := pb.SecureEntry()
+	e.Name = "test"
+	e.Password = "testing"
+	e.Expires = "Never"
+
+	if err := entry.Create(db, lockedBuf, e); err != nil {
 		t.Fatal(err)
 	}
 
@@ -67,11 +72,12 @@ func TestLs(t *testing.T) {
 	}
 
 	cmd := NewCmd(db)
-	f := cmd.Flags()
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			args := []string{tc.name}
+
+			f := cmd.Flags()
 			f.Set("filter", tc.filter)
 			f.Set("hide", tc.hide)
 			f.Set("qr", tc.qr)
@@ -83,8 +89,6 @@ func TestLs(t *testing.T) {
 			if err == nil && !tc.pass {
 				t.Error("Expected an error and got nil")
 			}
-
-			cmd.ResetFlags()
 		})
 	}
 }

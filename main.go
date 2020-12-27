@@ -16,7 +16,6 @@ import (
 	"github.com/GGP1/kure/cmd/clear"
 	configcmd "github.com/GGP1/kure/cmd/config"
 	"github.com/GGP1/kure/cmd/copy"
-	"github.com/GGP1/kure/cmd/edit"
 	"github.com/GGP1/kure/cmd/export"
 	"github.com/GGP1/kure/cmd/file"
 	"github.com/GGP1/kure/cmd/gen"
@@ -83,7 +82,6 @@ func main() {
 	root.Register(clear.NewCmd())
 	root.Register(configcmd.NewCmd(db, os.Stdin))
 	root.Register(copy.NewCmd(db))
-	root.Register(edit.NewCmd(db, os.Stdin))
 	root.Register(export.NewCmd(db))
 	root.Register(file.NewCmd(db, os.Stdin, os.Stdout))
 	root.Register(gen.NewCmd())
@@ -100,12 +98,10 @@ func main() {
 
 // signals waits for a signal to release resources, delete any sensitive information and exit safely.
 //
-// The viper variable is used to avoid creating new cards, entries and notes while exiting,
-// it's used for these situations only.
+// db.Close() will block waiting for open transactions to finish before closing.
 func signals(db *bolt.DB, interrupt chan os.Signal) {
 	<-interrupt
-	viper.Set("interrupt", true)
-	fmt.Fprint(os.Stderr, "\nExiting...\n")
 	db.Close()
+	fmt.Fprint(os.Stderr, "\nExiting...\n")
 	memguard.SafeExit(0)
 }

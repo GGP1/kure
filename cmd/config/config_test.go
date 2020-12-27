@@ -10,6 +10,7 @@ import (
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/spf13/viper"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestCreate(t *testing.T) {
@@ -19,7 +20,6 @@ func TestCreate(t *testing.T) {
 	dbName := "database"
 	dbPath := "../../db/testdata"
 	format := "1,2,3"
-	repeat := "true"
 	port := "4000"
 	prefix := "$"
 	timeout := "10m"
@@ -27,8 +27,8 @@ func TestCreate(t *testing.T) {
 	iter := "50"
 	threads := "2"
 
-	s := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
-		dbName, dbPath, format, repeat, port, prefix, timeout, memory, iter, threads)
+	s := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
+		dbName, dbPath, format, port, prefix, timeout, memory, iter, threads)
 	buf := bytes.NewBufferString(s)
 
 	cmd := NewCmd(db, buf)
@@ -51,9 +51,6 @@ func TestCreate(t *testing.T) {
 	if !reflect.DeepEqual(gotFormat, expectedFormat) {
 		t.Errorf("Expected %v, got %v", expectedFormat, gotFormat)
 	}
-
-	gotRepeat := viper.GetString("entry.repeat")
-	assertEqual(t, repeat, gotRepeat)
 
 	gotPort := viper.GetString("http.port")
 	assertEqual(t, port, gotPort)
@@ -127,16 +124,24 @@ func TestInvalidFields(t *testing.T) {
 	defer db.Close()
 
 	cases := []struct {
-		desc   string
-		port   string
-		format string
+		desc       string
+		format     string
+		port       string
+		memory     string
+		iterations string
+		threads    string
 	}{
-		{desc: "Invalid format", port: "8800", format: "a, b, c"},
+		{desc: "Invalid format", format: "a, b, c"},
+		{desc: "Invalid port", port: "abc"},
+		{desc: "Invalid iterations", iterations: "abc"},
+		{desc: "Invalid memory", memory: "abc"},
+		{desc: "Invalid threads", threads: "abc"},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			s := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s", "", "", tc.format, "", tc.port, "", "")
+			s := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s",
+				"", "", tc.format, tc.port, "", "", tc.memory, tc.iterations, tc.threads)
 			buf := bytes.NewBufferString(s)
 
 			cmd := NewCmd(db, buf)
@@ -148,6 +153,54 @@ func TestInvalidFields(t *testing.T) {
 				t.Fatal("Expected an error and got nil")
 			}
 		})
+	}
+}
+
+func TestArgon2(t *testing.T) {
+	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	defer db.Close()
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte("kure_argon2"))
+		if err != nil {
+			return err
+		}
+
+		keys := []string{"iterations", "memory", "threads"}
+
+		for _, key := range keys {
+			if err := b.Put([]byte(key), []byte("1")); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := argon2SubCmd(db)
+
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Errorf("Failed printing argon2 parameters: %v", err)
+	}
+}
+
+func TestArgon2Default(t *testing.T) {
+	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	defer db.Close()
+
+	err := db.Update(func(tx *bolt.Tx) error {
+		return tx.DeleteBucket([]byte("kure_argon2"))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := argon2SubCmd(db)
+
+	if err := cmd.RunE(cmd, nil); err != nil {
+		t.Errorf("Failed printing argon2 parameters: %v", err)
 	}
 }
 
@@ -193,10 +246,54 @@ func TestTest(t *testing.T) {
 	}
 }
 
+func TestTestInvalid(t *testing.T) {
+	cases := []struct {
+		desc       string
+		iterations string
+		memory     string
+		threads    string
+	}{
+		{
+			desc:       "Invalid iterations",
+			iterations: "0",
+			memory:     "1",
+			threads:    "1",
+		},
+		{
+			desc:       "Invalid memory",
+			iterations: "1",
+			memory:     "0",
+			threads:    "1",
+		},
+		{
+			desc:       "Invalid threads",
+			iterations: "1",
+			memory:     "1",
+			threads:    "0",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			cmd := testSubCmd()
+			f := cmd.Flags()
+			f.Set("iterations", tc.iterations)
+			f.Set("memory", tc.memory)
+			f.Set("threads", tc.threads)
+
+			if err := cmd.RunE(cmd, nil); err == nil {
+				t.Error("Expected an error and got nil")
+			}
+		})
+	}
+}
+
 func TestPostRun(t *testing.T) {
-	config := NewCmd(nil, nil)
-	f := config.PostRun
-	f(config, nil)
+	f := NewCmd(nil, nil)
+	f.PostRun(f, nil)
+
+	f2 := testSubCmd()
+	f2.PostRun(f2, nil)
 }
 
 func assertEqual(t *testing.T, expected, got string) {

@@ -1,7 +1,6 @@
 package crypt
 
 import (
-	"bytes"
 	"crypto/subtle"
 	"fmt"
 	"syscall"
@@ -28,8 +27,8 @@ func AskPassword(verify bool) (*memguard.Enclave, error) {
 		return nil, errors.New("invalid password")
 	}
 
-	pwd := memguard.NewBufferFromBytes(bytes.TrimSpace(password))
-	zero(password)
+	pwd := memguard.NewBufferFromBytes(password)
+	memguard.WipeBytes(password)
 
 	if verify {
 		fmt.Print("Retype to verify: ")
@@ -39,10 +38,10 @@ func AskPassword(verify bool) (*memguard.Enclave, error) {
 		}
 		fmt.Print("\n")
 
-		if subtle.ConstantTimeCompare(pwd.Bytes(), bytes.TrimSpace(password2)) != 1 {
+		if subtle.ConstantTimeCompare(pwd.Bytes(), password2) != 1 {
 			return nil, errors.New("passwords must be equal")
 		}
-		zero(password2)
+		memguard.WipeBytes(password2)
 	}
 
 	// Seal destroys the buffer
@@ -66,12 +65,5 @@ func GetMasterPassword() (*memguard.Enclave, error) {
 		viper.Set("user.password", pwd)
 
 		return pwd, nil
-	}
-}
-
-// zero wipes the given byte slice.
-func zero(buf []byte) {
-	for i := range buf {
-		buf[i] = 0
 	}
 }

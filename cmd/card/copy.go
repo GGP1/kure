@@ -7,6 +7,7 @@ import (
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/card"
+	"github.com/awnumar/memguard"
 
 	"github.com/atotto/clipboard"
 	"github.com/pkg/errors"
@@ -59,7 +60,7 @@ func runCard(db *bolt.DB) cmdutil.RunEFunc {
 			return errInvalidName
 		}
 
-		card, err := card.Get(db, name)
+		cardBuf, card, err := card.Get(db, name)
 		if err != nil {
 			return err
 		}
@@ -70,10 +71,12 @@ func runCard(db *bolt.DB) cmdutil.RunEFunc {
 			field = "Security code"
 			copy = card.SecurityCode
 		}
+		cardBuf.Destroy()
 
 		if err := clipboard.WriteAll(copy); err != nil {
 			return errors.Wrap(err, "failed writing to the clipboard")
 		}
+		memguard.WipeBytes([]byte(copy))
 
 		fmt.Printf("%s copied to clipboard\n", field)
 

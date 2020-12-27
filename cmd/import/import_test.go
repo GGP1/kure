@@ -15,13 +15,14 @@ func TestImport(t *testing.T) {
 	cases := []struct {
 		manager  string
 		path     string
+		name     string
 		expected *pb.Entry
 	}{
 		{
 			manager: "Keepass",
 			path:    "testdata/test_keepass",
+			name:    "keepass",
 			expected: &pb.Entry{
-				Name:     "keepass",
 				Username: "test@keepass.com",
 				Password: "keepass123",
 				URL:      "https://keepass.info/",
@@ -32,8 +33,8 @@ func TestImport(t *testing.T) {
 		{
 			manager: "1password",
 			path:    "testdata/test_1password.csv",
+			name:    "1password",
 			expected: &pb.Entry{
-				Name:     "1password",
 				Username: "test@1password.com",
 				Password: "1password123",
 				URL:      "https://1password.com/",
@@ -44,9 +45,9 @@ func TestImport(t *testing.T) {
 		{
 			manager: "Lastpass",
 			path:    "testdata/test_lastpass.csv",
+			// Kure will by default join folders with the entry names
+			name: "test/lastpass",
 			expected: &pb.Entry{
-				// Kure will by default join folders with the entry names
-				Name:     "test/lastpass",
 				Username: "test@lastpass.com",
 				Password: "lastpass123",
 				URL:      "https://lastpass.com/",
@@ -57,9 +58,9 @@ func TestImport(t *testing.T) {
 		{
 			manager: "Bitwarden",
 			path:    "testdata/test_bitwarden.csv",
+			// Kure will by default join folders with the entry names
+			name: "test/bitwarden",
 			expected: &pb.Entry{
-				// Kure will by default join folders with the entry names
-				Name:     "test/bitwarden",
 				Username: "test@bitwarden.com",
 				Password: "bitwarden123",
 				URL:      "https://bitwarden.com/",
@@ -69,9 +70,10 @@ func TestImport(t *testing.T) {
 		},
 	}
 
+	cmd := NewCmd(db)
+
 	for _, tc := range cases {
 		t.Run(tc.manager, func(t *testing.T) {
-			cmd := NewCmd(db)
 			cmd.Flags().Set("path", tc.path)
 			args := []string{tc.manager}
 
@@ -79,7 +81,7 @@ func TestImport(t *testing.T) {
 				t.Fatalf("Failed importing entries: %v", err)
 			}
 
-			got, err := entry.Get(db, tc.expected.Name)
+			_, got, err := entry.Get(db, tc.name)
 			if err != nil {
 				t.Fatalf("Failed listing entry: %v", err)
 			}
@@ -98,27 +100,42 @@ func TestInvalidImport(t *testing.T) {
 		manager string
 		path    string
 	}{
-		{desc: "Invalid name", manager: "", path: "testdata/test_keepass.csv"},
-		{desc: "Invalid path", manager: "keepass", path: ""},
-		{desc: "Failed reading file", manager: "1password", path: "test.csv"},
-		{desc: "Unsupported manager", manager: "unsupported", path: "testdata/test_keepass.csv"},
+		{
+			desc:    "Invalid name",
+			manager: "",
+			path:    "testdata/test_keepass.csv",
+		},
+		{
+			desc:    "Invalid path",
+			manager: "keepass",
+			path:    "",
+		},
+		{
+			desc:    "Failed reading file",
+			manager: "1password",
+			path:    "test.csv",
+		},
+		{
+			desc:    "Unsupported manager",
+			manager: "unsupported",
+			path:    "testdata/test_keepass.csv",
+		},
 	}
+
+	cmd := NewCmd(db)
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cmd := NewCmd(db)
 			cmd.Flags().Set("path", tc.path)
-
 			args := []string{tc.manager}
 
 			if err := cmd.RunE(cmd, args); err == nil {
-				t.Error("Expected test to fail but got nil")
+				t.Error("Expected an error but got nil")
 			}
-
-			cmd.ResetFlags()
 		})
 	}
 }
+
 func TestPostRun(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	defer db.Close()
@@ -128,10 +145,6 @@ func TestPostRun(t *testing.T) {
 }
 
 func compareEntries(t *testing.T, got, expected *pb.Entry) {
-	if got.Name != expected.Name {
-		t.Errorf("Expected %s, got %s", expected.Name, got.Name)
-	}
-
 	if got.Username != expected.Username {
 		t.Errorf("Expected %s, got %s", expected.Username, got.Username)
 	}

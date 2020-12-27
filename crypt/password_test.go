@@ -1,7 +1,6 @@
 package crypt
 
 import (
-	"bytes"
 	"crypto/subtle"
 	"testing"
 
@@ -39,15 +38,5 @@ func TestGetMasterPasswordDefault(t *testing.T) {
 	_, err := GetMasterPassword()
 	if err == nil {
 		t.Fatal("Expected GetMasterPassword() to fail but it didn't")
-	}
-}
-
-func TestZero(t *testing.T) {
-	buf := []byte("test")
-
-	zero(buf)
-
-	if !bytes.Equal(buf, []byte{0, 0, 0, 0}) {
-		t.Error("Failed wiping the buffer")
 	}
 }

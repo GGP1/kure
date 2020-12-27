@@ -93,6 +93,7 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 				return err
 			}
 		}
+
 		return nil
 	}
 }

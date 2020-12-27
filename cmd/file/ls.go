@@ -7,6 +7,7 @@ import (
 
 	cmdutil "github.com/GGP1/kure/cmd"
 	"github.com/GGP1/kure/db/file"
+	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
 	"github.com/GGP1/kure/tree"
 
@@ -92,20 +93,23 @@ func runLs(db *bolt.DB) cmdutil.RunEFunc {
 				break
 			}
 
-			file, err := file.Get(db, name)
+			lockedBuf, file, err := file.GetCheap(db, name)
 			if err != nil {
 				return err
 			}
 
 			printFile(file)
+			lockedBuf.Destroy()
 		}
 		return nil
 	}
 }
 
-func printFile(f *pb.File) {
+func printFile(f *pb.FileCheap) {
+	parts := strings.Split(f.Name, "/")
+	path := strings.Join(parts[:len(parts)-1], "/")
 	t := time.Unix(f.CreatedAt, 0)
-	bytes := len(f.Content)
+	bytes := f.Size
 	size := fmt.Sprintf("%d bytes", bytes)
 
 	switch {
@@ -119,13 +123,13 @@ func printFile(f *pb.File) {
 		size = fmt.Sprintf("%d KB", bytes/KB)
 	}
 
-	fields := map[string]string{
-		"Path":       f.Name,
-		"Filename":   f.Filename,
-		"Size":       size,
-		"Created at": fmt.Sprintf("%v", t),
-	}
+	// Map's key/value pairs are stored inside locked buffers
+	oMap := orderedmap.New(3)
+	oMap.Set("Path", "/"+path)
+	oMap.Set("Size", size)
+	oMap.Set("Created at", fmt.Sprintf("%v", t))
 
-	box := cmdutil.BuildBox(f.Name, fields)
+	lockedBuf, box := cmdutil.BuildBox(f.Name, oMap)
 	fmt.Println("\n" + box)
+	lockedBuf.Destroy()
 }
