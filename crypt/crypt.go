@@ -49,8 +49,11 @@ func Encrypt(data []byte) ([]byte, error) {
 		return nil, errEncrypt
 	}
 
+	dst := make([]byte, gcm.NonceSize())
+	copy(dst, nonce)
+
 	// Encrypt, authenticate and append the salt to the end of it
-	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+	ciphertext := gcm.Seal(dst, nonce, data, nil)
 	ciphertext = append(ciphertext, salt...)
 
 	return ciphertext, nil
