@@ -19,6 +19,17 @@ func TestLoad(t *testing.T) {
 		{desc: "Home directory", path: ""},
 	}
 
+	// Create the home folder with mode 0666 so the command uses it
+	// Otherwise github actions' test will fail
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("couldn't find the home directory: %v", err)
+	}
+	home = filepath.Join(home, ".kure")
+	if err := os.MkdirAll(home, 0666); err != nil {
+		t.Fatalf("couldn't create the configuration directory: %v", err)
+	}
+
 	expectedStr := "test"
 	expectedNum := 1
 	expectedBool := true
