@@ -6,26 +6,22 @@ import (
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/pb"
 
-	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
 
-var (
-	cardBucket       = []byte("kure_card")
-	errInvalidBucket = errors.New("invalid bucket")
-)
+var cardBucket = []byte("kure_card")
 
-// Create a new bank card. It destroys the locked buffer passed.
-func Create(db *bolt.DB, lockedBuf *memguard.LockedBuffer, card *pb.Card) error {
-	return db.Update(func(tx *bolt.Tx) error {
-		defer lockedBuf.Destroy()
+// Create a new bank card.
+func Create(db *bolt.DB, card *pb.Card) error {
+	return db.Batch(func(tx *bolt.Tx) error {
+		// Ensure the name does not contain null characters
+		if strings.ContainsRune(card.Name, '\x00') {
+			return errors.New("card name contains null characters")
+		}
 
 		b := tx.Bucket(cardBucket)
-		if b == nil {
-			return errInvalidBucket
-		}
 
 		buf, err := proto.Marshal(card)
 		if err != nil {
@@ -46,19 +42,15 @@ func Create(db *bolt.DB, lockedBuf *memguard.LockedBuffer, card *pb.Card) error 
 }
 
 // Get retrieves the card with the specified name.
-func Get(db *bolt.DB, name string) (*memguard.LockedBuffer, *pb.Card, error) {
-	buf, c := pb.SecureCard()
+func Get(db *bolt.DB, name string) (*pb.Card, error) {
+	card := &pb.Card{}
 
 	err := db.View(func(tx *bolt.Tx) error {
-		name = strings.TrimSpace(strings.ToLower(name))
 		b := tx.Bucket(cardBucket)
-		if b == nil {
-			return errInvalidBucket
-		}
 
 		encCard := b.Get([]byte(name))
 		if encCard == nil {
-			return errors.Errorf("%q does not exist", name)
+			return errors.Errorf("card %q does not exist", name)
 		}
 
 		decCard, err := crypt.Decrypt(encCard)
@@ -66,28 +58,25 @@ func Get(db *bolt.DB, name string) (*memguard.LockedBuffer, *pb.Card, error) {
 			return errors.Wrap(err, "decrypt card")
 		}
 
-		if err := proto.Unmarshal(decCard, c); err != nil {
+		if err := proto.Unmarshal(decCard, card); err != nil {
 			return errors.Wrap(err, "unmarshal card")
 		}
 
 		return nil
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return buf, c, nil
+	return card, nil
 }
 
 // List returns a list with all the cards.
-func List(db *bolt.DB) (*memguard.LockedBuffer, []*pb.Card, error) {
-	cardsBuf, cards := pb.SecureCardSlice()
+func List(db *bolt.DB) ([]*pb.Card, error) {
+	var cards []*pb.Card
 
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(cardBucket)
-		if b == nil {
-			return errInvalidBucket
-		}
 
 		return b.ForEach(func(k, v []byte) error {
 			card := &pb.Card{}
@@ -106,55 +95,31 @@ func List(db *bolt.DB) (*memguard.LockedBuffer, []*pb.Card, error) {
 		})
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return cardsBuf, cards, nil
-}
-
-// ListFastest is used to check if the user entered the correct password
-// by trying to decrypt every record and returning the fastest result.
-func ListFastest(db *bolt.DB) bool {
-	succeed := make(chan bool)
-
-	decrypt := func(v []byte) {
-		_, err := crypt.Decrypt(v)
-		if err != nil {
-			succeed <- false
-		}
-
-		succeed <- true
-	}
-
-	db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(cardBucket)
-
-		return b.ForEach(func(_, v []byte) error {
-			go decrypt(v)
-			return nil
-		})
-	})
-
-	return <-succeed
+	return cards, nil
 }
 
 // ListNames returns a list with all the cards names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	var cards []string
+	tx, _ := db.Begin(false)
+	defer tx.Rollback()
 
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(cardBucket)
-		if b == nil {
-			return errInvalidBucket
-		}
+	// b will be nil only if the user attempts to add
+	// a card on registration
+	b := tx.Bucket(cardBucket)
+	if b == nil {
+		return nil, nil
+	}
+	cards := make([]string, b.Stats().KeyN)
 
-		return b.ForEach(func(k, _ []byte) error {
-			cards = append(cards, string(k))
-			return nil
-		})
-	})
-	if err != nil {
-		return nil, err
+	c := b.Cursor()
+	k, _ := c.First()
+
+	for i := 0; k != nil; i++ {
+		cards[i] = string(k)
+		k, _ = c.Next()
 	}
 
 	return cards, nil
@@ -163,12 +128,7 @@ func ListNames(db *bolt.DB) ([]string, error) {
 // Remove removes a card from the database.
 func Remove(db *bolt.DB, name string) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		name = strings.TrimSpace(strings.ToLower(name))
-
 		b := tx.Bucket(cardBucket)
-		if b == nil {
-			return errInvalidBucket
-		}
 
 		if err := b.Delete([]byte(name)); err != nil {
 			return errors.Wrap(err, "remove card")

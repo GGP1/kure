@@ -21,5 +21,5 @@ kure card rm Sample
 
 Remove a directory:
 ```
-kure card rm dirName -d
+kure card rm SampleDir -d
 ```

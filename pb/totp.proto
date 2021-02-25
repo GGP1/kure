@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option go_package = "github.com/GGP1/kure/pb";
+
+package pb;
+
+// TOTP represents a Time-based One-Time Password.
+message TOTP {
+    string name = 1;
+    string raw = 2;
+    int32 digits = 3;
+}

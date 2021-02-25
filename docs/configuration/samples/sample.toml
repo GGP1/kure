@@ -1,0 +1,18 @@
+# Identitation must be respected and paths must be absolute. 
+# In case any of these values is omitted, Kure will use the default one.
+# See ../configuration.md for further information.
+
+editor = "vim"
+
+[clipboard]
+  timeout = "5s" # Set to "0s" or leave blank for no timeout
+ 
+[database]
+  path = "/home/user/kure.db" # Must be absolute
+
+[keyfile]
+  path = "/home/user/secret.key" # Must be absolute
+
+[session]
+  prefix = "kure:~$" 
+  timeout = "10m" # Set to "0s" or leave blank for no timeout

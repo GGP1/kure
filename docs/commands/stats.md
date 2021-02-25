@@ -12,7 +12,6 @@ No flags.
 
 ### Examples
 
-Standard:
 ```
 kure stats
 ```

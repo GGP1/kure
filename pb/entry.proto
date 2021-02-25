@@ -12,11 +12,3 @@ message Entry {
     string notes = 5;
     string expires = 6;
 }
-
-// EntryList is used when listing entries names only, to clean expired entries.
-//
-// Fields and numbers must match with Entry ones.
-message EntryList {
-    string name = 1;
-    string expires = 6;
-}

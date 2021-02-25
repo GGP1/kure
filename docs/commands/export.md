@@ -4,13 +4,15 @@
 
 ## Description
 
-Export entries to other password managers. Format: CSV.
+Export entries to other password managers.
 
-Supported:
-    • Bitwarden
-    • Keepass
-    • Lastpass
-    • 1Password
+This command creates a CSV file with all the entries unencrypted, make sure to delete it after it's used.
+
+Password managers supported:
+- 1Password
+- Bitwarden
+- Keepass/X/XC
+- Lastpass
 
 ## Flags
 

@@ -1,37 +1,26 @@
 ## Use
 
-`kure config [-c create] [-p path]`
+`kure config`
 
 *Aliases*: config, cfg.
 
 ## Description
 
-Read or create the configuration file.
+Configuration file operations. This command will print the configuration file on the terminal.
 
 ### Subcommands
 
-- `kure config test`: Test argon2 performance.
+- `kure config argon2`: Show argon2 parameters being used.
+- `kure config create`: Create a configuration file.
+- `kure config edit`: Edit the current configuration file.
 
 ## Flags 
 
-|  Name     | Shorthand |     Type      |    Default    |         Description          |
-|-----------|-----------|---------------|---------------|------------------------------|
-| create    | c         | bool          | false         | Create a config file         |
-| path      | p         | string        | ""            | Config file path             |
+No flags.
 
 ### Examples
 
 Read configuration file:
 ```
 kure config
-```
-
-Read specifying file path:
-```
-kure config -p path/to/file
-```
-
-Create configuration file:
-```
-kure config -c
 ```

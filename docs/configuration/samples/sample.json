@@ -1,0 +1,16 @@
+{
+    "clipboard": {
+        "timeout": "5s"
+    },
+    "database": {
+      "path": "/home/user/kure.db"
+    },
+    "editor": "vim",
+    "keyfile": {
+      "path": "/home/user/sample.key"
+    },
+    "session": {
+      "prefix": "kure:~$",
+      "timeout": "10m"
+    }
+}

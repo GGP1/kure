@@ -1,6 +1,3 @@
-# Test database
-*.db
-
 # Profiling files
 *.out
 *.pprof
@@ -9,9 +6,11 @@
 # Test binaries
 *.test
 
-# Configuration files
-config.yaml
-config.yml
+# Windows binaries
+*.exe
+
+# GoReleaser
+dist
 
 # TODO file
 TODO.txt

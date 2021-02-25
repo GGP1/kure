@@ -7,15 +7,15 @@ import (
 	"strings"
 )
 
-// Folder represents a system folder.
-type Folder struct {
+// Node represents a system folder or file.
+type Node struct {
 	Name     string
-	Children []*Folder
+	Children []*Node
 }
 
 // Print prints the paths passed as a tree on the console.
 func Print(paths []string) {
-	root := Root(paths)
+	root := Build(paths)
 
 	start := "│  "
 	for i, r := range root.Children {
@@ -30,74 +30,83 @@ func Print(paths []string) {
 	}
 }
 
-// Root returns the tree root.
-func Root(paths []string) *Folder {
-	root := &Folder{}
+// Build constructs the tree and returns the root node.
+func Build(paths []string) *Node {
+	root := &Node{}
 
 	for _, p := range paths {
-		build(root, p)
+		build(root, strings.Split(p, "/"))
 	}
 
 	return root
 }
 
-// build constructs the path tree.
-func build(root *Folder, path string) {
-	child := &Folder{}
+// build constructs the tree.
+//
+// path will be something like [root, folder, subfolder, file]
+func build(root *Node, path []string) {
+	child := &Node{
+		Name: path[0],
+	}
 
-	if !strings.Contains(path, "/") {
-		child.Name = path
+	// len(path) will be never < 1 and if there is only
+	// one element it must be unique as we already verified
+	// it when the user added the record
+	if len(path) == 1 {
 		root.Children = append(root.Children, child)
 		return
 	}
 
-	// In case we want to modify parts[1:] slice in the future we should
-	// use copy() to avoid underlying array unexpected behaviour
-	parts := strings.Split(path, "/")
+	temp := child
+	// Add each child to its corresponding parent
+	for _, name := range path[1:] {
+		c := &Node{Name: name}
+		child.Children = append(child.Children, c)
+		child = c
+	}
+	child = temp
 
-	child.Name = parts[0]
-	remaining := strings.Join(parts[1:], "/")
-
-	// Repeat the process with the remaining parts
-	build(child, remaining)
-
-	// If the root already exists, check heritage to the deepest level
-	// and merge if two parents have the same name
 	for _, r := range root.Children {
+		// If a node already exists, look for matches until the deepest level
 		if r.Name == child.Name {
-			finished := checkHeritage(r, child.Children)
-			if finished {
+			if !foundMatch(r, child.Children) {
+				// If no match was found in a deeper level,
+				// perform the append in this one
 				r.Children = append(r.Children, child.Children...)
 			}
 			return
 		}
 	}
+
+	// child is a new node
 	root.Children = append(root.Children, child)
 }
 
-// checkHeritage checks if two nodes of the tree have the same name
+// foundMatch checks if two nodes of the tree have the same name
 // to merge them once the last level has been checked.
 //
-// It returns a boolean to notify when the recursion has ended, this
-// helps to determine when to append the children to the parent.
-func checkHeritage(parent *Folder, children []*Folder) bool {
+// It returns a boolean to notify whether or not a match was found.
+func foundMatch(parent *Node, children []*Node) bool {
 	for _, p := range parent.Children {
-		for _, s := range children {
-			if p.Name == s.Name {
-				finished := checkHeritage(p, s.Children)
-				if finished {
-					p.Children = append(p.Children, s.Children...)
+		for _, c := range children {
+			// If there is a match repeat the process with their children
+			if p.Name == c.Name {
+				if !foundMatch(p, c.Children) {
+					// If no match was found in a deeper level,
+					// perform the append in this one
+					p.Children = append(p.Children, c.Children...)
 				}
-				return false
+				return true
 			}
 		}
 	}
-	return true
+
+	return false
 }
 
 // printChildren uses recursion for printing every folder children and adds
-// indentation every time it prints the last element of the branch.
-func printChildren(root *Folder, indent, start string) {
+// indentation every time it prints the last element of a branch.
+func printChildren(root *Node, indent, start string) {
 	for i, r := range root.Children {
 		fmt.Print(start)
 

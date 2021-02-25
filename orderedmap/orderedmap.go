@@ -1,23 +1,12 @@
-// Package orderedmap offers an ordered group of key/value pairs stored in a secure way.
+// Package orderedmap offers an ordered group of key/value pairs.
 package orderedmap
 
-import (
-	"container/list"
-	"unsafe"
-
-	"github.com/awnumar/memguard"
-)
+import "container/list"
 
 // Map is a combination of a map and a double linked list.
 type Map struct {
 	mp         map[string]*list.Element
 	linkedList *list.List
-
-	// List of each pair's locked buffer
-	buffers []*memguard.LockedBuffer
-
-	// Count is used to store locked buffers inside "buffers" fixed slice
-	count uint8
 }
 
 type pair struct {
@@ -25,24 +14,15 @@ type pair struct {
 	value string
 }
 
-// New initializes map's fields with the size provided and returns it.
-func New(size int) *Map {
+// New initializes an ordered map and returns it.
+func New() *Map {
 	return &Map{
-		mp:         make(map[string]*list.Element, size),
+		mp:         make(map[string]*list.Element),
 		linkedList: list.New(),
-		buffers:    make([]*memguard.LockedBuffer, size),
-		count:      0,
 	}
 }
 
-// Destroy destroys all pairs' underlying buffers.
-func (m *Map) Destroy() {
-	for _, b := range m.buffers {
-		b.Destroy()
-	}
-}
-
-// Get returns key's correspondent value.
+// Get returns key's value.
 func (m *Map) Get(key string) string {
 	return m.mp[key].Value.(*pair).value
 }
@@ -62,20 +42,10 @@ func (m *Map) Keys() []string {
 
 // Set inserts a new pair at the end of the map.
 func (m *Map) Set(key, value string) {
-	lockedBuf, p := securePair()
-	p.key = key
-	p.value = value
-	memguard.WipeBytes([]byte(value))
+	p := &pair{
+		key:   key,
+		value: value,
+	}
 
 	m.mp[key] = m.linkedList.PushBack(p)
-	m.buffers[m.count] = lockedBuf
-	m.count++
-}
-
-// securePair returns a pair along with the locked buffer where it is allocated.
-func securePair() (*memguard.LockedBuffer, *pair) {
-	s := new(pair)
-	b := memguard.NewBuffer(int(unsafe.Sizeof(*s)))
-
-	return b, (*pair)(unsafe.Pointer(&b.Bytes()[0]))
 }

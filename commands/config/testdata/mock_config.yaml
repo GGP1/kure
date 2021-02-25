@@ -1,0 +1,7 @@
+database:
+  path: test
+
+editor: vim
+
+session:
+  prefix: kure >

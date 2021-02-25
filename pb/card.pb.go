@@ -4,6 +4,8 @@
 // 	protoc        v3.13.0
 // source: card.proto
 
+// option go_package = "github.com/GGP1/kure/pb";
+
 package pb
 
 import (
@@ -30,12 +32,12 @@ type Card struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name         string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Type         string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Number       string `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
-	SecurityCode string `protobuf:"bytes,4,opt,name=security_code,json=securityCode,proto3" json:"security_code,omitempty"`
-	ExpireDate   string `protobuf:"bytes,5,opt,name=expire_date,json=expireDate,proto3" json:"expire_date,omitempty"`
-	Notes        string `protobuf:"bytes,6,opt,name=notes,proto3" json:"notes,omitempty"`
+	Name         string `protobuf:"bytes,1,opt,name=name,proto3" json:"name"`
+	Type         string `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Number       string `protobuf:"bytes,3,opt,name=number,proto3" json:"number"`
+	SecurityCode string `protobuf:"bytes,4,opt,name=security_code,json=securityCode,proto3" json:"security_code"`
+	ExpireDate   string `protobuf:"bytes,5,opt,name=expire_date,json=expireDate,proto3" json:"expire_date"`
+	Notes        string `protobuf:"bytes,6,opt,name=notes,proto3" json:"notes"`
 }
 
 func (x *Card) Reset() {
@@ -126,9 +128,7 @@ var file_card_proto_rawDesc = []byte{
 	0x0a, 0x0b, 0x65, 0x78, 0x70, 0x69, 0x72, 0x65, 0x5f, 0x64, 0x61, 0x74, 0x65, 0x18, 0x05, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x0a, 0x65, 0x78, 0x70, 0x69, 0x72, 0x65, 0x44, 0x61, 0x74, 0x65, 0x12,
 	0x14, 0x0a, 0x05, 0x6e, 0x6f, 0x74, 0x65, 0x73, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05,
-	0x6e, 0x6f, 0x74, 0x65, 0x73, 0x42, 0x19, 0x5a, 0x17, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
-	0x63, 0x6f, 0x6d, 0x2f, 0x47, 0x47, 0x50, 0x31, 0x2f, 0x6b, 0x75, 0x72, 0x65, 0x2f, 0x70, 0x62,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6e, 0x6f, 0x74, 0x65, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (

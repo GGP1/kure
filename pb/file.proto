@@ -9,13 +9,15 @@ message File {
     bytes content = 2;
     int64 size = 3;
     int64 created_at = 4;
+    int64 updated_at = 5;
 }
 
-// Used to display single files on the terminal without handling the content.
+// FileCheap is like File but without the content. It's used to display single files on the terminal.
 //
 // Fields and numbers must match with File ones.
 message FileCheap {
     string name = 1;
     int64 size = 3;
     int64 created_at = 4;
+    int64 updated_at = 5;
 }

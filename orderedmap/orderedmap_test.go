@@ -25,8 +25,7 @@ func Test(t *testing.T) {
 		},
 	}
 
-	m := New(3)
-	defer m.Destroy()
+	m := New()
 
 	// Test Get
 	for _, tc := range cases {

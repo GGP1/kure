@@ -1,17 +1,19 @@
-FROM golang:1.15-alpine as builder
+FROM golang:1.16.0-alpine3.13 as builder
 
-COPY . /go/src/github.com/GGP1/kure
+COPY . /kure
 
-WORKDIR /go/src/github.com/GGP1/kure
+WORKDIR /kure
 
-RUN go get -d -v ./...
-
-RUN go build -o kure -ldflags="-s -w" .
+RUN go install -ldflags="-s -w" .
 
 # ---------------------------------------------
 
-FROM alpine:3.12.1
+FROM alpine:3.13.2
 
-COPY --from=builder /go/src/github.com/GGP1/kure/kure /usr/bin/
+COPY --from=builder /go/bin/kure /usr/bin/
 
-CMD ["kure"]
+RUN apk add --update \
+        vim \
+    && rm -rf /var/cache/apk/*
+
+CMD ["/usr/bin/kure"]

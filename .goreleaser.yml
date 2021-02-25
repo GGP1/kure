@@ -1,0 +1,69 @@
+project_name: kure
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos: 
+      - darwin
+      - linux
+      - windows
+      - freebsd
+      - openbsd
+      - netbsd
+    goarch: 
+      - 386
+      - amd64
+      - arm
+      - arm64
+archives:
+  -
+    name_template: '{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      amd64: 64bit
+      386: 32bit
+      arm: ARM
+      arm64: ARM64
+      darwin: macOS
+      linux: Linux
+      windows: Windows
+      openbsd: OpenBSD
+      netbsd: NetBSD
+      freebsd: FreeBSD
+      dragonfly: DragonFlyBSD
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Tag }}_checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - 'typo'
+      - 'Merge pull request'
+      - 'Merge branch'
+
+brews:
+  - 
+    tap:
+      owner: GGP1
+      name: homebrew-tap
+    folder: Formula
+    homepage: https://github.com/GGP1/kure
+    description: CLI password manager
+    license: Apache 2.0
+
+scoop:
+  bucket:
+    owner: GGP1
+    name: scoop-bucket
+  homepage:  https://github.com/GGP1/kure
+  description: CLI password manager
+  license: Apache 2.0

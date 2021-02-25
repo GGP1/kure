@@ -1,6 +1,6 @@
 ## Use 
 
-`kure card ls <name> [-f filter] [-H hide]`
+`kure card ls <name> [-f filter] [-q qr] [-s show]`
 
 ## Description
 
@@ -8,21 +8,22 @@ List cards.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |    Description     |
-|-----------|-----------|---------------|---------------|--------------------|
-| filter    | f         | bool          | false         | Filter cards       |
-| hide      | H         | bool          | false         | Hide card CVC      |
+|  Name     | Shorthand |     Type      |    Default    |                 Description                   |
+|-----------|-----------|---------------|---------------|-----------------------------------------------|
+| filter    | f         | bool          | false         | Filter cards                                  |
+| qr        | q         | bool          | false         | Display card number QR code on the terminal   |
+| show      | s         | bool          | false         | Show card number and security code            |
 
 ### Examples
 
-List a specific card hiding CVC:
+List a card showin sensitive information:
 ```
-kure card ls sample -H
+kure card ls Sample -s
 ```
 
-Filter among cards:
+Filter:
 ```
-kure file ls ple -f
+kure file ls Sample -f
 ```
 
 List all cards;

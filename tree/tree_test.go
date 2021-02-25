@@ -35,7 +35,7 @@ func TestTreeStructure(t *testing.T) {
 		"The Lord of the Rings/The return of the king",
 	}
 
-	root := tree.Root(paths)
+	root := tree.Build(paths)
 	folders := make(map[string]struct{}, len(paths))
 
 	for _, p := range paths {
@@ -62,5 +62,20 @@ func TestTreeStructure(t *testing.T) {
 				t.Errorf("Expected %q branch to have a child named %q", r.Name, r.Children[0])
 			}
 		}
+	}
+}
+
+func BenchmarkTree(b *testing.B) {
+	paths := []string{
+		"bench/mark/tree",
+		"root",
+		"multi/planetary/life",
+		"go/src/github.com/GGP1/kure",
+		"super/long/path/contaning/folders/subfolders/and/files",
+		"go/src/github.com/<username>/<project>",
+	}
+
+	for i := 0; i < b.N; i++ {
+		tree.Build(paths)
 	}
 }

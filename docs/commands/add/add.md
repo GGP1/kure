@@ -1,6 +1,6 @@
 ## Use
 
-`kure add <name> [-c custom] [-l length] [-f format] [-i include] [-e exclude] [-r repeat]`
+`kure add <name> [-c custom] [-l length] [-L levels] [-i include] [-e exclude] [-r repeat]`
 
 *Aliases*: add, create, new.
 
@@ -18,25 +18,24 @@ Create an entry using a password.
 |-----------|-----------|---------------|---------------|----------------------------------------------|
 | custom    | c         | bool          | false         | Create an entry with a custom password       |
 | length    | l         | uint64        | 0             | Pasword length                               |
-| format    | f         | []string      | nil           | Password format (1,2,3,4,5)                  |
+| levels    | L         | []int         | [1,2,3,4,5]   | Password levels                              |
 | include   | i         | string        | ""            | Characters to include in the password        |
-| exclude   | e         | string        | ""            | Characters to exclude from the password      |
-| repeat    | r         | bool          | true          | Character repetition                         |
+| exclude   | e         | string        | ""            | Characters to exclude in the password        |
+| repeat    | r         | bool          | false         | Character repetition                         |
 
 ### Format levels
 
-> Default is [1, 2, 3, 4, 5]. Extended UTF-8 characters may mess the terminal up.
+> Default is [1, 2, 3, 4, 5].
 
 1. Lowercases (a, b, c...)
 2. Uppercases (A, B, C...)
 3. Digits (0, 1, 2...)
 4. Space
 5. Special (!, $, %...)
-6. Extended UTF-8 (¡, ¢, £, ¤, ¥)
 
 ### Expires
 
-Valid time formats are: 
+Valid time formats are:
 
 • **ISO**: 2006/01/02 or 2006-01-02.
 
@@ -48,12 +47,12 @@ Valid time formats are:
 
 Standard:
 ```
-kure add Sample --length 10 --format 1,2,3,4,5
+kure add Sample --length 10 --levels 1,2,3,4,5
 ```
 
 Using shorthands and allowing repetition:
 ```
-kure add Sample -l 10 -f 1,2,3,4,5 -r
+kure add Sample -l 10 -L 1,2,3,4,5 -r
 ```
 
 Using a custom password:

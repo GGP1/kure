@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/pb"
-	"github.com/awnumar/memguard"
 
+	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
@@ -14,39 +15,36 @@ import (
 
 func TestCard(t *testing.T) {
 	db := setContext(t)
-	defer db.Close()
 
-	name := "test"
-
-	buf, c := pb.SecureCard()
-	c.Name = name
-	c.Type = "debit"
-	c.Number = "4403650939814064"
-	c.SecurityCode = "1234"
-	c.ExpireDate = "16/2024"
+	c := &pb.Card{
+		Name:         "test",
+		Type:         "debit",
+		Number:       "4403650939814064",
+		SecurityCode: "1234",
+		ExpireDate:   "16/2024",
+	}
 
 	// Create destroys the buffer, hence we cannot use their fields anymore
-	t.Run("Create", create(db, buf, c))
-	t.Run("Get", get(db, name))
+	t.Run("Create", create(db, c))
+	t.Run("Get", get(db, c.Name))
 	t.Run("List", list(db))
-	t.Run("List fastest", listFastest(db))
 	t.Run("List names", listNames(db))
-	t.Run("Remove", remove(db, name))
+	t.Run("Remove", remove(db, c.Name))
 }
 
-func create(db *bolt.DB, buf *memguard.LockedBuffer, card *pb.Card) func(*testing.T) {
+func create(db *bolt.DB, c *pb.Card) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Create(db, buf, card); err != nil {
-			t.Fatalf("Create() failed: %v", err)
+		if err := Create(db, c); err != nil {
+			t.Error(err)
 		}
 	}
 }
 
 func get(db *bolt.DB, name string) func(*testing.T) {
 	return func(t *testing.T) {
-		_, got, err := Get(db, name)
+		got, err := Get(db, name)
 		if err != nil {
-			t.Fatalf("Get() failed: %v", err)
+			t.Error(err)
 		}
 
 		// They aren't DeepEqual
@@ -58,9 +56,9 @@ func get(db *bolt.DB, name string) func(*testing.T) {
 
 func list(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
-		_, cards, err := List(db)
+		cards, err := List(db)
 		if err != nil {
-			t.Fatalf("List() failed: %v", err)
+			t.Error(err)
 		}
 
 		if len(cards) == 0 {
@@ -69,19 +67,11 @@ func list(db *bolt.DB) func(*testing.T) {
 	}
 }
 
-func listFastest(db *bolt.DB) func(*testing.T) {
-	return func(t *testing.T) {
-		if !ListFastest(db) {
-			t.Error("Failed decrypting cards")
-		}
-	}
-}
-
 func listNames(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
 		cards, err := ListNames(db)
 		if err != nil {
-			t.Fatalf("List() failed: %v", err)
+			t.Error(err)
 		}
 
 		if len(cards) == 0 {
@@ -100,99 +90,105 @@ func listNames(db *bolt.DB) func(*testing.T) {
 func remove(db *bolt.DB, name string) func(*testing.T) {
 	return func(t *testing.T) {
 		if err := Remove(db, name); err != nil {
-			t.Fatalf("Remove() failed: %v", err)
+			t.Error(err)
 		}
 	}
 }
 
 func TestCreateErrors(t *testing.T) {
 	db := setContext(t)
-	defer db.Close()
 
-	lockedBuf, c := pb.SecureCard()
-	if err := Create(db, lockedBuf, c); err == nil {
-		t.Error("Expected 'save card' error, got nil")
+	cases := []struct {
+		desc string
+		name string
+	}{
+		{
+			desc: "Invalid name",
+			name: "",
+		},
+		{
+			desc: "Null characters",
+			name: string('\x00'),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			if err := Create(db, &pb.Card{Name: tc.name}); err == nil {
+				t.Error("Expected an error and got nil")
+			}
+		})
 	}
 }
 
 func TestGetError(t *testing.T) {
 	db := setContext(t)
-	defer db.Close()
 
-	_, _, err := Get(db, "non-existent")
-	if err == nil {
+	if _, err := Get(db, "non-existent"); err == nil {
 		t.Error("Expected 'does not exist' error, got nil")
 	}
 }
 
-func TestBucketError(t *testing.T) {
+func TestListNameNil(t *testing.T) {
 	db := setContext(t)
-	defer db.Close()
-
-	name := "nil bucket"
-	buf, card := pb.SecureCard()
-	card.Name = name
-
-	db.Update(func(tx *bolt.Tx) error {
-		tx.DeleteBucket([]byte("kure_card"))
-		return nil
+	err := db.Update(func(tx *bolt.Tx) error {
+		return tx.DeleteBucket(cardBucket)
 	})
+	if err != nil {
+		t.Fatalf("Failed deleting the card bucket: %v", err)
+	}
 
-	if err := Create(db, buf, card); err == nil {
-		t.Error("Create() didn't return 'invalid bucket' error")
-	}
-	_, _, err := Get(db, name)
-	if err == nil {
-		t.Error("Get() didn't return 'invalid bucket' error")
-	}
-	_, _, err = List(db)
-	if err == nil {
-		t.Error("List() didn't return 'invalid bucket' error")
-	}
-	_, err = ListNames(db)
-	if err == nil {
-		t.Error("ListNames() didn't return 'invalid bucket' error")
-	}
-	if err := Remove(db, name); err == nil {
-		t.Error("Remove() didn't return 'invalid bucket' error")
+	list, err := ListNames(db)
+	if err != nil || list != nil {
+		t.Errorf("Expected to receive a nil list and error, got: %v list, %v error", list, err)
 	}
 }
 
-func TestDecryptError(t *testing.T) {
+func TestCryptErrors(t *testing.T) {
 	db := setContext(t)
-	defer db.Close()
 
-	name := "test decrypt error"
-	buf, card := pb.SecureCard()
-	card.Name = name
-
-	if err := Create(db, buf, card); err != nil {
+	name := "crypt-errors"
+	if err := Create(db, &pb.Card{Name: name}); err != nil {
 		t.Fatal(err)
 	}
 
-	viper.Set("user.password", nil)
+	// Try to get the card with another password
+	viper.Set("auth.password", memguard.NewEnclave([]byte("invalid")))
 
-	_, _, err := Get(db, name)
-	if err == nil {
-		t.Error("Get() didn't return 'decrypt card' error")
+	if _, err := Get(db, name); err == nil {
+		t.Error("Expected Get() to fail but it didn't")
 	}
-	_, _, err = List(db)
-	if err == nil {
-		t.Error("List() didn't return 'decrypt card' error")
+	if _, err := List(db); err == nil {
+		t.Error("Expected List() to fail but it didn't")
 	}
-	if ListFastest(db) {
-		t.Error("Expected ListFastest() to return false and returned true")
+}
+
+func TestProtoErrors(t *testing.T) {
+	db := setContext(t)
+
+	name := "unformatted"
+	err := db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(cardBucket))
+		buf := make([]byte, 64)
+		encBuf, _ := crypt.Encrypt(buf)
+		return b.Put([]byte(name), encBuf)
+	})
+	if err != nil {
+		t.Fatalf("Failed writing invalid type: %v", err)
+	}
+
+	if _, err := Get(db, name); err == nil {
+		t.Error("Expected Get() to fail but it didn't")
+	}
+	if _, err := List(db); err == nil {
+		t.Error("Expected List() to fail but it didn't")
 	}
 }
 
 func TestKeyError(t *testing.T) {
 	db := setContext(t)
-	defer db.Close()
 
-	buf, card := pb.SecureCard()
-	card.Name = ""
-
-	if err := Create(db, buf, card); err == nil {
+	if err := Create(db, &pb.Card{Name: ""}); err == nil {
 		t.Error("Create() didn't fail")
 	}
 }
@@ -204,9 +200,14 @@ func setContext(t *testing.T) *bolt.DB {
 	}
 
 	viper.Reset()
-	password := memguard.NewBufferFromBytes([]byte("test"))
-	defer password.Destroy()
-	viper.Set("user.password", password.Seal())
+	// Reduce argon2 parameters to speed up tests
+	auth := map[string]interface{}{
+		"password":   memguard.NewEnclave([]byte("1")),
+		"iterations": 1,
+		"memory":     1,
+		"threads":    1,
+	}
+	viper.Set("auth", auth)
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		bucket := "kure_card"
@@ -219,6 +220,12 @@ func setContext(t *testing.T) *bolt.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Fatalf("Failed closing the database: %v", err)
+		}
+	})
 
 	return db
 }

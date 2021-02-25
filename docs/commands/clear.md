@@ -1,18 +1,15 @@
 ## Use
 
-`kure clear [-b both] [-c clipboard] [-t terminal]`
+`kure clear [-c clipboard] [-t terminal]`
 
 ## Description
 
-Manually clean clipboard, terminal (and its history) or both of them. Kure clears all by default.
-
-Windows users must clear the history manually with ALT+F7, executing "cmd" command or by re-opening the cmd (as it saves session history only).
+Manually clear the clipboard, terminal or both of them. Kure clears all by default.
 
 ## Flags 
 
 |  Name     | Shorthand |     Type      |    Default    |           Description             |
 |-----------|-----------|---------------|---------------|-----------------------------------|
-| both      | b         | bool          | true          | Clear both clipboard and terminal |
 | clipboard | c         | bool          | false         | Clear clipboard                   |
 | terminal  | t         | bool          | false         | Clear terminal                    |
 
@@ -22,7 +19,7 @@ Windows users must clear the history manually with ALT+F7, executing "cmd" comma
 
 Clear both clipboard and terminal:
 ```
-kure clear -b
+kure clear
 ```
 
 Clear clipboard:

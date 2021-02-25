@@ -10,6 +10,8 @@ import (
 )
 
 func TestCrypt(t *testing.T) {
+	reduceArgon2Params(t)
+
 	cases := []struct {
 		data     string
 		password string
@@ -19,8 +21,7 @@ func TestCrypt(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		viper.Reset()
-		viper.Set("user.password", memguard.NewEnclave([]byte(tc.password)))
+		viper.Set("auth.password", memguard.NewEnclave([]byte(tc.password)))
 
 		ciphertext, err := Encrypt([]byte(tc.data))
 		if err != nil {
@@ -42,81 +43,116 @@ func TestCrypt(t *testing.T) {
 	}
 }
 
-func TestCryptError(t *testing.T) {
-	_, err := Encrypt(nil)
-	if err == nil {
-		t.Error("Expected Encrypt() to fail but got nil")
+func TestInvalidData(t *testing.T) {
+	if _, err := Encrypt(nil); err == nil {
+		t.Error("Expected Encrypt() to fail but it didn't")
 	}
 
-	_, err = Decrypt(nil)
-	if err == nil {
-		t.Error("Expected Decrypt() to fail but got nil")
+	if _, err := Decrypt(nil); err == nil {
+		t.Error("Expected Decrypt() to fail but it didn't")
 	}
 }
 
-func TestEncryptInvalidPassword(t *testing.T) {
-	viper.Reset()
-
-	_, err := Encrypt([]byte("test_fail"))
-	if err == nil {
-		t.Error("Expected Encrypt() to fail but got nil")
-	}
-}
-
-func TestDecryptInvalidPassword(t *testing.T) {
-	viper.Reset()
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Expected Decrypt() to fail but got nil")
-		}
-	}()
-
-	Decrypt([]byte("test_fail"))
-}
-
-func TestDeriveKey(t *testing.T) {
-	salt := make([]byte, 32)
-	_, err := rand.Read(salt)
-	if err != nil {
-		t.Fatalf("Failed generating salt: %v", err)
-	}
-
-	key := memguard.NewEnclave([]byte("test"))
-
+func TestDecryptPanics(t *testing.T) {
 	cases := []struct {
 		desc string
 		key  *memguard.Enclave
-		salt []byte
+		data string
 	}{
 		{
-			desc: "Predefined random salt",
-			key:  key,
-			salt: salt,
+			desc: "Invalid password",
+			key:  memguard.NewEnclave(nil),
+			data: "test_invalid_password",
 		},
 		{
-			desc: "Generating random salt",
-			key:  key,
-			salt: nil,
+			desc: "Slice bounds out of range",
+			key:  memguard.NewEnclave([]byte("test")),
+			data: "short",
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			password, salt, err := deriveKey(tc.key, tc.salt)
+			defer func() {
+				if r := recover(); r == nil {
+					t.Error("Expected Decrypt() to panic but it didn't")
+				}
+			}()
+
+			viper.Set("auth.password", tc.key)
+
+			Decrypt([]byte(tc.data))
+		})
+	}
+}
+
+func TestDecryptError(t *testing.T) {
+	viper.Set("auth.password", memguard.NewEnclave([]byte("test")))
+
+	// Data must be between 32 and 45 bytes long to fail
+	data := []byte("t8aNDgbSxlnPn ehxsYFnuDwzU4eqgydh2k")
+
+	if _, err := Decrypt(data); err == nil {
+		t.Error("Expected Decrypt() to fail and got nil")
+	}
+}
+
+func TestDeriveKey(t *testing.T) {
+	reduceArgon2Params(t)
+
+	salt := make([]byte, 32)
+	if _, err := rand.Read(salt); err != nil {
+		t.Fatalf("Failed generating salt: %v", err)
+	}
+
+	key := memguard.NewEnclave([]byte("test"))
+	viper.Set("auth.password", key)
+
+	cases := []struct {
+		desc        string
+		salt        []byte
+		setDefaults func()
+	}{
+		{
+			desc: "Predefined random salt",
+			salt: salt,
+		},
+		{
+			desc: "Generating random salt",
+			salt: nil,
+		},
+		{
+			desc: "Argon2 custom parameters",
+			salt: nil,
+			setDefaults: func() {
+				viper.Set("auth.iterations", "1")
+				viper.Set("auth.memory", "5000")
+				viper.Set("auth.threads", "4")
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			if tc.setDefaults != nil {
+				tc.setDefaults()
+			}
+
+			pwd, salt, err := deriveKey(tc.salt)
 			if err != nil {
 				t.Fatal(err)
 			}
+			password := pwd.Bytes()
 
 			if len(password) != 32 {
 				t.Errorf("Expected a 32 byte long password, got %d bytes", len(password))
 			}
 
-			if len(salt) != 32 {
+			if len(salt) != saltSize {
 				t.Errorf("Expected a 32 byte long salt, got %d bytes", len(salt))
 			}
 
-			keyBuf, err := tc.key.Open()
+			keyBuf, err := key.Open()
 			if err != nil {
 				t.Errorf("Failed opening key enclave: %v", err)
 			}
@@ -126,4 +162,13 @@ func TestDeriveKey(t *testing.T) {
 			}
 		})
 	}
+}
+
+func reduceArgon2Params(t *testing.T) {
+	t.Helper()
+
+	// Reduce argon2 parameters to speed up tests
+	viper.Set("auth.memory", 1)
+	viper.Set("auth.iterations", 1)
+	viper.Set("auth.threads", 1)
 }

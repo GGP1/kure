@@ -12,7 +12,7 @@ Copy entry credentials to clipboard.
 
 |  Name     | Shorthand |     Type      |    Default    |         Description          |
 |-----------|-----------|---------------|---------------|------------------------------|
-| timeout   | t         | duration      | 0             | Clipboard cleaning timeout   |
+| timeout   | t         | time.Duration | 0             | Clipboard clearing timeout   |
 | username  | u         | bool          | false         | Copy entry username          |
 
 ### Timeout units
@@ -31,7 +31,7 @@ Copy username:
 kure copy Github -u
 ```
 
-Copy password and clean clipboard after 5 minutes:
+Copy password and clear clipboard after 5 minutes:
 ```
 kure copy Github -t 5m
 ```

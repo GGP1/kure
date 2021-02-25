@@ -10,10 +10,10 @@ Copy card number or security code.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |                  Description                  |
-|-----------|-----------|---------------|---------------|-----------------------------------------------|
-| cvc       | c         | bool          | false         | Copy card security code                       |
-| timeout   | t         | duration      | 0             | Set a time until the clipboard is cleaned     |
+|  Name     | Shorthand |     Type      |    Default    |         Description           |
+|-----------|-----------|---------------|---------------|-------------------------------|
+| cvc       | c         | bool          | false         | Copy card security code       |
+| timeout   | t         | time.Duration | 0             | Clipboard clearing timeout    |
 
 ### Timeout units
 

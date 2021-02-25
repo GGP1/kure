@@ -1,6 +1,6 @@
 ## Use
 
-`kure add phrase <name> [-l length] [-s separator] [-i include] [-e exclude] [list]`
+`kure add phrase <name> [-l length] [-s separator] [-i include] [-e exclude] [-L list]`
 
 *Aliases*: phrase, passphrase, p.
 
@@ -14,13 +14,13 @@ Create an entry using a passphrase instead of a password.
 |-----------|-----------|---------------|---------------|-----------------------------------------------------------------------|
 | length    | l         | uint64        | 1             | Passphrase length                                                     |
 | separator | s         | string        | " " (space)   | Set the character that separates each word                            |
-| include   | i         | []string      | nil           | Characters to include in the password                                 |
-| exclude   | e         | []string      | nil           | Characters to exclude from the password                               |
-| list      |           | string        | "NoList"      | Choose passphrase generating method (NoList, WordList, SyllableList)  |
+| include   | i         | []string      | nil           | Words to include in the passphrase                                    |
+| exclude   | e         | []string      | nil           | Words to exclude in the passphrase                                    |
+| list      | L         | string        | "WordList"    | Choose passphrase generating method (NoList, WordList, SyllableList)  |
 
 ### Expiration
 
-Valid time formats are: 
+Valid time formats are:
 
 • **ISO**: 2006/01/02 or 2006-01-02.
 
@@ -30,17 +30,17 @@ Valid time formats are:
 
 ### Examples
 
-Passphrase without a list (default):
+Passphrase without a list:
 ```
 kure add phrase Sample -l 5 -s / -i atoll, kure
 ```
 
-Passphrase using a word list:
+Passphrase using a word list (default):
 ```
-kure add phrase Sample -l 7 --list WordList
+kure add phrase Sample -l 7 -L WordList
 ```
 
 Passphrase using a syllable list:
 ```
-kure add phrase Sample -l 12 -s = --list SyllableList
+kure add phrase Sample -l 12 -s = -L SyllableList
 ```

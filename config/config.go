@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -16,60 +15,61 @@ func Load() error {
 	switch {
 	case envPath != "":
 		ext := filepath.Ext(envPath)
-		if ext == "" {
-			return errors.New("\"KURE_CONFIG\" env var must have an extension")
+		if ext == "" || ext == "." {
+			return errors.New("\"KURE_CONFIG\" environment variable must have an extension")
 		}
 
-		viper.SetConfigFile(envPath)
 		viper.SetConfigType(ext[1:])
+		viper.SetConfigFile(envPath)
 
 	default:
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return errors.Wrap(err, "couldn't find user home directory")
+			return errors.Wrap(err, "couldn't find the home directory")
+		}
+		home = filepath.Join(home, ".kure")
+
+		if err := os.MkdirAll(home, 0600); err != nil {
+			return errors.Wrap(err, "couldn't create the configuration directory")
 		}
 
-		setDefaults()
-		viper.SetConfigName(".kure")
+		configPath := filepath.Join(home, "kure.yaml")
 		viper.SetConfigType("yaml")
-		viper.Set("database.path", home)
-		viper.Set("database.name", "kure.db")
 
-		home = filepath.Join(home, ".kure.yaml")
-
-		_, err = os.Stat(home)
-		if err != nil {
+		if _, err := os.Stat(configPath); err != nil {
 			if os.IsNotExist(err) {
-				if err := viper.SafeWriteConfigAs(home); err != nil {
-					return errors.Wrap(err, "failed writing config file")
+				setDefaults(filepath.Join(home, "kure.db"))
+				if err := viper.WriteConfigAs(configPath); err != nil {
+					return errors.Wrap(err, "couldn't write the configuration file")
 				}
 			} else {
 				return err
 			}
 		}
 
-		viper.SetConfigFile(home)
+		viper.SetConfigFile(configPath)
 	}
 
-	viper.AutomaticEnv()
-
+	viper.SetConfigPermissions(0600)
 	if err := viper.ReadInConfig(); err != nil {
-		return errors.Wrap(err, "failed reading config")
+		return errors.Wrap(err, "couldn't read the configuration")
+	}
+
+	if viper.InConfig("auth") {
+		return errors.New("found invalid key in the configuration file: \"auth\"")
 	}
 
 	return nil
 }
 
-func setDefaults() {
+func setDefaults(dbPath string) {
 	var defaults = map[string]interface{}{
-		"database.path":     "",
-		"database.name":     "kure",
-		"entry.format":      []int{1, 2, 3, 4, 5},
-		"entry.repeat":      true,
-		"http.port":         4000,
-		"argon2.iterations": 1,
-		"argon2.memory":     1048576,
-		"argon2.threads":    runtime.NumCPU(),
+		"clipboard.timeout": "0s",
+		"database.path":     dbPath,
+		"editor":            "vim",
+		"keyfile.path":      "",
+		"session.prefix":    "kure:~ $",
+		"session.timeout":   "0s",
 	}
 
 	for k, v := range defaults {

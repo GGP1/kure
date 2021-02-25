@@ -1,6 +1,6 @@
 ## Use
 
-`kure ls <name> [-f filter] [-H hide] [-q qr]`
+`kure ls <name> [-f filter] [-q qr] [-s show]`
 
 *Aliases*: ls, entries.
 
@@ -8,30 +8,31 @@
 
 List entries.
 
+> Listing all the entries does not check for expired entries, this decision was taken to prevent high loads when the number of entries is elevated. Listing a single entry does notifies if it is expired.
+
 ## Flags 
 
 |  Name     | Shorthand |     Type      |    Default    |                                  Description                                         |
 |-----------|-----------|---------------|---------------|--------------------------------------------------------------------------------------|
 | filter    | f         | bool          | false         | Filter entries                                                                       |
-| hide      | H         | bool          | false         | Hide entries passwords                                                               |
 | qr        | q         | bool          | false         | Show the password QR code on the terminal (non-available when listing all entries)   |
-
+| show      | s         | bool          | false         | Show entry password                                                                  |
 
 ### Examples
 
 List an entry:
 ```
-kure ls Reddit
+kure ls Sample
 ```
 
-List an entry hiding the password and creating a qr code image:
+List one and show sensitive information:
 ```
-kure ls StackOverflow -H -q
+kure ls Sample -s
 ```
 
-Filter among entries:
+Filter:
 ```
-kure ls bank -f
+kure ls Sample -f
 ```
 
 List all entries:

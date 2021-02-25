@@ -8,8 +8,9 @@ Card operations.
 
 ## Subcommands
 
+- `kure card add`: Add a card.
 - `kure card copy`: Copy card number or cvc.
-- `kure card create`: Create a card.
+- `kure card edit`: Edit a card.
 - `kure card list`: List cards.
 - `kure card rm`: Remove a card.
 

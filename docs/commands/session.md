@@ -10,9 +10,10 @@ and stored inside a locked buffer, decrypted when needed and destroyed right aft
 The user can set a timeout to automatically close the session after *X* amount of time. By default it never ends.
 
 Once into the session:
-• it's optional to use the word "kure" to run a command.
-• type "timeout" to see the time left.
-• type "exit" or press Ctrl+C to quit.
+- it's optional to use the word "kure" to run a command.
+- type "timeout" to see the time left.
+- type "exit" or press Ctrl+C to quit.
+- type "pwd" to get the current working directory.
 
 ### Flags
 
@@ -37,12 +38,17 @@ Run a session without timeout and using "kure:~$" as the prefix
 kure session -l kure:~$
 ```
 
-Show the session time left (once into one)
+Show the session time left (session running)
 ```
 timeout
 ```
 
-Exit the session
+Show current directory (session running)
+```
+pwd
+```
+
+Exit the session (session running)
 ```
 exit
 ```

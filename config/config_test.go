@@ -57,6 +57,7 @@ func TestLoadErrors(t *testing.T) {
 		path string
 	}{
 		{desc: "Invalid path", path: "invalid_file.yaml"},
+		{desc: "Invalid extension", path: "invalid_extension"},
 		{desc: "Home path error", path: ""},
 	}
 
@@ -89,7 +90,7 @@ func cleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := os.Remove(filepath.Join(home, ".kure.yaml")); err != nil {
+	if os.RemoveAll(filepath.Join(home, ".kure")); err != nil {
 		t.Fatal(err)
 	}
 }
