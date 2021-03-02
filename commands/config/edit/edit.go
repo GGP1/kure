@@ -6,10 +6,10 @@ import (
 
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/config"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -35,7 +35,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 func runEdit(opts *editOptions) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		path := viper.ConfigFileUsed()
+		path := config.FileUsed()
 
 		f, err := os.OpenFile(path, os.O_RDWR, 0600)
 		if err != nil {

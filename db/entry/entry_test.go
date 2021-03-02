@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -155,7 +155,7 @@ func TestCryptErrors(t *testing.T) {
 	}
 
 	// Try to get the entry with other password
-	viper.Set("auth.password", memguard.NewEnclave([]byte("invalid")))
+	config.Set("auth.password", memguard.NewEnclave([]byte("invalid")))
 
 	if _, err := Get(db, name); err == nil {
 		t.Error("Expected Get() to fail but it didn't")
@@ -216,7 +216,7 @@ func setContext(t *testing.T) *bolt.DB {
 		t.Fatalf("Failed connecting to the database: %v", err)
 	}
 
-	viper.Reset()
+	config.Reset()
 	// Reduce argon2 parameters to speed up tests
 	auth := map[string]interface{}{
 		"password":   memguard.NewEnclave([]byte("1")),
@@ -224,7 +224,7 @@ func setContext(t *testing.T) *bolt.DB {
 		"memory":     1,
 		"threads":    1,
 	}
-	viper.Set("auth", auth)
+	config.Set("auth", auth)
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		bucket := "kure_entry"

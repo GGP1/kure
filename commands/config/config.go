@@ -11,10 +11,10 @@ import (
 	argon2cmd "github.com/GGP1/kure/commands/config/argon2"
 	"github.com/GGP1/kure/commands/config/create"
 	"github.com/GGP1/kure/commands/config/edit"
+	"github.com/GGP1/kure/config"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -40,7 +40,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 
 func runConfig(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		path := viper.ConfigFileUsed()
+		path := config.FileUsed()
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return errors.Wrap(err, "reading configuration file")

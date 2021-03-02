@@ -4,7 +4,7 @@ By default Kure will read the file at `$HOME/.kure/kure.yaml` or the one specifi
 
 Paths inside it **MUST** be **absolute**.
 
-*Formats supported*: JSON, TOML, YAML, HCL, envfile and Java properties. [Samples](https://github.com/GGP1/kure/tree/master/docs/configuration/samples).
+*Formats supported*: JSON, TOML, YAML. [Samples](https://github.com/GGP1/kure/tree/master/docs/configuration/samples).
 
 #### Helpful commands
 1.  [`kure config`](https://github.com/GGP1/kure/tree/master/docs/commands/config/config.md) -> Read current file

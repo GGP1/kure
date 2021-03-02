@@ -4,8 +4,7 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
-
-	"github.com/spf13/viper"
+	"github.com/GGP1/kure/config"
 )
 
 func TestEditErrors(t *testing.T) {
@@ -25,7 +24,7 @@ func TestEditErrors(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			viper.SetConfigFile(tc.path)
+			config.SetFile(tc.path)
 
 			if err := cmd.Execute(); err == nil {
 				t.Error("Expected an error and got nil")

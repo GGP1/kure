@@ -52,6 +52,10 @@ func (s *sig) KeepAlive() {
 func (s *sig) Kill() {
 	atomic.StoreInt32(&s.keepAlive, 0)
 	s.interrupt <- os.Kill
+
+	// Block and wait for the program to exit
+	block := make(chan struct{})
+	<-block
 }
 
 // Listen listens for a signal to release resources, delete any sensitive information

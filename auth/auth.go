@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/db/auth"
 	authDB "github.com/GGP1/kure/db/auth"
@@ -18,7 +19,6 @@ import (
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -32,7 +32,7 @@ const keyfilePath string = "keyfile.path"
 func Login(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		// If auth is not nil it means the user is already logged in (session)
-		if auth := viper.Get("auth"); auth != nil {
+		if auth := config.Get("auth"); auth != nil {
 			return nil
 		}
 
@@ -112,9 +112,9 @@ func askArgon2Params(r io.Reader) (iterations, memory, threads uint32, err error
 
 	fmt.Println("Set argon2 parameters, leave blank to use the default value")
 	fmt.Println("For more information visit https://github.com/GGP1/kure/wiki/Authentication")
-	scanner := bufio.NewScanner(r)
+	reader := bufio.NewReader(r)
 
-	if iter := cmdutil.Scanln(scanner, " Iterations"); iter != "" {
+	if iter := cmdutil.Scanln(reader, " Iterations"); iter != "" {
 		i, err := strconv.Atoi(iter)
 		if err != nil || i < 1 {
 			return 0, 0, 0, errors.New("invalid iterations number")
@@ -122,7 +122,7 @@ func askArgon2Params(r io.Reader) (iterations, memory, threads uint32, err error
 		iterations = uint32(i)
 	}
 
-	if mem := cmdutil.Scanln(scanner, " Memory"); mem != "" {
+	if mem := cmdutil.Scanln(reader, " Memory"); mem != "" {
 		m, err := strconv.Atoi(mem)
 		if err != nil || m < 1 {
 			return 0, 0, 0, errors.New("invalid memory number")
@@ -130,7 +130,7 @@ func askArgon2Params(r io.Reader) (iterations, memory, threads uint32, err error
 		memory = uint32(m)
 	}
 
-	if th := cmdutil.Scanln(scanner, " Threads"); th != "" {
+	if th := cmdutil.Scanln(reader, " Threads"); th != "" {
 		t, err := strconv.Atoi(th)
 		if err != nil || t < 1 {
 			return 0, 0, 0, errors.New("invalid threads number")
@@ -148,13 +148,13 @@ func askKeyfile(r io.Reader) (bool, error) {
 	if cmdutil.Confirm(r, "Would you like to use a key file?") {
 		use = true
 
-		if viper.GetString(keyfilePath) != "" {
+		if config.GetString(keyfilePath) != "" {
 			if !cmdutil.Confirm(r,
 				"Would you like to use the path specified in the configuration file?") {
 
 				// Overwrite the path value in the configuration file
-				viper.Set(keyfilePath, "")
-				if err := viper.WriteConfigAs(viper.ConfigFileUsed()); err != nil {
+				config.Set(keyfilePath, "")
+				if err := config.Write(config.FileUsed(), false); err != nil {
 					return false, errors.Wrap(err, "writing the configuration file")
 				}
 			}
@@ -165,11 +165,9 @@ func askKeyfile(r io.Reader) (bool, error) {
 }
 
 func combineKeys(r io.Reader, password *memguard.Enclave) (*memguard.Enclave, error) {
-	path := viper.GetString(keyfilePath)
+	path := config.GetString(keyfilePath)
 	if path == "" {
-		fmt.Print("Enter key file path: ")
-		fmt.Fscanln(r, &path)
-
+		path = cmdutil.Scanln(bufio.NewReader(r), "Enter key file path")
 		path = strings.Trim(path, "\"")
 		if path == "" || path == "." {
 			return nil, errors.New("invalid key file path")
@@ -209,5 +207,5 @@ func setAuthToConfig(password *memguard.Enclave, params auth.Parameters) {
 		"memory":     params.Memory,
 		"threads":    params.Threads,
 	}
-	viper.Set("auth", auth)
+	config.Set("auth", auth)
 }

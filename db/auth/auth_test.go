@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GGP1/kure/config"
+
 	"github.com/awnumar/memguard"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -118,7 +119,7 @@ func setContext(t *testing.T) *bolt.DB {
 		t.Fatalf("Failed connecting to the database: %v", err)
 	}
 
-	viper.Reset()
+	config.Reset()
 	// Reduce argon2 parameters to speed up tests
 	auth := map[string]interface{}{
 		"password":   memguard.NewEnclave([]byte("1")),
@@ -126,7 +127,7 @@ func setContext(t *testing.T) *bolt.DB {
 		"memory":     1,
 		"threads":    1,
 	}
-	viper.Set("auth", auth)
+	config.Set("auth", auth)
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		tx.DeleteBucket(authBucket)
@@ -152,7 +153,7 @@ func setContextB(b *testing.B) *bolt.DB {
 		b.Fatalf("Failed connecting to the database: %v", err)
 	}
 
-	viper.Reset()
+	config.Reset()
 	// Reduce argon2 parameters to speed up tests
 	auth := map[string]interface{}{
 		"password":   memguard.NewEnclave([]byte("1")),
@@ -160,7 +161,7 @@ func setContextB(b *testing.B) *bolt.DB {
 		"memory":     1,
 		"threads":    1,
 	}
-	viper.Set("auth", auth)
+	config.Set("auth", auth)
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		tx.DeleteBucket(authBucket)

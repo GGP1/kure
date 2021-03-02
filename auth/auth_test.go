@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db/auth"
 
 	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -43,7 +43,7 @@ func TestAskArgon2Params(t *testing.T) {
 	}{
 		{
 			desc:            "Custom values",
-			input:           "3\n2500000\n6\n",
+			input:           "3\n2500000\n6",
 			expectedIters:   3,
 			expectedMem:     2500000,
 			expectedThreads: 6,
@@ -112,8 +112,6 @@ func TestArgon2ParamsErrors(t *testing.T) {
 }
 
 func TestAskKeyfile(t *testing.T) {
-	viper.Reset()
-
 	cases := []struct {
 		desc            string
 		expected        bool
@@ -140,13 +138,12 @@ func TestAskKeyfile(t *testing.T) {
 		},
 	}
 
-	viper.SetConfigFile("testdata/mock_config.yaml")
-	viper.SetConfigType("yaml")
+	config.Load("testdata/mock_config.yaml")
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			// Set the key file path to the configuration
-			viper.Set(keyfilePath, "./testdata/test-32.key")
+			config.Set(keyfilePath, "./testdata/test-32.key")
 			buf := bytes.NewBufferString(tc.input)
 
 			got, err := askKeyfile(buf)
@@ -158,7 +155,7 @@ func TestAskKeyfile(t *testing.T) {
 				t.Errorf("Expected %v, got %v", tc.expected, got)
 			}
 
-			cfgPath := viper.Get(keyfilePath)
+			cfgPath := config.Get(keyfilePath)
 			if cfgPath != tc.expectedCfgPath {
 				t.Errorf("Expected %q, got %q", tc.expectedCfgPath, cfgPath)
 			}
@@ -166,8 +163,8 @@ func TestAskKeyfile(t *testing.T) {
 	}
 
 	t.Run("Error", func(t *testing.T) {
-		viper.Reset() // Unset config file and type
-		viper.Set(keyfilePath, "./testdata/test-default.key")
+		config.Reset() // Unset config file and type
+		config.Set(keyfilePath, "./testdata/test-default.key")
 
 		buf := bytes.NewBufferString("y\nn\n")
 		if _, err := askKeyfile(buf); err == nil {
@@ -196,7 +193,7 @@ func TestCombineKeys(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			viper.Set(keyfilePath, tc.path)
+			config.Set(keyfilePath, tc.path)
 
 			enclave, err := combineKeys(nil, memguard.NewEnclave([]byte("test")))
 			if err != nil {
@@ -230,7 +227,7 @@ func TestCombineKeys(t *testing.T) {
 }
 
 func TestCombineKeysRequestPath(t *testing.T) {
-	viper.Reset()
+	config.Reset()
 	path := "./testdata/test-32.key"
 	buf := bytes.NewBufferString(path)
 
@@ -258,22 +255,22 @@ func TestCombineKeysRequestPath(t *testing.T) {
 }
 
 func TestCombineKeysErrors(t *testing.T) {
-	viper.Set("keyfile.path", "non-existent")
+	config.Set("keyfile.path", "non-existent")
 
 	if _, err := combineKeys(nil, memguard.NewEnclave([]byte("test"))); err == nil {
 		t.Error("Expected an error and got nil")
 	}
 
 	t.Run("Invalid path", func(t *testing.T) {
-		viper.Reset()
-		if _, err := combineKeys(bytes.NewBufferString(""), nil); err == nil {
+		config.Reset()
+		if _, err := combineKeys(bytes.NewBufferString("\n"), nil); err == nil {
 			t.Errorf("Expected an error and got nil")
 		}
 	})
 }
 
 func TestSetAuthToConfig(t *testing.T) {
-	defer viper.Reset()
+	defer config.Reset()
 
 	expPassword := memguard.NewEnclave([]byte("test"))
 	var (
@@ -291,7 +288,7 @@ func TestSetAuthToConfig(t *testing.T) {
 	setAuthToConfig(expPassword, authParams)
 
 	// reflect.DeepEqual does not work
-	got := viper.Get("auth").(map[string]interface{})
+	got := config.Get("auth").(map[string]interface{})
 	gotPassword := got["password"]
 	gotMem := got["memory"].(uint32)
 	gotIter := got["iterations"].(uint32)

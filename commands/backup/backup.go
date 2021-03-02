@@ -13,11 +13,11 @@ import (
 
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/sig"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -153,7 +153,7 @@ func fileBackup(db *bolt.DB, path string) error {
 
 // httpBackup writes a consistent view of the database to a http endpoint.
 func httpBackup(db *bolt.DB) http.HandlerFunc {
-	name := filepath.Base(viper.GetString("database.path"))
+	name := filepath.Base(config.GetString("database.path"))
 	disposition := fmt.Sprintf(`attachment; filename="%s"`, name)
 
 	return func(w http.ResponseWriter, r *http.Request) {

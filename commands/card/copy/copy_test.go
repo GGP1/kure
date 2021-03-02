@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
-	"github.com/spf13/viper"
 )
 
 func TestCopy(t *testing.T) {
@@ -41,7 +41,7 @@ func TestCopy(t *testing.T) {
 
 	cmd := NewCmd(db)
 	f := cmd.Flags()
-	viper.Set("clipboard.timeout", "1ns") // Set default
+	config.Set("clipboard.timeout", "1ns") // Set default
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {

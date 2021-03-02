@@ -3,9 +3,10 @@ package argon2
 import (
 	"fmt"
 
+	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/commands/config/argon2/test"
-	"github.com/GGP1/kure/db/auth"
+	authDB "github.com/GGP1/kure/db/auth"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
@@ -21,6 +22,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Short:   "Display currently used argon2 parameters",
 		Aliases: []string{"argon"},
 		Example: argon2Example,
+		PreRunE: auth.Login(db),
 		RunE:    runArgon2(db),
 	}
 
@@ -31,7 +33,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 func runArgon2(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		params, err := auth.GetParameters(db)
+		params, err := authDB.GetParameters(db)
 		if err != nil {
 			return err
 		}

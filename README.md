@@ -93,7 +93,7 @@ Moving forward to the configuration file itself, in it we can specify the clipbo
 
 > Paths inside the file must be **absolute**.
 
-*Formats supported*: JSON, TOML, YAML, HCL, envfile and Java properties. [Samples](/docs/configuration/samples).
+*Formats supported*: JSON, TOML, YAML. [Samples](/docs/configuration/samples).
 
 ### Requirements
 

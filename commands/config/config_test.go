@@ -4,13 +4,12 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
-
-	"github.com/spf13/viper"
+	"github.com/GGP1/kure/config"
 )
 
 func TestRead(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
-	viper.SetConfigFile("./testdata/mock_config.yaml")
+	config.SetFile("./testdata/mock_config.yaml")
 
 	cmd := NewCmd(db, nil)
 	if err := cmd.Execute(); err != nil {
@@ -20,7 +19,7 @@ func TestRead(t *testing.T) {
 
 func TestReadError(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
-	viper.SetConfigFile("")
+	config.SetFile("")
 
 	cmd := NewCmd(db, nil)
 	if err := cmd.Execute(); err == nil {

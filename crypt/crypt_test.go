@@ -5,8 +5,9 @@ import (
 	"crypto/subtle"
 	"testing"
 
+	"github.com/GGP1/kure/config"
+
 	"github.com/awnumar/memguard"
-	"github.com/spf13/viper"
 )
 
 func TestCrypt(t *testing.T) {
@@ -21,7 +22,7 @@ func TestCrypt(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		viper.Set("auth.password", memguard.NewEnclave([]byte(tc.password)))
+		config.Set("auth.password", memguard.NewEnclave([]byte(tc.password)))
 
 		ciphertext, err := Encrypt([]byte(tc.data))
 		if err != nil {
@@ -79,7 +80,7 @@ func TestDecryptPanics(t *testing.T) {
 				}
 			}()
 
-			viper.Set("auth.password", tc.key)
+			config.Set("auth.password", tc.key)
 
 			Decrypt([]byte(tc.data))
 		})
@@ -87,7 +88,7 @@ func TestDecryptPanics(t *testing.T) {
 }
 
 func TestDecryptError(t *testing.T) {
-	viper.Set("auth.password", memguard.NewEnclave([]byte("test")))
+	config.Set("auth.password", memguard.NewEnclave([]byte("test")))
 
 	// Data must be between 32 and 45 bytes long to fail
 	data := []byte("t8aNDgbSxlnPn ehxsYFnuDwzU4eqgydh2k")
@@ -106,7 +107,7 @@ func TestDeriveKey(t *testing.T) {
 	}
 
 	key := memguard.NewEnclave([]byte("test"))
-	viper.Set("auth.password", key)
+	config.Set("auth.password", key)
 
 	cases := []struct {
 		desc        string
@@ -125,9 +126,9 @@ func TestDeriveKey(t *testing.T) {
 			desc: "Argon2 custom parameters",
 			salt: nil,
 			setDefaults: func() {
-				viper.Set("auth.iterations", "1")
-				viper.Set("auth.memory", "5000")
-				viper.Set("auth.threads", "4")
+				config.Set("auth.iterations", "1")
+				config.Set("auth.memory", "5000")
+				config.Set("auth.threads", "4")
 			},
 		},
 	}
@@ -168,7 +169,7 @@ func reduceArgon2Params(t *testing.T) {
 	t.Helper()
 
 	// Reduce argon2 parameters to speed up tests
-	viper.Set("auth.memory", 1)
-	viper.Set("auth.iterations", 1)
-	viper.Set("auth.threads", 1)
+	config.Set("auth.memory", 1)
+	config.Set("auth.iterations", 1)
+	config.Set("auth.threads", 1)
 }

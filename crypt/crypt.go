@@ -6,9 +6,10 @@ import (
 	"crypto/rand"
 	"io"
 
+	"github.com/GGP1/kure/config"
+
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -104,10 +105,10 @@ func Decrypt(data []byte) ([]byte, error) {
 //
 // It destroys the buffer of the enclave passed and returns the derived key, and the salt used.
 func deriveKey(salt []byte) (*memguard.LockedBuffer, []byte, error) {
-	password := viper.Get("auth.password").(*memguard.Enclave)
-	iters := viper.GetUint32("auth.iterations")
-	memory := viper.GetUint32("auth.memory")
-	threads := viper.GetUint32("auth.threads")
+	password := config.GetEnclave("auth.password")
+	iters := config.GetUint32("auth.iterations")
+	memory := config.GetUint32("auth.memory")
+	threads := config.GetUint32("auth.threads")
 
 	// When decrypting the salt is taken from the encrypted data and when encrypting it's randomly generated
 	if salt == nil {
