@@ -25,7 +25,7 @@ func format() survey.AskOpt {
 func ask(qs []*survey.Question, response interface{}) error {
 	if err := survey.Ask(qs, response, format()); err != nil {
 		if err == terminal.InterruptErr {
-			sig.Signal.Interrupt()
+			sig.Signal.Kill()
 		}
 		return err
 	}
@@ -38,7 +38,7 @@ func ask(qs []*survey.Question, response interface{}) error {
 func askOne(p survey.Prompt, response interface{}) error {
 	if err := survey.AskOne(p, response, format()); err != nil {
 		if err == terminal.InterruptErr {
-			sig.Signal.Interrupt()
+			sig.Signal.Kill()
 		}
 		return err
 	}

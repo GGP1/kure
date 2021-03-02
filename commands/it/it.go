@@ -66,29 +66,45 @@ func runIt(db *bolt.DB) cmdutil.RunEFunc {
 			arguments, err = requestCommands(db, root, nil)
 
 		default:
-			var hasFlags bool
-			for _, arg := range args {
-				if strings.Contains(arg, "-") {
-					hasFlags = true
-					break
-				}
-			}
-
-			found, _, err := root.Find(args)
-			if err != nil {
-				// If the command does not exist, assume the user passed a name
-				arguments, err = gotName(db, root, strings.Join(args, " "))
+			command, _, err := root.Find(args)
+			if err != nil || command == root {
+				// If the command does not exist or is the root, assume the user passed a name
+				arguments, err = gotName(db, root, args)
 				break
 			}
 
-			// Flags should be along with the command
-			// If we received flags we don't have to look for subcommands
-			if hasFlags {
-				arguments, err = requestName(db, args)
-			} else {
-				// Pass on received cmds and look for subcommands
-				arguments, err = requestCommands(db, found, args)
+			foundFlags := false
+			for _, a := range args {
+				if strings.HasPrefix(a, "-") {
+					foundFlags = true
+				}
 			}
+
+			if foundFlags {
+				// Got command+flags, do not look for subcommands
+				if err := command.ParseFlags(args); err != nil {
+					return err
+				}
+
+				// Get rid of the command and flags to validate the name
+				argsWoFlags := strings.Join(command.Flags().Args(), " ")
+				name := strings.Replace(argsWoFlags, command.Name(), "", 1)
+
+				// The validation won't fail if the user lists records
+				err := command.ValidateArgs([]string{name})
+				if err != nil || strings.Contains(command.Name(), "ls") {
+					// Received commands+flags, request name
+					arguments, err = requestName(db, args)
+					break
+				}
+
+				// Received command+flags+name, nothing to request
+				arguments = args
+				break
+			}
+
+			// Pass on received command(s) and look for subcommands
+			arguments, err = requestCommands(db, command, args)
 		}
 		if err != nil {
 			return err
@@ -188,19 +204,41 @@ func requestName(db *bolt.DB, instructions []string) ([]string, error) {
 }
 
 // gotName is executed when the user already provided the name, commands and flags are requested only.
-func gotName(db *bolt.DB, root *cobra.Command, name string) ([]string, error) {
+func gotName(db *bolt.DB, root *cobra.Command, args []string) ([]string, error) {
+	var (
+		name  []string
+		flags []string
+	)
+
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			flags = append(flags, a)
+			continue
+		}
+		name = append(name, a)
+	}
+
 	commands, err := selectCommands(root)
 	if err != nil {
 		return nil, err
 	}
 
-	flags, err := selectFlags(root, commands)
-	if err != nil {
-		return nil, err
+	if len(flags) == 0 {
+		flags, err = selectFlags(root, commands)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(name) == 0 {
+		name, err = requestName(db, commands)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result := append(commands, flags...)
-	result = append(result, name)
+	result = append(result, name...)
 
 	return result, nil
 }
