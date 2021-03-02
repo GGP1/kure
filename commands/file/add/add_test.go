@@ -134,11 +134,10 @@ func TestAddNote(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
 	expectedContent := []byte("note content")
-	var buf bytes.Buffer
-	buf.WriteString("note content!q")
+	buf := bytes.NewBufferString("note content<\n")
 
 	name := "test-notes"
-	if err := addNote(db, &buf, name); err != nil {
+	if err := addNote(db, buf, name); err != nil {
 		t.Errorf("Failed creating note: %v", err)
 	}
 

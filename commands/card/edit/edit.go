@@ -139,10 +139,10 @@ func updateCard(db *bolt.DB, name string, c *pb.Card) error {
 
 func useStdin(db *bolt.DB, r io.Reader, oldCard *pb.Card) error {
 	fmt.Println("Type '-' to clear the field or leave blank to use the current value")
+	reader := bufio.NewReader(r)
 
-	s := bufio.NewScanner(r)
 	scanln := func(field, value string) string {
-		input := cmdutil.Scanln(s, fmt.Sprintf("%s [%s]", field, value))
+		input := cmdutil.Scanln(reader, fmt.Sprintf("%s [%s]", field, value))
 		if input == "-" {
 			return ""
 		} else if input != "" {
@@ -159,7 +159,7 @@ func useStdin(db *bolt.DB, r io.Reader, oldCard *pb.Card) error {
 		ExpireDate:   scanln("Expire date", oldCard.ExpireDate),
 	}
 
-	notes := cmdutil.Scanlns(s, fmt.Sprintf("Notes [%s]", oldCard.Notes))
+	notes := cmdutil.Scanlns(reader, fmt.Sprintf("Notes [%s]", oldCard.Notes))
 	if notes == "" {
 		notes = oldCard.Notes
 	} else if notes == "-" {

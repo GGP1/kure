@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/file"
@@ -22,7 +23,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/skip2/go-qrcode"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -181,8 +181,8 @@ func BuildBox(name string, mp *orderedmap.Map) string {
 func ClipTimeout(cmd *cobra.Command, t time.Duration) {
 	// Use the configuration value
 	configKey := "clipboard.timeout"
-	if viper.IsSet(configKey) && !cmd.Flags().Changed("timeout") {
-		t = viper.GetDuration(configKey)
+	if config.IsSet(configKey) && !cmd.Flags().Changed("timeout") {
+		t = config.GetDuration(configKey)
 	}
 
 	if t > 0 {
@@ -198,7 +198,12 @@ func Confirm(r io.Reader, message string) bool {
 
 	for {
 		var res string
-		fmt.Fscanln(r, &res)
+		if _, err := fmt.Fscanln(r, &res); err != nil {
+			if err != io.EOF {
+				fmt.Fprintln(os.Stderr, "error:", err)
+			}
+			sig.Signal.Kill()
+		}
 
 		switch res {
 		case "Yes", "yes", "Y", "y":
@@ -367,8 +372,8 @@ func MustExistLs(db *bolt.DB, obj object) cobra.PositionalArgs {
 			return nil
 		}
 
-		// Sometimes when in a session or in tests it fails
-		// when args contains an empty string only
+		// If an empty string is joined in session/it command
+		// it returns a 1 item long slice [""]
 		if strings.Join(args, "") == "" {
 			return nil
 		}
@@ -401,37 +406,40 @@ func NormalizeName(name string) string {
 }
 
 // Scanln scans a single line and returns the input.
-func Scanln(scanner *bufio.Scanner, field string) string {
+func Scanln(r *bufio.Reader, field string) string {
 	fmt.Printf("%s: ", field)
-	scanner.Scan()
-	return strings.TrimSpace(scanner.Text())
+
+	text, _, err := r.ReadLine()
+	if err != nil {
+		if err != io.EOF {
+			fmt.Fprintln(os.Stderr, "error:", err)
+		}
+		sig.Signal.Kill()
+	}
+
+	return strings.TrimSpace(string(text))
 }
 
 // Scanlns scans multiple lines and returns the input.
-func Scanlns(scanner *bufio.Scanner, field string) string {
-	fmt.Printf("%s (type !q to finish): ", field)
+func Scanlns(r *bufio.Reader, field string) string {
+	fmt.Printf("%s (type < to finish): ", field)
 
-	var lines []string
-	for scanner.Scan() {
-		line := scanner.Text()
-		lines = append(lines, line)
-
-		// We could break before appending but that would force
-		// users to insert a new line to type it
-		if strings.Contains(line, "!q") {
-			break
+	text, err := r.ReadString('<')
+	if err != nil {
+		if err != io.EOF {
+			fmt.Fprintln(os.Stderr, "error:", err)
 		}
+		sig.Signal.Kill()
 	}
 
-	text := strings.Join(lines, "\n")
-	text = strings.ReplaceAll(text, "!q", "")
-
+	text = strings.TrimSuffix(text, "<")
+	text = strings.ReplaceAll(text, "\r", "")
 	return strings.TrimSpace(text)
 }
 
 // SelectEditor returns the editor to use, if none is found it returns vim.
 func SelectEditor() string {
-	if def := viper.GetString("editor"); def != "" {
+	if def := config.GetString("editor"); def != "" {
 		return def
 	} else if e := os.Getenv("EDITOR"); e != "" {
 		return e
@@ -453,7 +461,7 @@ func SetContext(t test, path string) *bolt.DB {
 		t.Fatalf("Failed connecting to the database: %v", err)
 	}
 
-	viper.Reset()
+	config.Reset()
 	// Reduce argon2 parameters to speed up tests
 	auth := map[string]interface{}{
 		"password":   memguard.NewEnclave([]byte("1")),
@@ -461,7 +469,7 @@ func SetContext(t test, path string) *bolt.DB {
 		"memory":     1,
 		"threads":    1,
 	}
-	viper.Set("auth", auth)
+	config.Set("auth", auth)
 
 	db.Update(func(tx *bolt.Tx) error {
 		buckets := [4]string{"kure_card", "kure_entry", "kure_file", "kure_totp"}

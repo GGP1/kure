@@ -10,11 +10,11 @@ import (
 
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/config"
+	"github.com/GGP1/kure/sig"
 
-	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -62,16 +62,15 @@ Once into the session:
 func runSession(db *bolt.DB, r io.Reader, opts *sessionOptions) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		// Use config values if they are set and the flag wasn't used
-		if p := "session.prefix"; viper.IsSet(p) && !cmd.Flags().Changed("prefix") {
-			opts.prefix = viper.GetString(p)
+		if p := "session.prefix"; config.IsSet(p) && !cmd.Flags().Changed("prefix") {
+			opts.prefix = config.GetString(p)
 		}
-		if t := "session.timeout"; viper.IsSet(t) && !cmd.Flags().Changed("timeout") {
-			opts.timeout = viper.GetDuration(t)
+		if t := "session.timeout"; config.IsSet(t) && !cmd.Flags().Changed("timeout") {
+			opts.timeout = config.GetDuration(t)
 		}
 
-		scanner := bufio.NewScanner(r)
 		start := time.Now()
-		go startSession(cmd, db, scanner, start, opts)
+		go startSession(cmd, db, r, start, opts)
 
 		if opts.timeout == 0 {
 			// Block forever
@@ -84,24 +83,29 @@ func runSession(db *bolt.DB, r io.Reader, opts *sessionOptions) cmdutil.RunEFunc
 	}
 }
 
-func startSession(cmd *cobra.Command, db *bolt.DB, scanner *bufio.Scanner, start time.Time, opts *sessionOptions) {
+func startSession(cmd *cobra.Command, db *bolt.DB, r io.Reader, start time.Time, opts *sessionOptions) {
 	for {
 		fmt.Printf("\n%s ", opts.prefix)
 
-		scanner.Scan()
-		text := strings.TrimSpace(scanner.Text())
-		args := strings.Split(text, " ")
-		// Lower case only the command as the args will be formatted by each command
-		args[0] = strings.ToLower(args[0])
+		reader := bufio.NewReader(r)
+		text, _, err := reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				sig.Signal.Kill()
+			}
+			fmt.Fprintln(os.Stderr, "error:", err)
+			continue
+		}
+
+		args := strings.Split(string(text), " ")
 
 		// Session commands
 		switch args[0] {
 		case "exit", "quit", "logout":
-			db.Close()
-			memguard.SafeExit(0)
+			sig.Signal.Kill()
 			return
 
-		case "kure":
+		case "kure", "Kure":
 			// Make using "kure" optional
 			args = args[1:]
 

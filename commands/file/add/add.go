@@ -208,12 +208,7 @@ func addNote(db *bolt.DB, r io.Reader, name string) error {
 		return err
 	}
 
-	scanner := bufio.NewScanner(r)
-	text := cmdutil.Scanlns(scanner, "Text")
-
-	if err := scanner.Err(); err != nil {
-		return errors.Wrap(err, "scanning input")
-	}
+	text := cmdutil.Scanlns(bufio.NewReader(r), "Text")
 
 	f := &pb.File{
 		Name:      name,

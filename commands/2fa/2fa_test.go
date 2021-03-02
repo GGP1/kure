@@ -5,11 +5,11 @@ import (
 	"time"
 
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/pb"
 
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -41,7 +41,7 @@ func Test2FA(t *testing.T) {
 	}
 
 	cmd := NewCmd(db)
-	viper.Set("clipboard.timeout", "1ns") // Set default
+	config.Set("clipboard.timeout", "1ns") // Set default
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {

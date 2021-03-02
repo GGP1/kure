@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
 
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -34,7 +34,7 @@ func TestEditErrors(t *testing.T) {
 			name: "test",
 			it:   "true",
 			set: func() {
-				viper.Set("editor", "non-existent")
+				config.Set("editor", "non-existent")
 			},
 		},
 	}

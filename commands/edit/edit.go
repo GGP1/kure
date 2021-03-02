@@ -154,10 +154,10 @@ func updateEntry(db *bolt.DB, name string, e *pb.Entry) error {
 
 func useStdin(db *bolt.DB, r io.Reader, oldEntry *pb.Entry) error {
 	fmt.Println("Type '-' to clear the field (except Name and Password) or leave blank to use the current value")
+	reader := bufio.NewReader(r)
 
-	s := bufio.NewScanner(r)
 	scanln := func(field, value string) string {
-		input := cmdutil.Scanln(s, fmt.Sprintf("%s [%s]", field, value))
+		input := cmdutil.Scanln(reader, fmt.Sprintf("%s [%s]", field, value))
 		if input == "-" {
 			return ""
 		} else if input != "" {
@@ -190,7 +190,7 @@ func useStdin(db *bolt.DB, r io.Reader, oldEntry *pb.Entry) error {
 	newEntry.URL = scanln("URL", oldEntry.URL)
 	newEntry.Expires = scanln("Expires", oldEntry.Expires)
 
-	notes := cmdutil.Scanlns(s, fmt.Sprintf("Notes [%s]", oldEntry.Notes))
+	notes := cmdutil.Scanlns(reader, fmt.Sprintf("Notes [%s]", oldEntry.Notes))
 	if notes == "" {
 		notes = oldEntry.Notes
 	} else if notes == "-" {

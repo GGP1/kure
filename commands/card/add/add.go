@@ -11,7 +11,6 @@ import (
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
@@ -55,19 +54,14 @@ func runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 }
 
 func input(db *bolt.DB, name string, r io.Reader) (*pb.Card, error) {
-	scanner := bufio.NewScanner(r)
-
+	reader := bufio.NewReader(r)
 	c := &pb.Card{
 		Name:         name,
-		Type:         cmdutil.Scanln(scanner, "Type"),
-		Number:       cmdutil.Scanln(scanner, "Number"),
-		SecurityCode: cmdutil.Scanln(scanner, "Security code"),
-		ExpireDate:   cmdutil.Scanln(scanner, "Expire date"),
-		Notes:        cmdutil.Scanlns(scanner, "Notes"),
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, errors.Wrap(err, "scanning input")
+		Type:         cmdutil.Scanln(reader, "Type"),
+		Number:       cmdutil.Scanln(reader, "Number"),
+		SecurityCode: cmdutil.Scanln(reader, "Security code"),
+		ExpireDate:   cmdutil.Scanln(reader, "Expire date"),
+		Notes:        cmdutil.Scanlns(reader, "Notes"),
 	}
 
 	return c, nil

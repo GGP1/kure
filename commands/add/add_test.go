@@ -2,7 +2,6 @@ package add
 
 import (
 	"bytes"
-	"os"
 	"reflect"
 	"testing"
 
@@ -28,11 +27,12 @@ func TestAdd(t *testing.T) {
 		},
 	}
 
-	cmd := NewCmd(db, os.Stdin)
-
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes<")
+			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
+
 			f := cmd.Flags()
 			f.Set("length", tc.length)
 			f.Set("format", tc.format)
@@ -55,7 +55,7 @@ func TestAddErrors(t *testing.T) {
 		desc   string
 		name   string
 		length string
-		format string
+		levels string
 	}{
 		{
 			desc: "Invalid name",
@@ -71,14 +71,22 @@ func TestAddErrors(t *testing.T) {
 			name:   "test",
 			length: "10",
 		},
+		{
+			desc:   "Invalid levels",
+			name:   "test-levels",
+			length: "6",
+			levels: "1,2,3,7",
+		},
 	}
-
-	cmd := NewCmd(db, os.Stdin)
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes<")
+			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
-			cmd.Flags().Set("length", tc.length)
+			f := cmd.Flags()
+			f.Set("length", tc.length)
+			f.Set("levels", tc.levels)
 
 			if err := cmd.Execute(); err == nil {
 				t.Error("Expected an error and got nil")
@@ -151,7 +159,7 @@ func TestEntryInput(t *testing.T) {
 		Expires:  "Fri, 03 May 2024 00:00:00 +0000",
 	}
 
-	buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes!q")
+	buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes<")
 
 	got, err := entryInput(buf, "test", false)
 	if err != nil {
@@ -166,7 +174,7 @@ func TestEntryInput(t *testing.T) {
 }
 
 func TestInvalidExpirationTime(t *testing.T) {
-	buf := bytes.NewBufferString("username\nurl\nnotes!q\ninvalid")
+	buf := bytes.NewBufferString("username\nurl\nnotes\ninvalid<\n")
 
 	if _, err := entryInput(buf, "test", false); err == nil {
 		t.Error("Expected an error and got nil")

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/file"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -44,8 +44,8 @@ func TestClipTimeout(t *testing.T) {
 	cmd := &cobra.Command{}
 
 	t.Run("Default timeout", func(t *testing.T) {
-		viper.Set("clipboard.timeout", 10*time.Millisecond)
-		defer viper.Reset()
+		config.Set("clipboard.timeout", 10*time.Millisecond)
+		defer config.Reset()
 		if err := clipboard.WriteAll("test"); err != nil {
 			t.Fatal(err)
 		}
@@ -497,16 +497,16 @@ func TestScanln(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{desc: "Scan", input: "test\n", expected: "test"},
+		{desc: "Scan", input: "test  \n", expected: "test"},
 		{desc: "Empty scan", input: "\n", expected: ""},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
-			scanner := bufio.NewScanner(buf)
+			r := bufio.NewReader(buf)
 
-			got := Scanln(scanner, "test")
+			got := Scanln(r, "test")
 			if got != tc.expected {
 				t.Errorf("Expected %s, got: %s", tc.expected, got)
 			}
@@ -520,16 +520,16 @@ func TestScanlns(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{desc: "Scan lines", input: "test\nscanlns\n!q\n", expected: "test\nscanlns"},
-		{desc: "Break", input: "!q\n", expected: ""},
+		{desc: "Scan lines", input: "test\nscanlns\n<\n", expected: "test\nscanlns"},
+		{desc: "Break", input: "<\n", expected: ""},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
-			scanner := bufio.NewScanner(buf)
+			r := bufio.NewReader(buf)
 
-			got := Scanlns(scanner, "test")
+			got := Scanlns(r, "test")
 			if got != tc.expected {
 				t.Errorf("Expected %s, got: %s", tc.expected, got)
 			}
@@ -540,8 +540,8 @@ func TestScanlns(t *testing.T) {
 func TestSelectEditor(t *testing.T) {
 	t.Run("Default editor", func(t *testing.T) {
 		expected := "nano"
-		viper.Set("editor", expected)
-		defer viper.Reset()
+		config.Set("editor", expected)
+		defer config.Reset()
 
 		got := SelectEditor()
 		if got != expected {

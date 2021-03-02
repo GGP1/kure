@@ -2,7 +2,6 @@ package phrase
 
 import (
 	"bytes"
-	"os"
 	"reflect"
 	"testing"
 
@@ -43,11 +42,12 @@ func TestPhrase(t *testing.T) {
 		},
 	}
 
-	cmd := NewCmd(db, os.Stdin)
-
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes<")
+			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
+
 			f := cmd.Flags()
 			f.Set("separator", tc.separator)
 			f.Set("length", tc.length)
@@ -107,11 +107,12 @@ func TestPhraseErrors(t *testing.T) {
 		},
 	}
 
-	cmd := NewCmd(db, os.Stdin)
-
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes<")
+			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
+
 			f := cmd.Flags()
 			f.Set("length", tc.length)
 			f.Set("include", tc.include)
@@ -134,7 +135,7 @@ func TestEntryInput(t *testing.T) {
 		Expires:  "Fri, 03 May 2024 00:00:00 +0000",
 	}
 
-	buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes!q")
+	buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes<")
 
 	got, err := entryInput(buf, "test")
 	if err != nil {
@@ -149,7 +150,7 @@ func TestEntryInput(t *testing.T) {
 }
 
 func TestInvalidExpirationTime(t *testing.T) {
-	buf := bytes.NewBufferString("username\nurl\nnotes!q\ninvalid")
+	buf := bytes.NewBufferString("username\nurl\nnotes\ninvalid<\n")
 
 	if _, err := entryInput(buf, "test"); err == nil {
 		t.Error("Expected an error and got nil")

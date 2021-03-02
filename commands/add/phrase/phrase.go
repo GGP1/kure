@@ -88,16 +88,12 @@ func runPhrase(db *bolt.DB, r io.Reader, opts *phraseOptions) cmdutil.RunEFunc {
 }
 
 func entryInput(r io.Reader, name string) (*pb.Entry, error) {
-	scanner := bufio.NewScanner(r)
+	reader := bufio.NewReader(r)
 
-	username := cmdutil.Scanln(scanner, "Username")
-	url := cmdutil.Scanln(scanner, "URL")
-	expires := cmdutil.Scanln(scanner, "Expires [dd/mm/yy]")
-	notes := cmdutil.Scanlns(scanner, "Notes")
-
-	if err := scanner.Err(); err != nil {
-		return nil, errors.Wrap(err, "scanning failed")
-	}
+	username := cmdutil.Scanln(reader, "Username")
+	url := cmdutil.Scanln(reader, "URL")
+	expires := cmdutil.Scanln(reader, "Expires [dd/mm/yy]")
+	notes := cmdutil.Scanlns(reader, "Notes")
 
 	exp, err := cmdutil.FmtExpires(expires)
 	if err != nil {

@@ -57,9 +57,7 @@ func (opts *addOptions) runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return errors.Errorf("invalid digits number [%d], it must be either 6, 7 or 8", opts.digits)
 		}
 
-		scanner := bufio.NewScanner(r)
-		key := cmdutil.Scanln(scanner, "Key")
-
+		key := cmdutil.Scanln(bufio.NewReader(r), "Key")
 		// Adjust key
 		key = strings.ReplaceAll(key, " ", "")
 		key += strings.Repeat("=", -len(key)&7)

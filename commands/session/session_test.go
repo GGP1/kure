@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"bytes"
 	"io"
 	"testing"
@@ -32,7 +31,7 @@ func TestStartSession(t *testing.T) {
 			timeout: time.Duration(500),
 		},
 		{
-			desc:    "Show timeout, no timeout",
+			desc:    "No timeout",
 			command: "timeout",
 			timeout: time.Duration(0),
 		},
@@ -44,7 +43,6 @@ func TestStartSession(t *testing.T) {
 			cmd := NewCmd(db, buf)
 
 			cmd.SetOut(io.Discard)
-			scanner := bufio.NewScanner(buf)
 			start := time.Now()
 			opts := &sessionOptions{
 				prefix:  "",
@@ -52,7 +50,7 @@ func TestStartSession(t *testing.T) {
 			}
 
 			// Start a goroutine so it doesn't block and we can skip the test
-			go startSession(cmd, db, scanner, start, opts)
+			go startSession(cmd, db, buf, start, opts)
 			t.SkipNow()
 		})
 	}

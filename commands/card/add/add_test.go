@@ -2,7 +2,6 @@ package add
 
 import (
 	"bytes"
-	"os"
 	"reflect"
 	"testing"
 
@@ -28,10 +27,11 @@ func TestAdd(t *testing.T) {
 		},
 	}
 
-	cmd := NewCmd(db, os.Stdin)
-
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString("type\n123456789\n1234\n2021/06\nnotes<\n")
+			cmd := NewCmd(db, buf)
+
 			cmd.SetArgs([]string{tc.name})
 			if err := cmd.Execute(); err != nil {
 				t.Error(err)
@@ -65,11 +65,12 @@ func TestAddErrors(t *testing.T) {
 		},
 	}
 
-	cmd := NewCmd(db, os.Stdin)
-
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString("type\n123456789\n1234\n2021/06\nnotes<\n")
+			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
+
 			if err := cmd.Execute(); err == nil {
 				t.Error("Expected an error and got nil")
 			}
@@ -89,7 +90,7 @@ func TestInput(t *testing.T) {
 		Notes:        "notes",
 	}
 
-	buf := bytes.NewBufferString("type\n123456789\n1234\n2021/06\nnotes")
+	buf := bytes.NewBufferString("type\n123456789\n1234\n2021/06\nnotes<")
 
 	got, err := input(db, "test", buf)
 	if err != nil {

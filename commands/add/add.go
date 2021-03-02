@@ -135,9 +135,9 @@ func genPassword(opts *addOptions) (string, error) {
 
 func entryInput(r io.Reader, name string, custom bool) (*pb.Entry, error) {
 	var password string
-	scanner := bufio.NewScanner(r)
+	reader := bufio.NewReader(r)
 
-	username := cmdutil.Scanln(scanner, "Username")
+	username := cmdutil.Scanln(reader, "Username")
 	if custom {
 		enclave, err := auth.AskPassword("Password", true)
 		if err != nil {
@@ -151,13 +151,9 @@ func entryInput(r io.Reader, name string, custom bool) (*pb.Entry, error) {
 
 		password = pwd.String()
 	}
-	url := cmdutil.Scanln(scanner, "URL")
-	expires := cmdutil.Scanln(scanner, "Expires [dd/mm/yy]")
-	notes := cmdutil.Scanlns(scanner, "Notes")
-
-	if err := scanner.Err(); err != nil {
-		return nil, errors.Wrap(err, "scanning failed")
-	}
+	url := cmdutil.Scanln(reader, "URL")
+	expires := cmdutil.Scanln(reader, "Expires [dd/mm/yy]")
+	notes := cmdutil.Scanlns(reader, "Notes")
 
 	exp, err := cmdutil.FmtExpires(expires)
 	if err != nil {
