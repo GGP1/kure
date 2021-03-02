@@ -28,7 +28,7 @@ func Init() error {
 		}
 		home = filepath.Join(home, ".kure")
 
-		if err := os.MkdirAll(home, 0600); err != nil {
+		if err := os.MkdirAll(home, 0700); err != nil {
 			return errors.Wrap(err, "creating the directory")
 		}
 
