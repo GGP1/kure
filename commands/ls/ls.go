@@ -44,7 +44,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Long: `List entries.
 
 Listing all the entries does not check for expired entries, this decision was taken to prevent high loads when the number of entries is elevated. Listing a single entry does notifies if it is expired.`,
-		Aliases: []string{"entries"},
+		Aliases: []string{"entries", "list"},
 		Example: example,
 		Args:    cmdutil.MustExistLs(db, cmdutil.Entry),
 		PreRunE: auth.Login(db),
