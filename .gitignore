@@ -14,3 +14,6 @@ dist
 
 # TODO file
 TODO.txt
+
+# IntelliJ Project
+.idea
