@@ -19,7 +19,7 @@ import (
 )
 
 var example = `
-* Read config file
+* Read configuration file
 kure config`
 
 // NewCmd returns a new command.

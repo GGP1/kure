@@ -8,6 +8,10 @@ import (
 )
 
 func TestClear(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
+
 	cases := []struct {
 		flag  string
 		value string

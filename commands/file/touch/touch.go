@@ -105,37 +105,9 @@ func runTouch(db *bolt.DB, opts *touchOptions) cmdutil.RunEFunc {
 
 			// Assume the user wants to recreate an entire directory
 			if filepath.Ext(name) == "" {
-				files, err := file.List(db)
-				if err != nil {
+				if err := createDirectory(db, name, opts.path, opts.overwrite); err != nil {
 					fmt.Fprintln(os.Stderr, "error:", err)
-					continue
 				}
-
-				// If the last rune of name is not a slash,
-				// add it to make sure to create items under that folder only
-				if name[len(name)-1] != '/' {
-					name += "/"
-				}
-
-				var dir []*pb.File
-
-				for _, f := range files {
-					if strings.Contains(f.Name, name) {
-						dir = append(dir, f)
-					}
-				}
-
-				if len(dir) == 0 {
-					fmt.Fprintf(os.Stderr, "error: there is no folder named %q\n", name)
-					continue
-				}
-
-				for _, f := range dir {
-					if err := createFiles(f, opts.path, opts.overwrite); err != nil {
-						fmt.Fprintln(os.Stderr, "error:", err)
-					}
-				}
-
 				continue
 			}
 
@@ -156,20 +128,51 @@ func runTouch(db *bolt.DB, opts *touchOptions) cmdutil.RunEFunc {
 	}
 }
 
-// createFile creates a file with the filename and content provided.
+func createDirectory(db *bolt.DB, name, path string, overwrite bool) error {
+	files, err := file.List(db)
+	if err != nil {
+		return err
+	}
+
+	// If the last rune of name is not a slash,
+	// add it to make sure to create items under that folder only
+	if name[len(name)-1] != '/' {
+		name += "/"
+	}
+
+	var dir []*pb.File
+	for _, f := range files {
+		if strings.HasPrefix(f.Name, name) {
+			dir = append(dir, f)
+		}
+	}
+
+	if len(dir) == 0 {
+		return errors.Errorf("there is no folder named %q", name)
+	}
+
+	for _, f := range dir {
+		if err := createFiles(f, path, overwrite); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func createFile(file *pb.File, overwrite bool) error {
 	filename := filepath.Base(file.Name)
 
 	// Create if it doesn't exist or if we are allowed to overwrite it
-	if _, err := os.Stat(filename); os.IsNotExist(err) || overwrite {
-		if err := os.WriteFile(filename, file.Content, 0600); err != nil {
-			return errors.Wrapf(err, "writing %q", filename)
-		}
-		fmt.Println("Create:", file.Name)
-		return nil
+	if _, err := os.Stat(filename); os.IsExist(err) && !overwrite {
+		return errors.Errorf("%q already exists, use -o to overwrite files", filename)
 	}
 
-	return errors.Errorf("%q already exists, use -o to overwrite files", filename)
+	if err := os.WriteFile(filename, file.Content, 0600); err != nil {
+		return errors.Wrapf(err, "writing %q", filename)
+	}
+	fmt.Println("Create:", file.Name)
+	return nil
 }
 
 // createFiles takes care of recreating folders and files as they were stored in the database.
@@ -197,10 +200,10 @@ func createFiles(file *pb.File, path string, overwrite bool) error {
 		// If it's not the last element, create a folder
 		// Use MkdirAll to avoid errors when the folder already exists
 		if err := os.MkdirAll(p, os.ModeDir); err != nil {
-			return errors.Wrapf(err, "making %s directory", p)
+			return errors.Wrapf(err, "making %q directory", p)
 		}
 		if err := os.Chdir(p); err != nil {
-			return errors.Wrap(err, "changing working directory")
+			return errors.Wrapf(err, "changing to %q directory", p)
 		}
 	}
 

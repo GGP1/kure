@@ -21,7 +21,7 @@ var (
 	thKey      = []byte("threads")
 )
 
-// Parameters contais all the information needed for logging in.
+// Parameters contains all the information needed for logging in.
 type Parameters struct {
 	AuthKey    []byte
 	Iterations uint32

@@ -12,6 +12,9 @@ import (
 )
 
 func TestCopyPassword(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	createEntry(t, db)
 
@@ -33,6 +36,9 @@ func TestCopyPassword(t *testing.T) {
 }
 
 func TestCopyUsername(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	createEntry(t, db)
 
@@ -55,6 +61,9 @@ func TestCopyUsername(t *testing.T) {
 }
 
 func TestCopyWithTimeout(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	createEntry(t, db)
 

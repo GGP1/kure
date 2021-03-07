@@ -17,8 +17,8 @@ import (
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/sig"
-	"github.com/atotto/clipboard"
 
+	"github.com/atotto/clipboard"
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	"github.com/skip2/go-qrcode"
@@ -173,23 +173,6 @@ func BuildBox(name string, mp *orderedmap.Map) string {
 	sb.WriteString(lowerRight)
 
 	return sb.String()
-}
-
-// ClipTimeout deletes the clipboard content after t if it's higher than 0
-// or if there is a default timeout set in the configuration.
-// Otherwise it does nothing.
-func ClipTimeout(cmd *cobra.Command, t time.Duration) {
-	// Use the configuration value
-	configKey := "clipboard.timeout"
-	if config.IsSet(configKey) && !cmd.Flags().Changed("timeout") {
-		t = config.GetDuration(configKey)
-	}
-
-	if t > 0 {
-		sig.Signal.AddCleanup(func() error { return clipboard.WriteAll("") })
-		<-time.After(t)
-		clipboard.WriteAll("")
-	}
 }
 
 // Confirm requests the user for a yes/no response.
@@ -517,4 +500,29 @@ func WatchFile(filename string, done chan struct{}, errCh chan error) {
 	}
 
 	done <- struct{}{}
+}
+
+// WriteClipboard writes the content to the clipboard and deletes it after
+// "t" if "t" is higher than 0 or if there is a default timeout set in the configuration.
+// Otherwise it does nothing.
+func WriteClipboard(cmd *cobra.Command, t time.Duration, field, content string) error {
+	if err := clipboard.WriteAll(content); err != nil {
+		return errors.Wrap(err, "writing to clipboard")
+	}
+	memguard.WipeBytes([]byte(content))
+	fmt.Printf("%s copied to clipboard\n", field)
+
+	// Use the config value if it's specified and the timeout flag wasn't used
+	configKey := "clipboard.timeout"
+	if config.IsSet(configKey) && !cmd.Flags().Changed("timeout") {
+		t = config.GetDuration(configKey)
+	}
+
+	if t > 0 {
+		sig.Signal.AddCleanup(func() error { return clipboard.WriteAll("") })
+		<-time.After(t)
+		clipboard.WriteAll("")
+	}
+
+	return nil
 }

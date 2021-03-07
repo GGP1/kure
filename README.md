@@ -65,9 +65,11 @@ scoop install https://raw.githubusercontent.com/GGP1/scoop-bucket/master/bucket/
 
 #### Docker
 
-> The image doesn't have an X server installed and hence, clipboard utilities are not available. Apart from that, everything works as expected.
+> Use volumes `-v <volume-name>:/root/.kure` to persist the data on the host machine.
+>
+> Mount your database and configuration file to the container using bind mounts: `-v /path/to/data:./root/.kure`. Any write into the bind mount will be propagated back to the Docker host.
 ```
-docker run -it gastonpalomeque/kure:0.1.0 sh
+docker run -it gastonpalomeque/kure sh
 ```
 
 #### Compìle from source
@@ -166,13 +168,6 @@ Kure encrypts and keeps the master key **in-memory** in a **protected buffer**. 
 This makes it secure even when the user is into a session and the password resides in the memory.
 
 It's important to mention that **password comparisons are done in constant time** to avoid side-channel attacks and that **additional sensitive information is wiped after being used** as well. The library used to perform this operations is called  [memguard](https://github.com/awnumar/memguard). Here are two interesting articles from its author talking about [memory security](https://spacetime.dev/memory-security-go) and [encrypting secrets in memory](https://spacetime.dev/encrypting-secrets-in-memory).
-
-#### Useful commands
-
-- [kure config argon2 test](/docs/commands/config/subcommands/argon2/subcommands/test.md) to test argon2 performance.
-- [kure config argon2](/docs/commands/config/subcommands/argon2/argon2.md) to see the values under which the password encrypted the records.
-- [kure restore argon2](/docs/commands/restore/subcommands/argon2.md) to change the parameters used by argon2.
-- [kure restore password](/docs/commands/restore/subcommands/password.md) to change the password.
 
 ### Encryption
 

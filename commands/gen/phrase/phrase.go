@@ -9,7 +9,6 @@ import (
 
 	"github.com/GGP1/atoll"
 
-	"github.com/atotto/clipboard"
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -150,12 +149,9 @@ Average time taken to crack: %s
 		}
 
 		if opts.copy {
-			if err := clipboard.WriteAll(phraseBuf.String()); err != nil {
-				return errors.Wrap(err, "writing to the clipboard")
+			if err := cmdutil.WriteClipboard(cmd, 0, "Passphrase", phraseBuf.String()); err != nil {
+				return err
 			}
-			fmt.Println("Passphrase copied to clipboard")
-
-			cmdutil.ClipTimeout(cmd, 0)
 		}
 		return nil
 	}

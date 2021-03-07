@@ -1,7 +1,6 @@
 package copy
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -9,9 +8,6 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/card"
 
-	"github.com/atotto/clipboard"
-	"github.com/awnumar/memguard"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
@@ -73,13 +69,6 @@ func runCard(db *bolt.DB, opts *copyOptions) cmdutil.RunEFunc {
 			copy = c.SecurityCode
 		}
 
-		if err := clipboard.WriteAll(copy); err != nil {
-			return errors.Wrap(err, "writing to the clipboard")
-		}
-		memguard.WipeBytes([]byte(copy))
-
-		fmt.Printf("%s copied to clipboard\n", field)
-		cmdutil.ClipTimeout(cmd, opts.timeout)
-		return nil
+		return cmdutil.WriteClipboard(cmd, opts.timeout, field, copy)
 	}
 }

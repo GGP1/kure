@@ -10,10 +10,14 @@ import (
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/pb"
 
+	"github.com/atotto/clipboard"
 	bolt "go.etcd.io/bbolt"
 )
 
 func Test2FA(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	createElements(t, db)
 

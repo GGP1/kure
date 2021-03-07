@@ -42,7 +42,7 @@ and stored inside a locked buffer, decrypted when needed and destroyed right aft
 
 The user can set a timeout to automatically close the session after X amount of time. By default it never ends.
 
-Once into the session:
+Once into a session:
 • it's optional to use the word "kure" to run a command.
 • type "timeout" to see the time left.
 • type "exit" or press Ctrl+C to quit.
@@ -101,9 +101,11 @@ func startSession(cmd *cobra.Command, db *bolt.DB, r io.Reader, start time.Time,
 
 		// Session commands
 		switch args[0] {
+		case "":
+			continue
+
 		case "exit", "quit", "logout":
 			sig.Signal.Kill()
-			return
 
 		case "kure", "Kure":
 			// Make using "kure" optional

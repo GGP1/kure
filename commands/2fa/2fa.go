@@ -18,8 +18,6 @@ import (
 	"github.com/GGP1/kure/commands/2fa/rm"
 	"github.com/GGP1/kure/db/totp"
 
-	"github.com/atotto/clipboard"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
@@ -90,12 +88,9 @@ func run2FA(db *bolt.DB, opts *tfaOptions) cmdutil.RunEFunc {
 		fmt.Println(strings.Title(t.Name), code)
 
 		if opts.copy {
-			if err := clipboard.WriteAll(code); err != nil {
-				return errors.Wrap(err, "writing to clipboard")
+			if err := cmdutil.WriteClipboard(cmd, opts.timeout, "TOTP", code); err != nil {
+				return err
 			}
-			fmt.Println("TOTP copied to clipboard")
-
-			cmdutil.ClipTimeout(cmd, opts.timeout)
 		}
 		return nil
 	}

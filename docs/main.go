@@ -98,6 +98,19 @@ func customMarkdown(cmd *cobra.Command, w io.Writer) error {
 	}
 	buf.WriteString(".\n\n")
 
+	if cmd.HasSubCommands() {
+		url := getURL(cmd)
+		buf.WriteString("## Subcommands\n\n")
+		for _, c := range cmd.Commands() {
+			name := c.Name()
+			if !c.HasSubCommands() {
+				name += ".md"
+			}
+			buf.WriteString(fmt.Sprintf("- [`%s`](%s%s): %s.\n", c.CommandPath(), url, name, c.Short))
+		}
+	}
+	buf.WriteString("\n")
+
 	buf.WriteString("## Flags\n\n")
 	flags := cmd.Flags()
 	if flags.HasFlags() {
@@ -131,6 +144,17 @@ func customMarkdown(cmd *cobra.Command, w io.Writer) error {
 	return err
 }
 
+func getURL(cmd *cobra.Command) string {
+	url := "https://github.com/GGP1/kure/tree/master/docs/commands/"
+
+	split := strings.Split(cmd.CommandPath(), " ")
+	for _, s := range split[1:] {
+		url += s + "/subcommands/"
+	}
+
+	return url
+}
+
 // Generate code completion files. By default it generates all the files.
 //
 // Usage: main --completion bash.
@@ -138,11 +162,18 @@ func completion(args []string) error {
 	root := root.CmdForDocs()
 
 	if len(args) < 3 {
-		err := root.GenBashCompletionFile("completion/bash.sh")
-		err = root.GenFishCompletionFile("completion/fish.sh", true)
-		err = root.GenPowerShellCompletionFile("completion/powershell.ps1")
-		err = root.GenZshCompletionFile("completion/zsh.sh")
-		return err
+		if err := root.GenBashCompletionFile("completion/bash.sh"); err != nil {
+			return err
+		}
+		if err := root.GenFishCompletionFile("completion/fish.sh", true); err != nil {
+			return err
+		}
+		if err := root.GenPowerShellCompletionFile("completion/powershell.ps1"); err != nil {
+			return err
+		}
+		if err := root.GenZshCompletionFile("completion/zsh.sh"); err != nil {
+			return err
+		}
 	}
 
 	switch args[2] {

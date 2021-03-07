@@ -40,62 +40,6 @@ Sam`)
 	}
 }
 
-func TestClipTimeout(t *testing.T) {
-	cmd := &cobra.Command{}
-
-	t.Run("Default timeout", func(t *testing.T) {
-		config.Set("clipboard.timeout", 10*time.Millisecond)
-		defer config.Reset()
-		if err := clipboard.WriteAll("test"); err != nil {
-			t.Fatal(err)
-		}
-
-		ClipTimeout(cmd, 0)
-
-		got, err := clipboard.ReadAll()
-		if err != nil {
-			t.Error(err)
-		}
-
-		if got != "" {
-			t.Errorf("Expected the clipboard to be empty and got %q", got)
-		}
-	})
-
-	t.Run("t > 0", func(t *testing.T) {
-		if err := clipboard.WriteAll("test"); err != nil {
-			t.Fatal(err)
-		}
-		ClipTimeout(cmd, 10*time.Millisecond)
-
-		got, err := clipboard.ReadAll()
-		if err != nil {
-			t.Error(err)
-		}
-
-		if got != "" {
-			t.Errorf("Expected the clipboard to be empty and got %q", got)
-		}
-	})
-
-	t.Run("t = 0", func(t *testing.T) {
-		clip := "test"
-		if err := clipboard.WriteAll(clip); err != nil {
-			t.Fatal(err)
-		}
-		ClipTimeout(cmd, 0)
-
-		got, err := clipboard.ReadAll()
-		if err != nil {
-			t.Error(err)
-		}
-
-		if got != clip {
-			t.Errorf("Expected %q, got %q", clip, got)
-		}
-	})
-}
-
 func TestConfirm(t *testing.T) {
 	cases := []struct {
 		desc     string
@@ -671,6 +615,63 @@ func TestWatchFileErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWriteClipboard(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
+
+	cmd := &cobra.Command{}
+
+	t.Run("Default timeout", func(t *testing.T) {
+		config.Set("clipboard.timeout", 10*time.Millisecond)
+		defer config.Reset()
+
+		if err := WriteClipboard(cmd, 0, "", "test"); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := clipboard.ReadAll()
+		if err != nil {
+			t.Error(err)
+		}
+
+		if got != "" {
+			t.Errorf("Expected the clipboard to be empty and got %q", got)
+		}
+	})
+
+	t.Run("t > 0", func(t *testing.T) {
+		if err := WriteClipboard(cmd, 10*time.Millisecond, "", "test"); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := clipboard.ReadAll()
+		if err != nil {
+			t.Error(err)
+		}
+
+		if got != "" {
+			t.Errorf("Expected the clipboard to be empty and got %q", got)
+		}
+	})
+
+	t.Run("t = 0", func(t *testing.T) {
+		clip := "test"
+		if err := WriteClipboard(cmd, 0, "", clip); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := clipboard.ReadAll()
+		if err != nil {
+			t.Error(err)
+		}
+
+		if got != clip {
+			t.Errorf("Expected %q, got %q", clip, got)
+		}
+	})
 }
 
 func createObjects(t *testing.T, db *bolt.DB, name string) {

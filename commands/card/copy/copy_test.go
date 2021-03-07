@@ -7,9 +7,14 @@ import (
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/atotto/clipboard"
 )
 
 func TestCopy(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
 	if err := card.Create(db, &pb.Card{Name: "test"}); err != nil {

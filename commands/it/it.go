@@ -46,82 +46,88 @@ name 				command and flags`,
 
 func runIt(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		var (
-			arguments []string
-			err       error
-		)
-
 		root := cmd.Root()
 		// Get rid of unnecessary information and reset in case we are inside a session
 		defer root.SetUsageTemplate(root.UsageTemplate())
 		root.SetUsageTemplate(template)
 
-		// Evaluate whether we received:
-		// Nothing
-		// Commands
-		// Commands + flags
-		// Name
-		switch len(args) {
-		case 0:
-			arguments, err = requestCommands(db, root, nil)
+		// We received nothing, request all
+		if len(args) == 0 {
+			arguments, err := requestCommands(db, root, nil)
+			if err != nil {
+				return err
+			}
 
-		default:
-			command, _, err := root.Find(args)
-			if err != nil || command == root {
-				// If the command does not exist or is the root, assume the user passed a name
-				arguments, err = gotName(db, root, args)
+			return execute(root, arguments)
+		}
+
+		command, _, err := root.Find(args)
+		if err != nil || command == root {
+			// If the command does not exist or is the root, assume the user passed a name
+			arguments, err := gotName(db, root, args)
+			if err != nil {
+				return err
+			}
+
+			return execute(root, arguments)
+		}
+
+		foundFlags := false
+		for _, a := range args {
+			if strings.HasPrefix(a, "-") {
+				foundFlags = true
 				break
 			}
+		}
 
-			foundFlags := false
-			for _, a := range args {
-				if strings.HasPrefix(a, "-") {
-					foundFlags = true
-				}
+		if foundFlags {
+			// Got command+flags, do not look for subcommands
+			if err := command.ParseFlags(args); err != nil {
+				return err
 			}
 
-			if foundFlags {
-				// Got command+flags, do not look for subcommands
-				if err := command.ParseFlags(args); err != nil {
+			// Get rid of the command and flags to validate the name
+			argsWoFlags := strings.Join(command.Flags().Args(), " ")
+			name := strings.Replace(argsWoFlags, command.Name(), "", 1)
+
+			// The validation won't fail if the user lists records
+			err := command.ValidateArgs([]string{name})
+			if err != nil || strings.Contains(command.Name(), "ls") {
+				// Received commands+flags, request name
+				arguments, err := requestName(db, args)
+				if err != nil {
 					return err
 				}
 
-				// Get rid of the command and flags to validate the name
-				argsWoFlags := strings.Join(command.Flags().Args(), " ")
-				name := strings.Replace(argsWoFlags, command.Name(), "", 1)
-
-				// The validation won't fail if the user lists records
-				err := command.ValidateArgs([]string{name})
-				if err != nil || strings.Contains(command.Name(), "ls") {
-					// Received commands+flags, request name
-					arguments, err = requestName(db, args)
-					break
-				}
-
-				// Received command+flags+name, nothing to request
-				arguments = args
-				break
+				return execute(root, arguments)
 			}
 
-			// Pass on received command(s) and look for subcommands
-			arguments, err = requestCommands(db, command, args)
+			// Received command+flags+name, nothing to request
+			return execute(root, args)
 		}
+
+		// Pass on received command(s) and look for subcommands
+		arguments, err := requestCommands(db, command, args)
 		if err != nil {
 			return err
 		}
 
-		// Discard empty arguments as some commands will fail if we don't
-		// eg. file cat
-		var filteredArgs []string
-		for _, arg := range arguments {
-			if arg != "" {
-				filteredArgs = append(filteredArgs, arg)
-			}
-		}
-
-		root.SetArgs(filteredArgs)
-		return root.Execute()
+		return execute(root, arguments)
 	}
+}
+
+func execute(root *cobra.Command, args []string) error {
+	// Discard empty arguments as some commands will fail if we don't
+	// eg. file cat
+	var filteredArgs []string
+	for _, a := range args {
+		if a != "" {
+			filteredArgs = append(filteredArgs, a)
+		}
+	}
+
+	root.SetArgs(filteredArgs)
+	return root.Execute()
 }
 
 func requestCommands(db *bolt.DB, root *cobra.Command, receivedCmds []string) ([]string, error) {
@@ -135,23 +141,23 @@ func requestCommands(db *bolt.DB, root *cobra.Command, receivedCmds []string) ([
 		return nil, err
 	}
 
-	instructions := append(commands, flags...)
+	args := append(commands, flags...)
 	// Preprend the received commands if there is any
 	// We would have [received commands] [commands] [flags]
 	if len(receivedCmds) > 0 {
-		instructions = append(receivedCmds, instructions...)
+		args = append(receivedCmds, args...)
 	}
-	return requestName(db, instructions)
+	return requestName(db, args)
 }
 
-// Instructions contains commands and flags.
-func requestName(db *bolt.DB, instructions []string) ([]string, error) {
+// args contains commands and flags.
+func requestName(db *bolt.DB, args []string) ([]string, error) {
 	var (
 		name string
 		err  error
 	)
 
-	search := strings.Join(instructions, " ")
+	search := strings.Join(args, " ")
 	// contains reports whether s is within search
 	contains := func(s string) bool {
 		return strings.Contains(search, s)
@@ -172,14 +178,14 @@ func requestName(db *bolt.DB, instructions []string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		return append(instructions, names...), nil
+		return append(args, names...), nil
 
 	case contains("file mv"):
 		names, err := fileMvNames(db)
 		if err != nil {
 			return nil, err
 		}
-		return append(instructions, names...), nil
+		return append(args, names...), nil
 
 	default:
 		list := []string{"2fa", "copy", "edit", "ls", "rm"}
@@ -187,8 +193,8 @@ func requestName(db *bolt.DB, instructions []string) ([]string, error) {
 		for _, cmd := range list {
 			if contains(cmd) {
 				// Skip "config edit" as it doesn't need a name
-				if instructions[0] != "config" {
-					name, err = selectName(db, instructions)
+				if args[0] != "config" {
+					name, err = selectName(db, args)
 					break
 				}
 			}
@@ -199,7 +205,7 @@ func requestName(db *bolt.DB, instructions []string) ([]string, error) {
 	}
 
 	// Remember: the flags are inside the commands slice
-	result := append(instructions, name)
+	result := append(args, name)
 	return result, nil
 }
 

@@ -13,6 +13,9 @@ import (
 )
 
 func TestCat(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
 	name1 := "test.txt"

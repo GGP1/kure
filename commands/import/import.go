@@ -22,7 +22,7 @@ var example = `
 * Import
 kure import keepass -p path/to/file
 
-* Import and deleete the file:
+* Import and delete the file:
 kure import 1password -e -p path/to/file`
 
 type importOptions struct {
@@ -94,7 +94,7 @@ func runImport(db *bolt.DB, opts *importOptions) cmdutil.RunEFunc {
 			fmt.Printf("Erased file at %s\n", opts.path)
 		}
 
-		fmt.Printf("Sucessfully imported the entries from %s\n", manager)
+		fmt.Printf("Successfully imported the entries from %s\n", manager)
 		return nil
 	}
 }
