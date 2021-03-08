@@ -125,7 +125,7 @@ func fileBackup(db *bolt.DB, path string) error {
 
 	dir := filepath.Dir(path)
 
-	if err := os.MkdirAll(dir, os.ModeDir); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return errors.Wrap(err, "making directory")
 	}
 

@@ -233,12 +233,12 @@ func TestCombineKeysRequestPath(t *testing.T) {
 
 	enclave, err := combineKeys(buf, memguard.NewEnclave([]byte("test")))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	pwdBuf, err := enclave.Open()
 	if err != nil {
-		t.Errorf("Failed opening enclave: %v", err)
+		t.Fatalf("Failed opening enclave: %v", err)
 	}
 	defer pwdBuf.Destroy()
 

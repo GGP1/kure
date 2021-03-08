@@ -3,9 +3,14 @@ package gen
 import (
 	"bytes"
 	"testing"
+
+	"github.com/atotto/clipboard"
 )
 
 func TestGen(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
 	cases := []struct {
 		desc   string
 		length string

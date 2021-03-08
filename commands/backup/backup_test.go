@@ -73,10 +73,6 @@ func TestBackupErrors(t *testing.T) {
 			desc: "Mkdir error",
 			path: "backup.go/",
 		},
-		{
-			desc: "Create file error",
-			path: `""`,
-		},
 	}
 
 	cmd := NewCmd(db)

@@ -2,10 +2,16 @@ package phrase
 
 import (
 	"math"
+	"os"
 	"testing"
+
+	"github.com/atotto/clipboard"
 )
 
 func TestGenPhrase(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
 	cases := []struct {
 		desc      string
 		length    string
@@ -40,6 +46,8 @@ func TestGenPhrase(t *testing.T) {
 	}
 
 	cmd := NewCmd()
+	os.Stdout = os.NewFile(0, "") // Mute stdout
+	os.Stderr = os.NewFile(0, "") // Mute stderr
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -92,6 +100,8 @@ func TestGenPhraseErrors(t *testing.T) {
 	}
 
 	cmd := NewCmd()
+	os.Stdout = os.NewFile(0, "") // Mute stdout
+	os.Stderr = os.NewFile(0, "") // Mute stderr
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {

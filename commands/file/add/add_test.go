@@ -138,12 +138,12 @@ func TestAddNote(t *testing.T) {
 
 	name := "test-notes"
 	if err := addNote(db, buf, name); err != nil {
-		t.Errorf("Failed creating note: %v", err)
+		t.Fatalf("Failed creating note: %v", err)
 	}
 
 	file, err := file.Get(db, fmt.Sprintf("notes/%s.txt", name))
 	if err != nil {
-		t.Errorf("The note wasn't created: %v", err)
+		t.Fatalf("The note wasn't created: %v", err)
 	}
 
 	if !bytes.Equal(file.Content, expectedContent) {

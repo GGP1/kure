@@ -2,6 +2,7 @@ package importt
 
 import (
 	"os"
+	"runtime"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
@@ -189,6 +190,9 @@ func TestImportAndErase(t *testing.T) {
 }
 
 func TestImportAndEraseError(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.SkipNow()
+	}
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 
 	tempFile, err := os.CreateTemp("", "*.csv")

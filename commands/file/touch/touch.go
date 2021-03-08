@@ -70,7 +70,7 @@ func runTouch(db *bolt.DB, opts *touchOptions) cmdutil.RunEFunc {
 		}
 		opts.path = absolute
 
-		if err := os.MkdirAll(opts.path, os.ModeDir); err != nil {
+		if err := os.MkdirAll(opts.path, 0700); err != nil {
 			return errors.Wrap(err, "making directory")
 		}
 
@@ -199,7 +199,7 @@ func createFiles(file *pb.File, path string, overwrite bool) error {
 
 		// If it's not the last element, create a folder
 		// Use MkdirAll to avoid errors when the folder already exists
-		if err := os.MkdirAll(p, os.ModeDir); err != nil {
+		if err := os.MkdirAll(p, 0700); err != nil {
 			return errors.Wrapf(err, "making %q directory", p)
 		}
 		if err := os.Chdir(p); err != nil {

@@ -225,12 +225,12 @@ func TestWriteStruct(t *testing.T) {
 	config.mp = temp
 
 	if err := WriteStruct(filename); err != nil {
-		t.Errorf("Failed writing config struct: %v", err)
+		t.Fatalf("Failed writing config struct: %v", err)
 	}
 
 	got, err := os.ReadFile(filename)
 	if err != nil {
-		t.Errorf("Failed reading file: %v", err)
+		t.Fatalf("Failed reading file: %v", err)
 	}
 	os.Remove(filename)
 

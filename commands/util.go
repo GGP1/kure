@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/GGP1/kure/config"
@@ -47,13 +48,6 @@ const (
 type RunEFunc func(cmd *cobra.Command, args []string) error
 
 type object int
-
-// test is used for passing both testing.T and testing.B to SetContext().
-type test interface {
-	Cleanup(func())
-	Fatalf(format string, args ...interface{})
-	Helper()
-}
 
 // BuildBox constructs a responsive box used to display records information.
 //
@@ -437,7 +431,7 @@ func SelectEditor() string {
 //
 // It uses t.Cleanup() to close the database connection after the test and
 // all its subtests are completed.
-func SetContext(t test, path string) *bolt.DB {
+func SetContext(t testing.TB, path string) *bolt.DB {
 	t.Helper()
 	db, err := bolt.Open(path, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {

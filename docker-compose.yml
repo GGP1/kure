@@ -1,0 +1,23 @@
+# This file contains details about how to execute Kure inside a container while persisting the data.
+version: "3.8"
+
+services:
+  # Run using "docker-compose run --rm kure"
+  kure:
+    image: gastonpalomeque/kure:latest
+    command: sh # Add -c "kure session" to directly initialize a session ar execute other commands
+    volumes:
+      # Volume
+      - <volume-name>:/root/.kure
+
+      # Bind mount: default
+      - ${HOME}/.kure:/root/.kure
+
+      # Bind mount: custom (if they are both inside the same folder you can simply mount the folder)
+      - ${KURE_CONFIG}:/root/.kure/kure.yaml # "database.path" field must point to the database inside the container
+      - <host/db/path>:/root/.kure/kure.db # The database can be placed anywhere as long as its path is specified in the configuration file
+
+    # environment:
+    #   - KURE_CONFIG=path/to/config -> Put the configuration file elsewhere by setting its path in the environment variable
+
+# In case you want to limit privileges, modify the Dockerfile to create a new user, create the same user on the host (with the same IDs) and give him the ownership of the mount/volume.

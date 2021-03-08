@@ -63,7 +63,7 @@ func TestCreateTempFile(t *testing.T) {
 
 	got, err := os.ReadFile(filename)
 	if err != nil {
-		t.Errorf("Failed reading temporary file")
+		t.Fatalf("Failed reading temporary file: %v", err)
 	}
 
 	if !bytes.Equal(got, expected) {
@@ -86,7 +86,7 @@ func TestReadAndUpdate(t *testing.T) {
 
 	got, err := file.Get(db, name)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("The file wasn't created: %v", err)
 	}
 
 	if !bytes.Equal([]byte("test"), got.Content) {

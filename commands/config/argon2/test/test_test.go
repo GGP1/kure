@@ -17,7 +17,7 @@ func TestTest(t *testing.T) {
 			desc:       "Test 1",
 			iterations: 1,
 			memory:     400000,
-			threads:    uint8(runtime.NumCPU() - 2),
+			threads:    uint8(runtime.NumCPU()),
 		},
 		{
 			desc:       "Test 2",
