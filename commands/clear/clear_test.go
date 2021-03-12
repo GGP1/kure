@@ -2,6 +2,7 @@ package clear
 
 import (
 	"bytes"
+	"runtime"
 	"testing"
 
 	"github.com/atotto/clipboard"
@@ -30,7 +31,11 @@ func TestClear(t *testing.T) {
 			f.Set(tc.flag, tc.value)
 
 			if err := cmd.Execute(); err != nil {
-				t.Fatalf("Failed clearing %s: %v", tc.flag, err)
+				t.Fatalf("Failed: %v", err)
+			}
+
+			if tc.flag == "terminal" && runtime.GOOS == "darwin" {
+				t.Skip("macOS returns an exit status 1 when clearing the terminal")
 			}
 
 			if tc.flag == "clipboard" {

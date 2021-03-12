@@ -3,7 +3,7 @@ module github.com/GGP1/kure
 go 1.16
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.8
+	github.com/AlecAivazis/survey/v2 v2.2.9
 	github.com/GGP1/atoll v0.4.2
 	github.com/atotto/clipboard v0.1.4
 	github.com/awnumar/memguard v0.22.2
@@ -19,7 +19,7 @@ require (
 	github.com/stretchr/testify v1.7.0 // indirect
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
-	golang.org/x/sys v0.0.0-20210305230114-8fe3ee5dd75b // indirect
+	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2 // indirect
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/protobuf v1.25.0

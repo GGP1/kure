@@ -133,17 +133,21 @@ func TestAddErrors(t *testing.T) {
 func TestAddNote(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
+	name := "test-notes"
 	expectedContent := []byte("note content")
 	buf := bytes.NewBufferString("note content<\n")
 
-	name := "test-notes"
-	if err := addNote(db, buf, name); err != nil {
-		t.Fatalf("Failed creating note: %v", err)
+	cmd := NewCmd(db, buf)
+	cmd.SetArgs([]string{name})
+	cmd.Flags().Set("note", "true")
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Failed creating the note: %v", err)
 	}
 
 	file, err := file.Get(db, fmt.Sprintf("notes/%s.txt", name))
 	if err != nil {
-		t.Fatalf("The note wasn't created: %v", err)
+		t.Fatalf("The note wasn't found: %v", err)
 	}
 
 	if !bytes.Equal(file.Content, expectedContent) {
