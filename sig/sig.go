@@ -79,10 +79,8 @@ func (s *sig) Listen(db *bolt.DB) {
 		}
 
 		if atomic.LoadInt32(&s.keepAlive) == 1 {
-			// Terminate the goroutine without exiting
-			// Just in case we are inside a session, go back to the initial state
+			// Reset keep alive state
 			atomic.StoreInt32(&s.keepAlive, 0)
-			s.cleanups = nil
 			s.Listen(db)
 			return
 		}
@@ -91,4 +89,9 @@ func (s *sig) Listen(db *bolt.DB) {
 		fmt.Println("\nExiting...")
 		memguard.SafeExit(0)
 	}()
+}
+
+// ResetCleanups empties cleanup functions.
+func (s *sig) ResetCleanups() {
+	s.cleanups = nil
 }

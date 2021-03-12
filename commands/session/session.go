@@ -138,9 +138,8 @@ func startSession(cmd *cobra.Command, db *bolt.DB, r io.Reader, start time.Time,
 			}
 		}
 
-		// Set all flags as unchanged to keep using default values
-		subCmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-			f.Changed = false
-		})
+		// Reset cleanups and set all flags as unchanged to keep using default values
+		sig.Signal.ResetCleanups()
+		subCmd.LocalFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
 	}
 }

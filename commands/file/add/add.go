@@ -93,7 +93,6 @@ func runAdd(db *bolt.DB, r io.Reader, opts *addOptions) cmdutil.RunEFunc {
 
 		dirs, err := os.ReadDir(opts.path)
 		if err != nil {
-			fmt.Printf("Add: %s\n", opts.path)
 			// If it's not a directory, attempt storing a file
 			return storeFile(db, opts.path, name)
 		}
