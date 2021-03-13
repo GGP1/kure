@@ -30,12 +30,12 @@ func TestClear(t *testing.T) {
 			f := cmd.Flags()
 			f.Set(tc.flag, tc.value)
 
-			if err := cmd.Execute(); err != nil {
-				t.Fatalf("Failed: %v", err)
-			}
-
 			if tc.flag == "terminal" && runtime.GOOS == "darwin" {
 				t.Skip("macOS returns an exit status 1 when clearing the terminal")
+			}
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("Failed: %v", err)
 			}
 
 			if tc.flag == "clipboard" {

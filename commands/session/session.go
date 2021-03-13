@@ -87,8 +87,7 @@ func startSession(cmd *cobra.Command, db *bolt.DB, r io.Reader, start time.Time,
 	for {
 		fmt.Printf("\n%s ", opts.prefix)
 
-		reader := bufio.NewReader(r)
-		text, _, err := reader.ReadLine()
+		text, _, err := bufio.NewReader(r).ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				sig.Signal.Kill()
@@ -141,5 +140,6 @@ func startSession(cmd *cobra.Command, db *bolt.DB, r io.Reader, start time.Time,
 		// Reset cleanups and set all flags as unchanged to keep using default values
 		sig.Signal.ResetCleanups()
 		subCmd.LocalFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
+		subCmd.Flags().Set("help", "false") // Reset help flag
 	}
 }
