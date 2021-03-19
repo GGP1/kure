@@ -29,7 +29,7 @@ import (
 var cmd = &cobra.Command{
 	Use:           "kure",
 	Short:         "Kure ~ CLI password manager",
-	Version:       "0.2.1",
+	Version:       "0.3.0",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 }
