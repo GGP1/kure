@@ -1,22 +1,30 @@
 ## Use
 
-`kure 2fa add <name> [-d digits]`
+`kure 2fa add <name> [-d digits] [-u url]`
 
 ## Description
 
-Add a two-factor authentication code. The name must be one already used by an entry.
+Add a two-factor authentication code.
 
-Services tipically show an hyperlinked "Enter manually", "Enter this text code" or similar messages, copy the hexadecimal code given and submit it when requested by Kure. After this, your entry will have a synchronized token with the service.
+- **Using a setup key**: services tipically show hyperlinked text like "Enter manually" or "Enter this text code", copy the hexadecimal code given and submit it when requested.
+
+- **Using a URL**: extract the URL encoded in the QR code given and submit it when requested. Format: otpauth://totp/{service}:{account}?secret={secret}.
 
 ## Flags
 
-|  Name     |     Type      |    Default    |            Description            |
-|-----------|---------------|---------------|-----------------------------------|
-| digits    | int           | 6             | TOTP length                       |
+| Name | Shorthand | Type | Default | Description |
+|------|-----------|------|---------|-------------|
+| digits | d | int32 | 6 | TOTP length {6|7|8} |
+| url | u | bool | false | Add using a URL |
 
 ### Examples
 
-Add a 2FA code to Sample (Sample must be an already created entry):
+Add with setup key:
 ```
 kure 2fa add Sample
+```
+
+Add with URL:
+```
+kure 2fa add -u
 ```
