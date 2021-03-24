@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -85,6 +86,9 @@ func runSession(db *bolt.DB, r io.Reader, opts *sessionOptions) cmdutil.RunEFunc
 
 func startSession(cmd *cobra.Command, db *bolt.DB, r io.Reader, start time.Time, opts *sessionOptions) {
 	for {
+		// Force a garbage collection so the memory used by argon2 isn't reserved
+		// for us by the system while sleeping
+		debug.FreeOSMemory()
 		fmt.Printf("\n%s ", opts.prefix)
 
 		text, _, err := bufio.NewReader(r).ReadLine()
@@ -140,6 +144,7 @@ func startSession(cmd *cobra.Command, db *bolt.DB, r io.Reader, start time.Time,
 		// Reset cleanups and set all flags as unchanged to keep using default values
 		sig.Signal.ResetCleanups()
 		subCmd.LocalFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
-		subCmd.Flags().Set("help", "false") // Reset help flag
+		// Set the help flag internal variable to false in case it's used
+		subCmd.Flags().Set("help", "false")
 	}
 }

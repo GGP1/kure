@@ -17,6 +17,8 @@ import (
 	"github.com/GGP1/kure/commands/2fa/add"
 	"github.com/GGP1/kure/commands/2fa/rm"
 	"github.com/GGP1/kure/db/totp"
+	"github.com/GGP1/kure/orderedmap"
+	"github.com/GGP1/kure/pb"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
@@ -27,11 +29,14 @@ var example = `
 kure 2fa Sample -c
 
 * List all
-kure 2fa`
+kure 2fa
+
+* Display information about the setup key
+kure 2fa Sample -i`
 
 type tfaOptions struct {
-	copy    bool
-	timeout time.Duration
+	copy, info bool
+	timeout    time.Duration
 }
 
 // NewCmd returns a new command.
@@ -39,8 +44,11 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := tfaOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "2fa <name>",
-		Short:   "List two-factor authentication codes",
+		Use:   "2fa <name>",
+		Short: "List two-factor authentication codes",
+		Long: `List two-factor authentication codes.
+
+Use the [-i info] flag to display information about the setup key, it also generates a QR code with the key in URL format that can be scanned by any authenticator.`,
 		Example: example,
 		Args:    cmdutil.MustExistLs(db, cmdutil.TOTP),
 		PreRunE: auth.Login(db),
@@ -55,7 +63,8 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVarP(&opts.copy, "copy", "c", false, "copy code to clipboard")
-	f.DurationVarP(&opts.timeout, "timeout", "t", 0, "clipboard clearing timeout (only if copy=true)")
+	f.BoolVarP(&opts.info, "info", "i", false, "display information about the setup key")
+	f.DurationVarP(&opts.timeout, "timeout", "t", 0, "clipboard clearing timeout")
 
 	return cmd
 }
@@ -82,6 +91,10 @@ func run2FA(db *bolt.DB, opts *tfaOptions) cmdutil.RunEFunc {
 		t, err := totp.Get(db, name)
 		if err != nil {
 			return err
+		}
+
+		if opts.info {
+			return printKeyInfo(t)
 		}
 
 		code := GenerateTOTP(t.Raw, time.Now(), int(t.Digits))
@@ -118,9 +131,25 @@ func GenerateTOTP(key string, t time.Time, digits int) string {
 		((int(sum[offset+2] & 0xff)) << 8) |
 		(int(sum[offset+3]) & 0xff))
 
-	d := digits
-	mod := int32(value % int64(math.Pow10(d)))
-	format := fmt.Sprintf("%%0%dd", d)
+	mod := int32(value % int64(math.Pow10(digits)))
+	format := fmt.Sprintf("%%0%dd", digits)
 
 	return fmt.Sprintf(format, mod)
+}
+
+func printKeyInfo(t *pb.TOTP) error {
+	// https://github.com/google/google-authenticator/wiki/Key-Uri-Format
+	URL := fmt.Sprintf("otpauth://totp/%s?secret=%s&digits=%d", strings.Title(t.Name), t.Raw, t.Digits)
+
+	if err := cmdutil.DisplayQRCode(URL); err != nil {
+		return err
+	}
+	mp := orderedmap.New()
+	mp.Set("URL", URL)
+	mp.Set("Key", t.Raw)
+	mp.Set("Digits", fmt.Sprint(t.Digits))
+
+	box := cmdutil.BuildBox(t.Name, mp)
+	fmt.Println(box)
+	return nil
 }

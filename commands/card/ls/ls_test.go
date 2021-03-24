@@ -11,7 +11,10 @@ import (
 func TestLs(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := card.Create(db, &pb.Card{Name: "test"}); err != nil {
+	if err := card.Create(db, &pb.Card{
+		Name:   "test",
+		Number: "1500135",
+	}); err != nil {
 		t.Fatalf("Failed creating the card: %v", err)
 	}
 
@@ -20,14 +23,20 @@ func TestLs(t *testing.T) {
 		name   string
 		filter string
 		hide   string
+		qr     string
 	}{
 		{
 			desc: "List one",
 			name: "test",
 		},
 		{
+			desc: "List one and show qr",
+			name: "test",
+			qr:   "true",
+		},
+		{
 			desc:   "Filter by name",
-			name:   "te",
+			name:   "te*",
 			filter: "true",
 		},
 		{
@@ -49,6 +58,7 @@ func TestLs(t *testing.T) {
 			cmd.SetArgs([]string{tc.name})
 			f.Set("filter", tc.filter)
 			f.Set("hide", tc.hide)
+			f.Set("qr", tc.qr)
 
 			if err := cmd.Execute(); err != nil {
 				t.Error(err)
@@ -60,10 +70,15 @@ func TestLs(t *testing.T) {
 func TestLsErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
+	if err := card.Create(db, &pb.Card{Name: "test"}); err != nil {
+		t.Fatalf("Failed creating the card: %v", err)
+	}
+
 	cases := []struct {
 		desc   string
 		name   string
 		filter string
+		qr     string
 	}{
 		{
 			desc:   "Card does not exist",
@@ -75,6 +90,16 @@ func TestLsErrors(t *testing.T) {
 			name:   "non-existent",
 			filter: "true",
 		},
+		{
+			desc:   "Filter syntax error",
+			name:   "[error",
+			filter: "true",
+		},
+		{
+			desc: "No data to encode",
+			name: "test",
+			qr:   "true",
+		},
 	}
 
 	cmd := NewCmd(db)
@@ -84,6 +109,7 @@ func TestLsErrors(t *testing.T) {
 			cmd.SetArgs([]string{tc.name})
 			f := cmd.Flags()
 			f.Set("filter", tc.filter)
+			f.Set("qr", tc.qr)
 
 			if err := cmd.Execute(); err == nil {
 				t.Error("Expected an error and got nil")

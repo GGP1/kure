@@ -271,9 +271,7 @@ Kure offers storing two-factor authentication codes in the form of **time-based 
 
 The time-step size used is 30 seconds, a balance between security and usability as specified by [RFC6238](https://tools.ietf.org/html/rfc6238#section-5.2).
 
-> TOTP code can be either 6, 7 or 8 digits long. The hash algorithm used is SHA1.
-
-To add a two-factor authentication code it's necessary to have an already stored entry with the same name, this makes 2FA and entries not tightly coupled but slightly related. It's important to mention that this two are encrypted with a different salt.
+> TOTP codes can be either 6, 7 or 8 digits long. The hash algorithm used is SHA1.
 
 Two-factor authentication adds an extra layer of security to your accounts. In case an attacker gets access to the secrets, he will still need the **constantly refreshing code** to get into the account making it, not impossible, but much more complicated.
 

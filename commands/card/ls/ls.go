@@ -1,7 +1,9 @@
 package ls
 
 import (
+	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/GGP1/kure/auth"
@@ -11,7 +13,6 @@ import (
 	"github.com/GGP1/kure/pb"
 	"github.com/GGP1/kure/tree"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
@@ -80,7 +81,12 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 
 			var filtered []string
 			for _, card := range cards {
-				if strings.Contains(card, name) {
+				matched, err := filepath.Match(name, card)
+				if err != nil {
+					return err
+				}
+
+				if matched {
 					filtered = append(filtered, card)
 				}
 			}

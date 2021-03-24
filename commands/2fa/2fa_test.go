@@ -25,6 +25,7 @@ func Test2FA(t *testing.T) {
 		desc    string
 		name    string
 		copy    string
+		info    string
 		timeout string
 	}{
 		{
@@ -42,6 +43,11 @@ func Test2FA(t *testing.T) {
 			copy:    "true",
 			timeout: "1ns",
 		},
+		{
+			desc: "Show setup key information",
+			name: "test",
+			info: "true",
+		},
 	}
 
 	cmd := NewCmd(db)
@@ -52,6 +58,7 @@ func Test2FA(t *testing.T) {
 			cmd.SetArgs([]string{tc.name})
 			f := cmd.Flags()
 			f.Set("copy", tc.copy)
+			f.Set("info", tc.info)
 			f.Set("timeout", tc.timeout)
 
 			if err := cmd.Execute(); err != nil {
@@ -131,7 +138,7 @@ func createElements(t *testing.T, db *bolt.DB) {
 	if err := entry.Create(db, &pb.Entry{Name: "test"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := totp.Create(db, &pb.TOTP{Name: "test"}); err != nil {
+	if err := totp.Create(db, &pb.TOTP{Name: "test", Raw: "AG5H1H2"}); err != nil {
 		t.Fatal(err)
 	}
 }

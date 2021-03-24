@@ -27,7 +27,7 @@ func TestLs(t *testing.T) {
 		},
 		{
 			desc:   "Filter by name",
-			name:   "test",
+			name:   "test*",
 			filter: "true",
 		},
 		{
@@ -54,19 +54,27 @@ func TestLs(t *testing.T) {
 func TestLsErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
+	if err := file.Create(db, &pb.File{Name: "test.txt"}); err != nil {
+		t.Fatalf("Failed creating the first file: %v", err)
+	}
+
 	cases := []struct {
 		desc   string
 		name   string
 		filter string
 	}{
 		{
-			desc:   "File does not exist",
-			name:   "non-existent",
-			filter: "false",
+			desc: "File does not exist",
+			name: "non-existent",
 		},
 		{
 			desc:   "No files found",
 			name:   "non-existent",
+			filter: "true",
+		},
+		{
+			desc:   "Filter syntax error",
+			name:   "[error",
 			filter: "true",
 		},
 	}

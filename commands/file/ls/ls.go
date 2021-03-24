@@ -2,6 +2,7 @@ package ls
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -90,7 +91,12 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 
 			var filtered []string
 			for _, file := range files {
-				if strings.Contains(file, name) {
+				matched, err := filepath.Match(name, file)
+				if err != nil {
+					return err
+				}
+
+				if matched {
 					filtered = append(filtered, file)
 				}
 			}
