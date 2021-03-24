@@ -56,6 +56,7 @@ func runCat(db *bolt.DB, w io.Writer, opts *catOptions) cmdutil.RunEFunc {
 				return errors.Errorf("name [%d] is invalid", i)
 			}
 
+			name = cmdutil.NormalizeName(name)
 			f, err := file.Get(db, name)
 			if err != nil {
 				return err
@@ -71,7 +72,7 @@ func runCat(db *bolt.DB, w io.Writer, opts *catOptions) cmdutil.RunEFunc {
 			}
 
 			if _, err := io.Copy(w, buf); err != nil {
-				return errors.Wrap(err, "")
+				return errors.Wrap(err, "copying content")
 			}
 		}
 
