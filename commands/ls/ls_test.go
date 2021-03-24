@@ -32,7 +32,7 @@ func TestLs(t *testing.T) {
 		},
 		{
 			desc:   "Filter by name",
-			name:   "test",
+			name:   "te*",
 			filter: "true",
 		},
 		{
@@ -57,7 +57,7 @@ func TestLs(t *testing.T) {
 			f.Set("qr", tc.qr)
 
 			if err := cmd.Execute(); err != nil {
-				t.Errorf("Failed running ls: %v", err)
+				t.Error(err)
 			}
 		})
 	}
@@ -65,21 +65,32 @@ func TestLs(t *testing.T) {
 
 func TestLsErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	createEntry(t, db, "test", "")
 
 	cases := []struct {
 		desc   string
 		name   string
 		filter string
+		qr     string
 	}{
 		{
-			desc:   "Entry does not exist",
-			name:   "non-existent",
-			filter: "false",
+			desc: "Entry does not exist",
+			name: "non-existent",
 		},
 		{
 			desc:   "No entries found",
 			name:   "non-existent",
 			filter: "true",
+		},
+		{
+			desc:   "Filter syntax error",
+			name:   "[error",
+			filter: "true",
+		},
+		{
+			desc: "No data to encode",
+			name: "test",
+			qr:   "true",
 		},
 	}
 
@@ -90,6 +101,7 @@ func TestLsErrors(t *testing.T) {
 			cmd.SetArgs([]string{tc.name})
 			f := cmd.Flags()
 			f.Set("filter", tc.filter)
+			f.Set("qr", tc.qr)
 
 			if err := cmd.Execute(); err == nil {
 				t.Error("Expected an error and got nil")
