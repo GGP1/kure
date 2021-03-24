@@ -11,8 +11,8 @@ import (
 	"unicode"
 
 	"github.com/GGP1/kure/commands/root"
-	"github.com/atotto/clipboard"
 
+	"github.com/atotto/clipboard"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -93,10 +93,11 @@ func customMarkdown(cmd *cobra.Command, w io.Writer) error {
 	buf.WriteString("## Description\n\n")
 	if cmd.Long != "" {
 		buf.WriteString(cmd.Long)
+		buf.WriteString("\n\n")
 	} else {
 		buf.WriteString(cmd.Short)
+		buf.WriteString(".\n\n")
 	}
-	buf.WriteString(".\n\n")
 
 	if cmd.HasSubCommands() {
 		url := getURL(cmd)
@@ -174,6 +175,7 @@ func completion(args []string) error {
 		if err := root.GenZshCompletionFile("completion/zsh.sh"); err != nil {
 			return err
 		}
+		return nil
 	}
 
 	switch args[2] {
