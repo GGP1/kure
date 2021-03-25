@@ -29,7 +29,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Use:   "it <command|flags|name>",
 		Short: "Interactive prompt",
 		Long: `Interactive prompt.
-This commands behave depending on the arguments received, it requests the missing information.
+This command behaves depending on the arguments received, it requests the missing information.
 
 Given 				Requests
 command 			flags and name
