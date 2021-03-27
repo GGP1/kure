@@ -33,12 +33,16 @@ func Test2FA(t *testing.T) {
 			name: "",
 		},
 		{
-			desc: "List one and copy with default timeout",
+			desc: "List one",
+			name: "test",
+		},
+		{
+			desc: "Copy with default timeout",
 			name: "test",
 			copy: "true",
 		},
 		{
-			desc:    "List one and copy with custom timeout",
+			desc:    "Copy with custom timeout",
 			name:    "test",
 			copy:    "true",
 			timeout: "1ns",
