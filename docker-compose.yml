@@ -1,23 +1,31 @@
-# This file contains details about how to execute Kure inside a container while persisting the data.
+# This file contains details about how to execute Kure inside a container while persisting the information.
 version: "3.8"
 
 services:
-  # Run using "docker-compose run --rm kure"
+  # Run using "docker-compose run kure"
   kure:
     image: gastonpalomeque/kure:latest
-    command: sh # Add -c "kure session" to directly initialize a session ar execute other commands
+    command: sh # Use the -c flag to initialize the container with a specific command, e.g. sh -c "kure session"
     volumes:
       # Volume
-      - <volume-name>:/root/.kure
-
+      - <volume-name>:/{$HOME}/.kure
+      
       # Bind mount: default
-      - ${HOME}/.kure:/root/.kure
-
+      - ${HOME}/.kure:/{$HOME}/.kure
+      
       # Bind mount: custom (if they are both inside the same folder you can simply mount the folder)
-      - ${KURE_CONFIG}:/root/.kure/kure.yaml # "database.path" field must point to the database inside the container
-      - <host/db/path>:/root/.kure/kure.db # The database can be placed anywhere as long as its path is specified in the configuration file
+      - ${KURE_CONFIG}:/{$HOME}/.kure/kure.yaml # "database.path" field must point to the database inside the container
+      - <host/db/path>:/{$HOME}/.kure/kure.db # The database can be placed anywhere as long as its path is specified in the configuration file
+      
+      # environment:
+        #   - KURE_CONFIG=path/to/config -> Put the configuration file elsewhere by setting its path in the environment variable
 
-    # environment:
-    #   - KURE_CONFIG=path/to/config -> Put the configuration file elsewhere by setting its path in the environment variable
-
-# In case you want to limit privileges, modify the Dockerfile to create a new user, create the same user on the host (with the same IDs) and give him the ownership of the mount/volume.
+  # In the case of kure-secure, the bind mount/volume must be owned by the same uid on both the host and the container. Docker does not support id-mapped mounts yet.
+  # Run using "docker-compose run kure-secure"
+  kure-secure:
+    image: gastonpalomeque/kure-secure:latest
+    command: sh
+    cap_drop:
+      - all
+    security_opt:
+      - no-new-privileges
