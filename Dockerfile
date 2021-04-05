@@ -1,4 +1,4 @@
-FROM golang:1.16.0-alpine3.13 as builder
+FROM golang:1.16.3-alpine3.13 as builder
 
 WORKDIR /kure
 
@@ -12,7 +12,7 @@ RUN go install -ldflags="-s -w" .
 
 # ---------------------------------------------
 
-FROM alpine:3.13.2
+FROM alpine:3.13.4
 
 RUN apk add --update \
         vim \
