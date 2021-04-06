@@ -2,8 +2,6 @@ package session
 
 import (
 	"bytes"
-	"io"
-	"os"
 	"testing"
 	"time"
 
@@ -12,19 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestRunSession(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
-
-	cmd := NewCmd(db, nil)
-	config.Set("session.timeout", "1ms")
-	config.Set("session.prefix", "test")
-
-	if err := runSession(os.Stdin, &sessionOptions{})(cmd, nil); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestStartSession(t *testing.T) {
+func TestExecute(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	scripts := map[string]string{
 		"login": "copy -u $1 && copy $1",
@@ -32,33 +18,32 @@ func TestStartSession(t *testing.T) {
 	config.Set("session.scripts", scripts)
 
 	cases := []struct {
-		desc    string
-		command string
-		timeout time.Duration
+		desc string
+		args []string
 	}{
 		{
-			desc:    "Kure command",
-			command: "kure gen -l 15 -L 1,2,3",
+			desc: "Kure command",
+			args: []string{"kure", "stats"},
 		},
 		{
-			desc:    "Run script",
-			command: "login github",
+			desc: "Session command",
+			args: []string{"pwd"},
+		},
+		{
+			desc: "No command",
+			args: []string{},
 		},
 	}
 
+	cmd := NewCmd(db, &bytes.Buffer{})
+	cmd.RunE = nil
+	root := cmd.Root()
+
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			buf := bytes.NewBufferString(tc.command)
-			cmd := NewCmd(db, buf)
-
-			cmd.SetOut(io.Discard)
-			opts := &sessionOptions{
-				prefix:  "",
-				timeout: tc.timeout,
+			if err := execute(root, tc.args, time.Now(), &sessionOptions{}); err != nil {
+				t.Errorf("Failed executing command: %v", err)
 			}
-
-			// Start a goroutine so it doesn't block
-			go startSession(cmd, buf, opts)
 		})
 	}
 }
