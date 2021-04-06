@@ -98,13 +98,11 @@ func run2FA(db *bolt.DB, opts *tfaOptions) cmdutil.RunEFunc {
 		}
 
 		code := GenerateTOTP(t.Raw, time.Now(), int(t.Digits))
-		fmt.Println(strings.Title(t.Name), code)
-
 		if opts.copy {
-			if err := cmdutil.WriteClipboard(cmd, opts.timeout, "TOTP", code); err != nil {
-				return err
-			}
+			return cmdutil.WriteClipboard(cmd, opts.timeout, "TOTP", code)
 		}
+
+		fmt.Println(strings.Title(t.Name), code)
 		return nil
 	}
 }

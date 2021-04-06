@@ -14,10 +14,15 @@ RUN go install -ldflags="-s -w" .
 
 FROM alpine:3.13.4
 
-RUN apk add --update \
-        vim \
-    && rm -rf /var/cache/apk/*
+ARG USER=gandalf
 
 COPY --from=builder /go/bin/kure /usr/bin/
+
+RUN adduser $USER -D -S \
+    && mkdir $HOME/.kure \
+    && chown $USER /usr/bin/kure $HOME/.kure \
+    && chmod 0700 /usr/bin/kure $HOME/.kure
+
+USER $USER
 
 CMD ["/usr/bin/kure"]

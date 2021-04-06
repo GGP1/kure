@@ -38,19 +38,23 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "session",
 		Short: "Run a session",
-		Long: `Sessions are used for doing multiple operations by providing the master password once, it's encrypted
-and stored inside a locked buffer, decrypted when needed and destroyed right after it.
+		Long: `Sessions are used for doing multiple operations by providing the master password once, it's encrypted and stored inside a locked buffer, decrypted when needed and destroyed right after it.
 
-The user can set a timeout to automatically close the session after X amount of time. By default it never ends.
+Scripts can be created in the configuration file and executed inside sessions by using their aliases and, optionally, passing arguments.
 
 Once into a session:
+• use "&&" to execute a commands sequence.
 • it's optional to use the word "kure" to run a command.
-• type "timeout" to see the time left.
-• type "exit" or press Ctrl+C to quit.
-• type "pwd" to get the current working directory.`,
+
+Session commands:
+• block - block execution (to be manually unlocked).
+• exit|quit|Ctrl+C - close the session.
+• timeout - show time left.
+• pwd - show current directory.
+• sleep - sleep for x time.`,
 		Example: example,
 		PreRunE: auth.Login(db),
-		RunE:    runSession(db, r, &opts),
+		RunE:    runSession(r, &opts),
 	}
 
 	f := cmd.Flags()
@@ -60,7 +64,7 @@ Once into a session:
 	return cmd
 }
 
-func runSession(db *bolt.DB, r io.Reader, opts *sessionOptions) cmdutil.RunEFunc {
+func runSession(r io.Reader, opts *sessionOptions) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		// Use config values if they are set and the flag wasn't used
 		if p := "session.prefix"; config.IsSet(p) && !cmd.Flags().Changed("prefix") {
@@ -70,8 +74,7 @@ func runSession(db *bolt.DB, r io.Reader, opts *sessionOptions) cmdutil.RunEFunc
 			opts.timeout = config.GetDuration(t)
 		}
 
-		start := time.Now()
-		go startSession(cmd, db, r, start, opts)
+		go startSession(cmd, r, opts)
 
 		if opts.timeout == 0 {
 			// Block forever
@@ -84,14 +87,20 @@ func runSession(db *bolt.DB, r io.Reader, opts *sessionOptions) cmdutil.RunEFunc
 	}
 }
 
-func startSession(cmd *cobra.Command, db *bolt.DB, r io.Reader, start time.Time, opts *sessionOptions) {
+func startSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) {
+	reader := bufio.NewReader(r)
+	root := cmd.Root()
+	// The configuration is populated on start and changes inside the session won't have effect until restart.
+	scripts := config.GetStringMapString("session.scripts")
+	start := time.Now()
+
 	for {
 		// Force a garbage collection so the memory used by argon2 isn't reserved
 		// for us by the system while sleeping
 		debug.FreeOSMemory()
-		fmt.Printf("\n%s ", opts.prefix)
+		fmt.Printf("%s ", opts.prefix)
 
-		text, _, err := bufio.NewReader(r).ReadLine()
+		text, _, err := reader.ReadLine()
 		if err != nil {
 			if err == io.EOF {
 				sig.Signal.Kill()
@@ -102,49 +111,116 @@ func startSession(cmd *cobra.Command, db *bolt.DB, r io.Reader, start time.Time,
 
 		args := strings.Split(string(text), " ")
 
-		// Session commands
-		switch args[0] {
-		case "":
+		script, ok := scripts[args[0]]
+		if ok {
+			script = fillScript(args[1:], script)
+			args = strings.Split(script, " ")
+		}
+
+		if err := execute(root, args, start, opts); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+		}
+	}
+}
+
+// cleanup resets signal cleanups and sets all flags as unchanged to keep using default values.
+//
+// It also sets the help flag internal variable to false in case it's used.
+func cleanup(cmd *cobra.Command) {
+	sig.Signal.ResetCleanups()
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
+	cmd.Flags().Set("help", "false")
+}
+
+func execute(root *cobra.Command, args []string, start time.Time, opts *sessionOptions) error {
+	cmdsGroup := parseCmds(args)
+
+	for _, args := range cmdsGroup {
+		if len(args) == 0 {
 			continue
-
-		case "exit", "quit", "logout":
-			sig.Signal.Kill()
-
-		case "kure", "Kure":
-			// Make using "kure" optional
+		}
+		if args[0] == "kure" {
 			args = args[1:]
+		}
 
-		case "pwd":
-			dir, _ := os.Getwd()
-			fmt.Println(dir)
-			continue
-
-		case "timeout":
-			if opts.timeout == 0 {
-				fmt.Println("The session has no timeout.")
-				continue
-			}
-			fmt.Println("Time left:", opts.timeout-time.Since(start))
+		cont := sessionCommand(args, start, opts)
+		if cont {
 			continue
 		}
 
-		root := cmd.Root()
-		root.SetArgs(args[:])
-		subCmd, _, _ := root.Find(args[:])
+		root.SetArgs(args)
+		subCmd, _, _ := root.Find(args)
 
 		if err := root.Execute(); err != nil {
-			fmt.Fprintln(os.Stderr, "error:", err)
-
 			if subCmd.PostRun != nil {
-				// Force PostRun to reset options variables (it isn't executed on failure)
+				// Force PostRun to reset options variables (as it isn't executed on failure)
 				subCmd.PostRun(nil, nil)
+			}
+			return err
+		}
+
+		cleanup(subCmd)
+	}
+	return nil
+}
+
+// fillScript returns the script with the arguments replaced.
+func fillScript(args []string, script string) string {
+	if !strings.Contains(script, "$") {
+		return script
+	}
+
+	arg := 1 // Start from $1 like bash
+	for i := 0; i < len(args); i++ {
+		name := args[i]
+
+		if strings.HasPrefix(name, "\"") {
+			// Look for the closing quote
+			for j, a := range args[i:] {
+				if strings.HasSuffix(a, "\"") {
+					words := strings.Join(args[i+1:i+j+1], " ") // Add ones to exclude first and include second element
+					name = strings.TrimPrefix(name, "\"") + " " + strings.TrimSuffix(words, "\"")
+					i += j // Skip joined words
+					break
+				}
 			}
 		}
 
-		// Reset cleanups and set all flags as unchanged to keep using default values
-		sig.Signal.ResetCleanups()
-		subCmd.LocalFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
-		// Set the help flag internal variable to false in case it's used
-		subCmd.Flags().Set("help", "false")
+		script = strings.ReplaceAll(script, fmt.Sprintf("$%d", arg), name)
+		arg++
 	}
+
+	return script
+}
+
+// Given
+// 		"ls && copy github && 2fa"
+// return
+// 		[{"ls"}, {"copy", "github"}, {"2fa"}].
+func parseCmds(args []string) [][]string {
+	var ampersands []int
+	for i, a := range args {
+		if a == "&&" {
+			// Store the indices of the ampersands
+			ampersands = append(ampersands, i)
+		}
+	}
+
+	// Pass on the args received if no ampersand was found
+	if len(ampersands) == 0 {
+		return [][]string{args}
+	}
+
+	// Append len(ampersands) commands to the group
+	group := [][]string{}
+	lastIdx := 0
+	for _, idx := range ampersands {
+		group = append(group, args[lastIdx:idx])
+		lastIdx = idx + 1 // Add one to skip the ampersand
+	}
+
+	// Append the last command
+	group = append(group, args[lastIdx:])
+
+	return group
 }

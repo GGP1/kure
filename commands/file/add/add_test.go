@@ -155,22 +155,6 @@ func TestAddNote(t *testing.T) {
 	}
 }
 
-func BenchmarkAdd(b *testing.B) {
-	db := cmdutil.SetContext(b, "../../../db/testdata/database")
-
-	cmd := NewCmd(db, nil)
-	f := cmd.Flags()
-	f.Set("path", "../testdata/test_file.txt")
-
-	for i := 0; i < b.N; i++ {
-		cmd.SetArgs([]string{fmt.Sprintf("%d", i)})
-
-		if err := cmd.Execute(); err != nil {
-			b.Error(err)
-		}
-	}
-}
-
 func TestPostRun(t *testing.T) {
 	NewCmd(nil, nil).PostRun(nil, nil)
 }

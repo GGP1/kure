@@ -67,7 +67,7 @@ func Get(key string) interface{} {
 	return config.Get(key)
 }
 
-// GetEnclave returns an uncasted value from the config map.
+// GetEnclave returns an enclave from the config map.
 func GetEnclave(key string) *memguard.Enclave {
 	v := config.Get(key)
 	if v == nil {
@@ -82,12 +82,17 @@ func GetDuration(key string) time.Duration {
 	return cast.ToDuration(config.Get(key))
 }
 
-// GetString returns an string from the config map.
+// GetString returns a string from the config map.
 func GetString(key string) string {
 	return cast.ToString(config.Get(key))
 }
 
-// GetUint32 returns a uint32 from the config map.
+// GetString returns a map[string]string from the config map.
+func GetStringMapString(key string) map[string]string {
+	return cast.ToStringMapString(config.Get(key))
+}
+
+// GetUint32 returns an uint32 from the config map.
 func GetUint32(key string) uint32 {
 	return cast.ToUint32(config.Get(key))
 }
@@ -120,6 +125,7 @@ func SetDefaults(dbPath string) {
 		"editor":            "vim",
 		"keyfile.path":      "",
 		"session.prefix":    "kure:~ $",
+		"session.scripts":   map[string]string{},
 		"session.timeout":   "0s",
 	}
 
@@ -162,6 +168,7 @@ func WriteStruct(filename string) error {
 		},
 		"session": map[string]interface{}{
 			"prefix":  "",
+			"scripts": map[string]string{},
 			"timeout": "",
 		},
 	}

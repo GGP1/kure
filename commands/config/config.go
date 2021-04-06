@@ -30,7 +30,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 		Aliases: []string{"cfg"},
 		Example: example,
 		PreRunE: auth.Login(db),
-		RunE:    runConfig(db, r),
+		RunE:    runConfig(r),
 	}
 
 	cmd.AddCommand(argon2cmd.NewCmd(db), create.NewCmd(), edit.NewCmd(db))
@@ -38,7 +38,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	return cmd
 }
 
-func runConfig(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
+func runConfig(r io.Reader) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		path := config.FileUsed()
 		data, err := os.ReadFile(path)

@@ -79,7 +79,7 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 				return err
 			}
 
-			var filtered []string
+			var matches []string
 			for _, card := range cards {
 				matched, err := filepath.Match(name, card)
 				if err != nil {
@@ -87,15 +87,15 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 				}
 
 				if matched {
-					filtered = append(filtered, card)
+					matches = append(matches, card)
 				}
 			}
 
-			if len(filtered) == 0 {
+			if len(matches) == 0 {
 				return errors.New("no cards were found")
 			}
 
-			tree.Print(filtered)
+			tree.Print(matches)
 			return nil
 		}
 

@@ -22,7 +22,8 @@ Paths inside it **MUST** be **absolute**.
   - [Path](#path)
 - [Session](#session)
   - [Prefix](#prefix)
-  - [Timeout](#timeout)
+  - [Scripts](#scripts)
+  - [Timeout](#timeoutt)
 
 ---
 
@@ -63,7 +64,13 @@ The path to the key file may be specified or not, in case it's not, the user wil
 
 Text that precedes your commands.
 
+#### Scripts
+
+Scripts can be used to run a sequence of commands inside sessions. Each one of them has an alias and may contain one-based indexing arguments ($1, $2, ..., $n) to be replaced by the arguments passed when executing the script. For example, having the script `list: ls $1 -s` we execute it by typing `list sample`, that is `<alias> <$1>`.
+
+> Aliases must not contain spaces and arguments containing spaces must be enclosed by double quotes.
+
 #### Timeout
 
 Time until the session is closed.
-Set to "0s" or leave blank for no timeout.
+Set to "0s" or leave blank for no timeout.ç

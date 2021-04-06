@@ -16,30 +16,6 @@ This project aims to offer the most secure and private way of operating with sen
 - **Portable:** Both Kure and the database compile to binary files and they can be easily carried around in an external device.
 - **Multiple formats:** Store entries, cards and files of any type.
 
-## Table of contents
-
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Documentation](#documentation)
-  - [Database](#database)
-  - [Data organization](#data-organization)
-  - [Secret generation](#secret-generation)
-  - [Master password](#master-password)
-  - [Key file](#key-file)
-  - [Memory security](#memory-security)
-  - [Encryption](#encryption)
-  - [Backups](#backups)
-  - [Restoration](#restoration)
-  - [Synchronization](#synchronization)
-  - [Sessions](#sessions)
-  - [Interactive prompt](#interactive-prompt)
-  - [Import/Export](#import/export)
-  - [Two factor authentication](#two-factor-authentication)
-- [Caveats and limitations](#caveats-and-limitations)
-- [Contributing](#contributing)
-- [License](#license)
-
 ## Installation
 
 #### Pre-compiled binaries
@@ -65,20 +41,23 @@ scoop install https://raw.githubusercontent.com/GGP1/scoop-bucket/master/bucket/
 
 #### Docker
 
-> Use volumes `-v <volume-name>:/root/.kure` to persist the data on the host machine.
->
-> Mount your database and configuration file to the container using bind mounts: `-v /path/to/data:./root/.kure`. Any write into the bind mount will be propagated back to the Docker host.
+> For details about persisting the information check the [docker-compose.yml](/docker-compose.yml) file.
+
 ```
 docker run -it gastonpalomeque/kure sh
+```
+
+For a container with limited privileges and kernel capabilities, use:
+
+```
+docker run -it --security-opt=no-new-privileges --cap-drop=all gastonpalomeque/kure-secure sh
 ```
 
 #### Compìle from source
 
 Requirements: [Go](https://golang.org/doc/install)
 ```
-git clone https://github.com/GGP1/kure
-cd kure
-make install
+git clone https://github.com/GGP1/kure && cd kure && make install
 ```
 
 ## Configuration
@@ -108,7 +87,7 @@ Moving forward to the configuration file itself, in it we can specify the clipbo
 Further information and examples about each command under [docs/commands](/docs/commands).
 
 <div>
-    <img align="middle" src="https://user-images.githubusercontent.com/51374959/109055273-b4413180-76bd-11eb-8e71-ae73e7e06522.png" height=600 width=600 />
+    <img align="middle" src="https://user-images.githubusercontent.com/51374959/109055273-b4413180-76bd-11eb-8e71-ae73e7e06522.png" height=500 width=500 />
 </div>
 
 ### Overview
@@ -212,58 +191,51 @@ The session command is, essentially, a wrapper of the **root** command and all i
 Here's a simplified implementation of [session.go](/cmd/session/session.go):
 
 ```go
-func runSession(cmd *cobra.Command) error {
+func runSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) error {
           ...
 
-    scanner := bufio.NewScanner(os.Stdin)
-    go startSession(cmd, scanner)
+    go startSession(cmd, r, opts)
 
-    if timeout == 0 {
-      block := make(chan struct{})
-      <-block
-    }
+	if opts.timeout == 0 {
+		block := make(chan struct{})
+		<-block
+	}
 
-    <-time.After(timeout)
+	<-time.After(opts.timeout)
     return nil
 }
 
-func startSession(cmd *cobra.Command, scanner *bufio.Scanner) {
-  for {
-      scanner.Scan()
-      args := strings.Split(scanner.Text(), " ")
-    
-          ...
+func startSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) {
+	reader := bufio.NewReader(r)
+  	root := cmd.Root()
+	scripts := config.GetStringMapString("session.scripts")
+	start := time.Now()
 
-      r := cmd.Root()
-      r.SetArgs(args[:])
-      if err := r.Execute(); err != nil {
-        fmt.Fprintln(os.Stderr, err)
-      }
-  }
+	for {
+		fmt.Printf("%s ", opts.prefix)
+
+		text, _, err := reader.ReadLine()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			continue
+		}
+
+		args := strings.Split(string(text), " ")
+
+		script, ok := scripts[args[0]]
+		if ok {
+			script = fillScript(args[1:], script)
+			args = strings.Split(script, " ")
+		}
+
+		if err := execute(root, args, start, opts); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+		}
+	}
 }
 ```
 
-To start a session use `kure session`.
-
-You can set a **timeout** using the [-t timeout] flag so it will **automatically close** the session once the time specified has passed. [Command documentation](/docs/commands/session.md).
-
-### Interactive prompt
-
-`kure it` command starts an interactive prompt that behaves depending on the arguments received, it requests the missing information. See its [wiki page](https://github.com/GGP1/kure/wiki/Interactive-prompt) to see more details.
-
-### Import/Export
-
-`kure import` reads other managers' CSV files and stores the entries encrypting them with the master password previously passed.
-
-`kure export` takes Kure's entries and formats them depending on the manager selected to generate a CSV file.
-
-Formats supported: CSV.
-
-Password managers supported:
-  - 1Password
-  - Bitwarden
-  - Keepass/X/XC
-  - Lastpass
+To start a session use `kure session`. [Command documentation](/docs/commands/session.md).
 
 ### Two-factor authentication
 

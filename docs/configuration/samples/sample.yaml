@@ -15,4 +15,11 @@ keyfile:
 
 session:
   prefix: "kure:~$"
+  scripts: 
+    # Aliases must not contain spaces
+    # Arguments containing spaces must be enclosed by double quotes
+    # alias: script
+    login: copy $1 -u -t 4s && copy $1 -t 4s && 2fa $1 -c -t 5s
+    create: add $1 -l 25 && 2fa add $1
+    show: ls $1 -s && 2fa $2
   timeout: "10m"  # Set to "0s" or leave blank for no timeout

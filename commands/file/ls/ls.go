@@ -89,7 +89,7 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 				return err
 			}
 
-			var filtered []string
+			var matches []string
 			for _, file := range files {
 				matched, err := filepath.Match(name, file)
 				if err != nil {
@@ -97,15 +97,15 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 				}
 
 				if matched {
-					filtered = append(filtered, file)
+					matches = append(matches, file)
 				}
 			}
 
-			if len(filtered) == 0 {
+			if len(matches) == 0 {
 				return errors.New("no files were found")
 			}
 
-			tree.Print(filtered)
+			tree.Print(matches)
 			return nil
 		}
 

@@ -2,53 +2,40 @@
 
 `kure session [-p prefix] [-t timeout]`
 
-### Description
+## Description
 
-Sessions are used for doing multiple operations by providing the master password once, it's encrypted
-and stored inside a locked buffer, decrypted when needed and destroyed right after it.
+Sessions are used for doing multiple operations by providing the master password once, it's encrypted and stored inside a locked buffer, decrypted when needed and destroyed right after it.
 
-The user can set a timeout to automatically close the session after *X* amount of time. By default it never ends.
+Scripts can be created in the configuration file and executed inside sessions by using their aliases and, optionally, passing arguments.
 
-Once into the session:
+> Adding scripts inside a session will require to restart it to take effect as they are loaded on the command initialization and not before every command.
+
+Once into a session:
+- use "&&" to execute a commands sequence.
 - it's optional to use the word "kure" to run a command.
-- type "timeout" to see the time left.
-- type "exit" or press Ctrl+C to quit.
-- type "pwd" to get the current working directory.
 
-### Flags
+Session commands:
+- block - block execution (to be manually unlocked).
+- exit|quit|Ctrl+C - close the session.
+- timeout - show time left.
+- pwd - show current directory.
+- sleep - sleep for x time.
 
-|  Name     | Shorthand |     Type      |    Default    |                   Description                     |
-|-----------|-----------|---------------|---------------|---------------------------------------------------|
-| prefix    | p         | string        | "kure:~#"     | Customize the text that precedes your commands    |
-| timeout   | t         | duration      | 0             | Session timeout. By default it never ends         |
+## Flags
 
-### Timeout units
-
-Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+| Name | Shorthand | Type | Default | Description |
+|------|-----------|------|---------|-------------|
+| prefix | p | string | kure:~ $ | Text that precedes your commands |
+| timeout | t | duration | 0s | Session timeout |
 
 ### Examples
 
-Run a session for 1 hour
+Run a session without timeout and using "$" as the prefix:
+```
+kure session -p $
+```
+
+Run a session for 1 hour:
 ```
 kure session -t 1h
-```
-
-Run a session without timeout and using "kure:~$" as the prefix
-```
-kure session -l kure:~$
-```
-
-Show the session time left (session running)
-```
-timeout
-```
-
-Show current directory (session running)
-```
-pwd
-```
-
-Exit the session (session running)
-```
-exit
 ```

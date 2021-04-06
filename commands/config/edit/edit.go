@@ -16,24 +16,20 @@ import (
 var example = `
 kure config edit`
 
-type editOptions struct{}
-
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
-	opts := editOptions{}
-
 	cmd := &cobra.Command{
 		Use:     "edit",
 		Short:   "Edit the current configuration file",
 		Example: example,
 		PreRunE: auth.Login(db),
-		RunE:    runEdit(&opts),
+		RunE:    runEdit(),
 	}
 
 	return cmd
 }
 
-func runEdit(opts *editOptions) cmdutil.RunEFunc {
+func runEdit() cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		path := config.FileUsed()
 

@@ -11,6 +11,11 @@
     },
     "session": {
       "prefix": "kure:~$",
+      "scripts": {
+        "login": "copy $1 -u -t 4s && copy $1 -t 4s && 2fa $1 -c -t 5s",
+        "create": "add $1 -l 25 && 2fa add $1",
+        "show": "ls $1 -s && 2fa $2"
+      },
       "timeout": "10m"
     }
 }
