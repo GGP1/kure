@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"testing"
 	"time"
@@ -159,6 +160,20 @@ func TestGetString(t *testing.T) {
 	}
 }
 
+func TestStringMapString(t *testing.T) {
+	expected := map[string]string{"login": "test"}
+	config.mp = map[string]interface{}{
+		"scripts": map[string]string{
+			"login": "test",
+		},
+	}
+
+	got := GetStringMapString("scripts")
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("Expected %v, got %v", expected, got)
+	}
+}
+
 func TestGetUint32(t *testing.T) {
 	key := "test"
 	expected := uint32(12)
@@ -217,6 +232,7 @@ func TestWriteStruct(t *testing.T) {
 		},
 		"session": map[string]interface{}{
 			"prefix":  "",
+			"scripts": map[string]string{},
 			"timeout": "",
 		},
 	}
