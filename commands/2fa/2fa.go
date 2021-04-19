@@ -19,6 +19,7 @@ import (
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
+	"github.com/GGP1/kure/tree"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
@@ -75,16 +76,12 @@ func run2FA(db *bolt.DB, opts *tfaOptions) cmdutil.RunEFunc {
 		name = cmdutil.NormalizeName(name)
 
 		if name == "" {
-			totps, err := totp.List(db)
+			totps, err := totp.ListNames(db)
 			if err != nil {
 				return err
 			}
 
-			for _, t := range totps {
-				code := GenerateTOTP(t.Raw, time.Now(), int(t.Digits))
-
-				fmt.Printf("%s %s\n", strings.Title(t.Name), code)
-			}
+			tree.Print(totps)
 			return nil
 		}
 
