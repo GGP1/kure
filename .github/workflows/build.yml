@@ -28,6 +28,8 @@ jobs:
         uses: crazy-max/ghaction-docker-meta@v2
         with:
           images: gastonpalomeque/kure,gastonpalomeque/kure-secure
+          tags: |
+            type=semver,pattern={{raw}}
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
