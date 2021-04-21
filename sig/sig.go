@@ -48,7 +48,7 @@ func (s *sig) KeepAlive() {
 	atomic.StoreInt32(&s.keepAlive, 1)
 }
 
-// Kill forces realeasing resources, deleting sensitive information and exiting.
+// Kill forces releasing resources, deleting sensitive information and exiting.
 func (s *sig) Kill() {
 	atomic.StoreInt32(&s.keepAlive, 0)
 	s.interrupt <- os.Kill

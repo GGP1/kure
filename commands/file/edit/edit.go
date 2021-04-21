@@ -78,7 +78,7 @@ func runEdit(db *bolt.DB, opts *editOptions) cmdutil.RunEFunc {
 		}
 		bin, err := exec.LookPath(opts.editor)
 		if err != nil {
-			return errors.Errorf("%q executable not found", opts.editor)
+			return errors.Errorf("executable %q not found", opts.editor)
 		}
 
 		filename, err := createTempFile(filepath.Ext(oldFile.Name), oldFile.Content)
