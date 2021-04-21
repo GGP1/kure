@@ -172,10 +172,7 @@ func completion(args []string) error {
 		if err := root.GenPowerShellCompletionFile("completion/powershell.ps1"); err != nil {
 			return err
 		}
-		if err := root.GenZshCompletionFile("completion/zsh.sh"); err != nil {
-			return err
-		}
-		return nil
+		return root.GenZshCompletionFile("completion/zsh.sh")
 	}
 
 	switch args[2] {
