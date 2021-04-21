@@ -1,10 +1,14 @@
 project_name: kure
 before:
   hooks:
+    - make completion
+    - go mod download
     - go mod tidy
 builds:
-  - env:
-      - CGO_ENABLED=0
+  -
+    ldflags: -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }}
+    env:
+        - CGO_ENABLED=0
     goos: 
       - darwin
       - linux
@@ -16,6 +20,9 @@ builds:
       - amd64
       - arm
       - arm64
+    goarm:
+      - 6
+      - 7
 archives:
   -
     name_template: '{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
