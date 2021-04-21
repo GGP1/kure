@@ -1,6 +1,7 @@
 package root
 
 import (
+	"fmt"
 	"os"
 
 	tfa "github.com/GGP1/kure/commands/2fa"
@@ -29,13 +30,19 @@ import (
 var cmd = &cobra.Command{
 	Use:           "kure",
 	Short:         "Kure ~ CLI password manager",
-	Version:       "0.3.0",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 }
 
+// CmdForDocs returns the root command and should be used for documentation purposes only.
+func CmdForDocs() *cobra.Command {
+	registerCmds(nil)
+	return cmd
+}
+
 // Execute adds all the subcommands to the root and executes it.
-func Execute(db *bolt.DB) error {
+func Execute(version, commit string, db *bolt.DB) error {
+	setVersion(version, commit)
 	registerCmds(db)
 
 	return cmd.Execute()
@@ -63,8 +70,6 @@ func registerCmds(db *bolt.DB) {
 	cmd.AddCommand(stats.NewCmd(db))
 }
 
-// CmdForDocs returns the root command and should be used for documentation purposes only.
-func CmdForDocs() *cobra.Command {
-	registerCmds(nil)
-	return cmd
+func setVersion(version, commit string) {
+	cmd.Version = fmt.Sprintf("%s (%s)", version, commit)
 }

@@ -15,6 +15,11 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+var (
+	version = "development"
+	commit  = ""
+)
+
 func main() {
 	if err := config.Init(); err != nil {
 		log.Fatalf("couldn't initialize the configuration: %v", err)
@@ -29,7 +34,7 @@ func main() {
 	// Listen for a signal to release resources and delete sensitive information
 	sig.Signal.Listen(db)
 
-	if err := root.Execute(db); err != nil {
+	if err := root.Execute(version, commit, db); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		db.Close()
 		memguard.SafeExit(1)
