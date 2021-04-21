@@ -184,15 +184,12 @@ func storeFile(db *bolt.DB, path, filename string) error {
 		UpdatedAt: time.Time{}.Unix(),
 	}
 
-	// There is no better way to report as Batch blocks until all the
-	// transactions started are done
+	// There is no better way to report as Batch combines
+	// all the transactions into a single one
 	abs, _ := filepath.Abs(path)
-	fmt.Printf("Add: %s\n", abs)
 
-	if err := file.Create(db, f); err != nil {
-		return err
-	}
-	return nil
+	fmt.Printf("Add: %s\n", abs)
+	return file.Create(db, f)
 }
 
 // addNote takes input from the user and creates a file inside the "notes" folder
@@ -217,10 +214,6 @@ func addNote(db *bolt.DB, r io.Reader, name string) error {
 		UpdatedAt: time.Time{}.Unix(),
 	}
 
-	if err := file.Create(db, f); err != nil {
-		return err
-	}
-
 	fmt.Printf("Add: %s\n", name)
-	return nil
+	return file.Create(db, f)
 }
