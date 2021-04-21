@@ -205,7 +205,7 @@ func useTextEditor(db *bolt.DB, oldEntry *pb.Entry) error {
 	editor := cmdutil.SelectEditor()
 	bin, err := exec.LookPath(editor)
 	if err != nil {
-		return errors.Errorf("%q executable not found", editor)
+		return errors.Errorf("executable %q not found", editor)
 	}
 
 	filename, err := createTempFile(oldEntry)
@@ -246,6 +246,14 @@ func useTextEditor(db *bolt.DB, oldEntry *pb.Entry) error {
 	if err != nil {
 		return err
 	}
+
+	rmTabs := func(old string) string {
+		return strings.ReplaceAll(old, "\t", "")
+	}
+	newEntry.Name = rmTabs(newEntry.Name)
+	newEntry.Username = rmTabs(newEntry.Username)
+	newEntry.URL = rmTabs(newEntry.URL)
+	newEntry.Notes = rmTabs(newEntry.Notes)
 
 	return updateEntry(db, oldEntry.Name, newEntry)
 }

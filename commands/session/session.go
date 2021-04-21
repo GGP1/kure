@@ -198,7 +198,8 @@ func fillScript(args []string, script string) string {
 // return
 // 		[{"ls"}, {"copy", "github"}, {"2fa"}].
 func parseCmds(args []string) [][]string {
-	var ampersands []int
+	// The underlying array will grow only if the script has multiple "&&" in a row
+	ampersands := make([]int, 0, len(args)/2)
 	for i, a := range args {
 		if a == "&&" {
 			// Store the indices of the ampersands
@@ -211,9 +212,9 @@ func parseCmds(args []string) [][]string {
 		return [][]string{args}
 	}
 
-	// Append len(ampersands) commands to the group
-	group := [][]string{}
+	group := make([][]string, 0, len(ampersands)+1)
 	lastIdx := 0
+	// Append len(ampersands) commands to the group
 	for _, idx := range ampersands {
 		group = append(group, args[lastIdx:idx])
 		lastIdx = idx + 1 // Add one to skip the ampersand

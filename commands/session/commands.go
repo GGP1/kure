@@ -27,7 +27,8 @@ var commands = map[string]command{
 	},
 	"block": func(p params) bool {
 		fmt.Fprint(p.out, "Press Enter to continue")
-		fmt.Fscanln(p.in)
+		dump := ""
+		fmt.Fscanln(p.in, &dump)
 		return true
 	},
 	"exit": func(_ params) bool {

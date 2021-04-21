@@ -174,7 +174,7 @@ func useTextEditor(db *bolt.DB, oldCard *pb.Card) error {
 	editor := cmdutil.SelectEditor()
 	bin, err := exec.LookPath(editor)
 	if err != nil {
-		return errors.Errorf("%q executable not found", editor)
+		return errors.Errorf("executable %q not found", editor)
 	}
 
 	filename, err := createTempFile(oldCard)
@@ -214,6 +214,16 @@ func useTextEditor(db *bolt.DB, oldCard *pb.Card) error {
 	if err != nil {
 		return err
 	}
+
+	rmTabs := func(old string) string {
+		return strings.ReplaceAll(old, "\t", "")
+	}
+	newCard.Name = rmTabs(newCard.Name)
+	newCard.Type = rmTabs(newCard.Type)
+	newCard.Number = rmTabs(newCard.Number)
+	newCard.SecurityCode = rmTabs(newCard.SecurityCode)
+	newCard.ExpireDate = rmTabs(newCard.ExpireDate)
+	newCard.Notes = rmTabs(newCard.Notes)
 
 	return updateCard(db, oldCard.Name, newCard)
 }
