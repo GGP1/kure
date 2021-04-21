@@ -103,7 +103,10 @@ func List(db *bolt.DB) ([]*pb.Card, error) {
 
 // ListNames returns a list with all the cards names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	tx, _ := db.Begin(false)
+	tx, err := db.Begin(false)
+	if err != nil {
+		return nil, err
+	}
 	defer tx.Rollback()
 
 	// b will be nil only if the user attempts to add
@@ -112,15 +115,12 @@ func ListNames(db *bolt.DB) ([]string, error) {
 	if b == nil {
 		return nil, nil
 	}
-	cards := make([]string, b.Stats().KeyN)
 
-	c := b.Cursor()
-	k, _ := c.First()
-
-	for i := 0; k != nil; i++ {
-		cards[i] = string(k)
-		k, _ = c.Next()
-	}
+	cards := make([]string, 0, b.Stats().KeyN)
+	_ = b.ForEach(func(k, _ []byte) error {
+		cards = append(cards, string(k))
+		return nil
+	})
 
 	return cards, nil
 }

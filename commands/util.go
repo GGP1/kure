@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"io"
@@ -36,12 +37,23 @@ var (
 	ErrInvalidPath = errors.New("invalid path")
 )
 
-// Objects are used to identify which type is passed to Exists().
 const (
+	// Card object
 	Card object = iota
+	// Entry object
 	Entry
+	// File object
 	File
+	// TOTP object
 	TOTP
+
+	// Box
+	hBar       = "─"
+	vBar       = "│"
+	upperLeft  = "╭"
+	lowerLeft  = "╰"
+	upperRight = "╮"
+	lowerRight = "╯"
 )
 
 // RunEFunc runs a cobra function returning an error.
@@ -55,16 +67,6 @@ type object int
 // │ Key  │ Value   │
 // └────────────────┘
 func BuildBox(name string, mp *orderedmap.Map) string {
-	const (
-		// Box bars
-		hBar = "─"
-		vBar = "│"
-		// Box corners
-		upperLeft  = "╭"
-		lowerLeft  = "╰"
-		upperRight = "╮"
-		lowerRight = "╯"
-	)
 	var sb strings.Builder
 
 	// Do not use folders as part of the name
@@ -375,9 +377,8 @@ func MustNotExist(db *bolt.DB, obj object) cobra.PositionalArgs {
 
 // NormalizeName sanitizes the user input name.
 func NormalizeName(name string) string {
-	// Avoid allocations
 	if name == "" {
-		return name
+		return name // Avoid allocations
 	}
 	return strings.ToLower(strings.TrimSpace(strings.Trim(strings.TrimSpace(name), "/")))
 }
@@ -393,6 +394,7 @@ func Scanln(r *bufio.Reader, field string) string {
 		}
 		sig.Signal.Kill()
 	}
+	text = bytes.ReplaceAll(text, []byte("\t"), []byte(""))
 
 	return strings.TrimSpace(string(text))
 }
@@ -411,6 +413,7 @@ func Scanlns(r *bufio.Reader, field string) string {
 
 	text = strings.TrimSuffix(text, "<")
 	text = strings.ReplaceAll(text, "\r", "")
+	text = strings.ReplaceAll(text, "\t", "")
 	return strings.TrimSpace(text)
 }
 
@@ -503,8 +506,8 @@ func WriteClipboard(cmd *cobra.Command, t time.Duration, field, content string) 
 	if err := clipboard.WriteAll(content); err != nil {
 		return errors.Wrap(err, "writing to clipboard")
 	}
-	memguard.WipeBytes([]byte(content))
 	fmt.Printf("%s copied to clipboard\n", field)
+	memguard.WipeBytes([]byte(content))
 
 	// Use the config value if it's specified and the timeout flag wasn't used
 	configKey := "clipboard.timeout"

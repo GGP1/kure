@@ -115,15 +115,12 @@ func ListNames(db *bolt.DB) ([]string, error) {
 	if b == nil {
 		return nil, nil
 	}
-	entries := make([]string, b.Stats().KeyN)
 
-	c := b.Cursor()
-	k, _ := c.First()
-
-	for i := 0; k != nil; i++ {
-		entries[i] = string(k)
-		k, _ = c.Next()
-	}
+	entries := make([]string, 0, b.Stats().KeyN)
+	_ = b.ForEach(func(k, _ []byte) error {
+		entries = append(entries, string(k))
+		return nil
+	})
 
 	return entries, nil
 }

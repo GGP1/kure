@@ -119,7 +119,7 @@ func runIt(db *bolt.DB) cmdutil.RunEFunc {
 func execute(root *cobra.Command, args []string) error {
 	// Discard empty arguments as some commands will fail if we don't
 	// eg. file cat
-	var filteredArgs []string
+	filteredArgs := make([]string, 0, len(args))
 	for _, a := range args {
 		if a != "" {
 			filteredArgs = append(filteredArgs, a)

@@ -44,11 +44,10 @@ func GetParameters(db *bolt.DB) (Parameters, error) {
 	}
 
 	params := make(map[string][]byte, 5)
-
-	c := b.Cursor()
-	for k, v := c.First(); k != nil; k, v = c.Next() {
+	_ = b.ForEach(func(k, v []byte) error {
 		params[string(k)] = v
-	}
+		return nil
+	})
 
 	// Key file will be used only if it isn't nil
 	useKeyfile := false

@@ -69,6 +69,29 @@ func TestAdd(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Add note", func(t *testing.T) {
+		name := "test-notes"
+		expectedContent := []byte("note content")
+		buf := bytes.NewBufferString("note content<\n")
+
+		cmd := NewCmd(db, buf)
+		cmd.SetArgs([]string{name})
+		cmd.Flags().Set("note", "true")
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Failed creating the note: %v", err)
+		}
+
+		file, err := file.Get(db, fmt.Sprintf("notes/%s.txt", name))
+		if err != nil {
+			t.Fatalf("Couldn't find the note: %v", err)
+		}
+
+		if !bytes.Equal(file.Content, expectedContent) {
+			t.Errorf("Expected %q, got %q", string(expectedContent), string(file.Content))
+		}
+	})
 }
 
 func TestAddErrors(t *testing.T) {
@@ -127,31 +150,6 @@ func TestAddErrors(t *testing.T) {
 				t.Error("Expected an error and got nil")
 			}
 		})
-	}
-}
-
-func TestAddNote(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
-
-	name := "test-notes"
-	expectedContent := []byte("note content")
-	buf := bytes.NewBufferString("note content<\n")
-
-	cmd := NewCmd(db, buf)
-	cmd.SetArgs([]string{name})
-	cmd.Flags().Set("note", "true")
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Failed creating the note: %v", err)
-	}
-
-	file, err := file.Get(db, fmt.Sprintf("notes/%s.txt", name))
-	if err != nil {
-		t.Fatalf("The note wasn't found: %v", err)
-	}
-
-	if !bytes.Equal(file.Content, expectedContent) {
-		t.Errorf("Expected %q, got %q", string(expectedContent), string(file.Content))
 	}
 }
 

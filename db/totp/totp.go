@@ -82,25 +82,25 @@ func List(db *bolt.DB) ([]*pb.TOTP, error) {
 	defer tx.Rollback()
 
 	b := tx.Bucket(totpBucket)
+	totps := make([]*pb.TOTP, 0, b.Stats().KeyN)
 
-	totps := make([]*pb.TOTP, b.Stats().KeyN)
-	c := b.Cursor()
-	k, v := c.First()
-
-	for i := 0; k != nil; i++ {
+	err = b.ForEach(func(k, v []byte) error {
 		totp := &pb.TOTP{}
 
 		decTOTP, err := crypt.Decrypt(v)
 		if err != nil {
-			return nil, errors.Wrap(err, "decrypt TOTP")
+			return errors.Wrap(err, "decrypt TOTP")
 		}
 
 		if err := proto.Unmarshal(decTOTP, totp); err != nil {
-			return nil, errors.Wrap(err, "unmarshal TOTP")
+			return errors.Wrap(err, "unmarshal TOTP")
 		}
 
-		totps[i] = totp
-		k, v = c.Next()
+		totps = append(totps, totp)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return totps, nil
@@ -121,14 +121,11 @@ func ListNames(db *bolt.DB) ([]string, error) {
 		return nil, nil
 	}
 
-	totps := make([]string, b.Stats().KeyN)
-	c := b.Cursor()
-	k, _ := c.First()
-
-	for i := 0; k != nil; i++ {
-		totps[i] = string(k)
-		k, _ = c.Next()
-	}
+	totps := make([]string, 0, b.Stats().KeyN)
+	_ = b.ForEach(func(k, _ []byte) error {
+		totps = append(totps, string(k))
+		return nil
+	})
 
 	return totps, nil
 }
