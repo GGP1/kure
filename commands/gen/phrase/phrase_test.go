@@ -3,6 +3,7 @@ package phrase
 import (
 	"math"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/atotto/clipboard"
@@ -202,6 +203,39 @@ func TestFormatSecurity(t *testing.T) {
 
 			if gotTime != tc.expectedTime {
 				t.Errorf("Expected %q, got %q", tc.expectedTime, gotTime)
+			}
+		})
+	}
+}
+
+func TestBeautify(t *testing.T) {
+	cases := []struct {
+		actual   string
+		expected string
+	}{
+		{
+			actual:   "27738957312183663402227335168.00",
+			expected: "27,738,957,312,183,663,402,227,335,168.00",
+		},
+		{
+			actual:   "7456198.39",
+			expected: "7,456,198.39",
+		},
+		{
+			actual:   "124561.65",
+			expected: "124,561.65",
+		},
+		{
+			actual:   "379.78",
+			expected: "379.78",
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			got := prettify(tc.actual)
+			if got != tc.expected {
+				t.Errorf("Expected %q, got %q", tc.expected, got)
 			}
 		})
 	}
