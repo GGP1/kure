@@ -71,8 +71,8 @@ func runTest(opts *testOptions) cmdutil.RunEFunc {
 		}
 
 		password, err := atoll.NewPassword(25, []atoll.Level{
-			atoll.Lowercase,
-			atoll.Uppercase,
+			atoll.Lower,
+			atoll.Upper,
 			atoll.Digit,
 			atoll.Space,
 			atoll.Special})
