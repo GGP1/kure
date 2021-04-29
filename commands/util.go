@@ -177,7 +177,9 @@ func Confirm(r io.Reader, message string) bool {
 
 	for {
 		var res string
-		if _, err := fmt.Fscanln(r, &res); err != nil {
+		// Scanln returns an error when the input is an empty string,
+		// we do accept it here
+		if _, err := fmt.Fscanln(r, &res); err != nil && res != "" {
 			if err != io.EOF {
 				fmt.Fprintln(os.Stderr, "error:", err)
 			}
