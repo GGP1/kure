@@ -31,6 +31,12 @@ type sessionOptions struct {
 	timeout time.Duration
 }
 
+type timeout struct {
+	t     time.Duration
+	start time.Time
+	timer *time.Timer
+}
+
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	opts := sessionOptions{}
@@ -49,9 +55,11 @@ Once into a session:
 Session commands:
 • block - block execution (to be manually unlocked).
 • exit|quit|Ctrl+C - close the session.
-• timeout - show time left.
 • pwd - show current directory.
-• sleep - sleep for x time.`,
+• timeout - show time left.
+• ttadd [duration] - increase/decrease timeout.
+• ttset [duration] - set a new timeout.
+• sleep [duration] - sleep for x time.`,
 		Example: example,
 		PreRunE: auth.Login(db),
 		RunE:    runSession(r, &opts),
@@ -74,31 +82,34 @@ func runSession(r io.Reader, opts *sessionOptions) cmdutil.RunEFunc {
 			opts.timeout = config.GetDuration(t)
 		}
 
-		go startSession(cmd, r, opts)
-
-		if opts.timeout == 0 {
-			// Block forever
-			block := make(chan struct{})
-			<-block
+		timeout := &timeout{
+			t:     opts.timeout,
+			start: time.Now(),
+			timer: time.NewTimer(opts.timeout),
 		}
 
-		<-time.After(opts.timeout)
+		go startSession(cmd, r, opts.prefix, timeout)
+
+		if timeout.t == 0 {
+			timeout.timer.Stop()
+		}
+
+		<-timeout.timer.C
 		return nil
 	}
 }
 
-func startSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) {
+func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeout) {
 	reader := bufio.NewReader(r)
 	root := cmd.Root()
 	// The configuration is populated on start and changes inside the session won't have effect until restart.
 	scripts := config.GetStringMapString("session.scripts")
-	start := time.Now()
 
 	for {
 		// Force a garbage collection so the memory used by argon2 isn't reserved
 		// for us by the system while sleeping
 		debug.FreeOSMemory()
-		fmt.Printf("%s ", opts.prefix)
+		fmt.Printf("%s ", prefix)
 
 		text, _, err := reader.ReadLine()
 		if err != nil {
@@ -117,7 +128,7 @@ func startSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) {
 			args = strings.Split(script, " ")
 		}
 
-		if err := execute(root, args, start, opts); err != nil {
+		if err := execute(root, args, timeout); err != nil {
 			fmt.Fprintln(os.Stderr, "error:", err)
 		}
 	}
@@ -132,7 +143,7 @@ func cleanup(cmd *cobra.Command) {
 	cmd.Flags().Set("help", "false")
 }
 
-func execute(root *cobra.Command, args []string, start time.Time, opts *sessionOptions) error {
+func execute(root *cobra.Command, args []string, timeout *timeout) error {
 	cmdsGroup := parseCmds(args)
 
 	for _, args := range cmdsGroup {
@@ -143,7 +154,7 @@ func execute(root *cobra.Command, args []string, start time.Time, opts *sessionO
 			args = args[1:]
 		}
 
-		cont := sessionCommand(args, start, opts)
+		cont := sessionCommand(args, timeout)
 		if cont {
 			continue
 		}

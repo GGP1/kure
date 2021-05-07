@@ -3,7 +3,6 @@ package session
 import (
 	"bytes"
 	"testing"
-	"time"
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
@@ -30,6 +29,10 @@ func TestExecute(t *testing.T) {
 			args: []string{"pwd"},
 		},
 		{
+			desc: "Kure help",
+			args: []string{"kure"},
+		},
+		{
 			desc: "No command",
 			args: []string{},
 		},
@@ -41,7 +44,7 @@ func TestExecute(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := execute(root, tc.args, time.Now(), &sessionOptions{}); err != nil {
+			if err := execute(root, tc.args, &timeout{}); err != nil {
 				t.Errorf("Failed executing command: %v", err)
 			}
 		})
@@ -49,11 +52,8 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCleanup(t *testing.T) {
-	cmd := &cobra.Command{
-		Use: "test",
-	}
+	cmd := &cobra.Command{Use: "test"}
 	cmd.Flags().Bool("testing", false, "")
-
 	cmd.Flag("testing").Changed = true
 	cleanup(cmd)
 

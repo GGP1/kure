@@ -23,11 +23,16 @@ func TestSessionCommand(t *testing.T) {
 			args: []string{"jump"},
 			cont: false,
 		},
+		{
+			desc: "No args",
+			args: []string{},
+			cont: false,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cont := sessionCommand(tc.args, time.Time{}, &sessionOptions{})
+			cont := sessionCommand(tc.args, &timeout{})
 			if cont != tc.cont {
 				t.Errorf("Expected %v, got %v", tc.cont, cont)
 			}
@@ -41,7 +46,7 @@ func TestCommands(t *testing.T) {
 	cases := []struct {
 		desc        string
 		args        []string
-		timeout     time.Duration
+		timeout     *timeout
 		input       string
 		expectedOut string
 		expectedErr string
@@ -51,30 +56,65 @@ func TestCommands(t *testing.T) {
 			args: []string{""},
 		},
 		{
-			desc:        "Block",
+			desc:        "block",
 			args:        []string{"block"},
 			expectedOut: "Press Enter to continue",
 			input:       "\n",
 		},
 		{
-			desc: "Sleep",
+			desc: "sleep",
 			args: []string{"sleep", "1ns"},
 		},
 		{
-			desc:        "Sleep error",
+			desc:        "sleep no duration",
+			args:        []string{"sleep"},
+			expectedErr: "error: invalid duration, use sleep [duration]\n",
+		},
+		{
+			desc:        "sleep invalid duration",
 			args:        []string{"sleep", "1", "ns"},
 			expectedErr: "error: invalid duration \"1\"\n",
 		},
 		{
-			desc:        "Show current directory",
+			desc:        "pwd",
 			args:        []string{"pwd"},
 			expectedOut: dir + "\n",
 		},
 		{
 			desc:        "No timeout",
 			args:        []string{"timeout"},
-			timeout:     time.Duration(0),
+			timeout:     &timeout{t: 0},
 			expectedOut: "The session has no timeout.\n",
+		},
+		{
+			desc:    "ttadd",
+			args:    []string{"ttadd", "15s"},
+			timeout: &timeout{timer: time.NewTimer(0)},
+		},
+		{
+			desc:        "ttadd no duration",
+			args:        []string{"ttadd"},
+			expectedErr: "error: invalid duration, use ttadd [duration]\n",
+		},
+		{
+			desc:        "ttadd invalid duration",
+			args:        []string{"ttadd", "s"},
+			expectedErr: "error: invalid duration \"s\"\n",
+		},
+		{
+			desc:    "ttset",
+			args:    []string{"ttset", "15s"},
+			timeout: &timeout{timer: time.NewTimer(0)},
+		},
+		{
+			desc:        "ttset no duration",
+			args:        []string{"ttset"},
+			expectedErr: "error: invalid duration, use ttset [duration]\n",
+		},
+		{
+			desc:        "ttset invalid duration",
+			args:        []string{"ttset", "15"},
+			expectedErr: "error: invalid duration \"15\"\n",
 		},
 	}
 
@@ -92,14 +132,11 @@ func TestCommands(t *testing.T) {
 				in:      in,
 				out:     out,
 				outErr:  outErr,
-				args:    tc.args,
-				start:   time.Time{},
+				args:    tc.args[1:],
 				timeout: tc.timeout,
 			}
 
-			if !cmd(params) {
-				t.Errorf("Expected the command to return true and got false")
-			}
+			cmd(params)
 
 			if tc.expectedErr != "" {
 				gotErr := outErr.String()

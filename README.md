@@ -12,7 +12,7 @@ This project aims to offer the most secure and private way of operating with sen
 - **Cross-Platform:** Linux, macOS, BSD and Windows supported.
 - **Offline:** Data is handled locally, no connection is established with 3rd parties.
 - **Secure:** Each record is encrypted using **AES-GCM 256-bit** and a **unique** password. Furthermore, the user's master password is **never** stored on disk, it's encrypted and temporarily kept **in-memory** inside a protected buffer, decrypted when it's required and destroyed immediately after it. The key derivation function used is Argon2 with the **id** version.
-- **Easy-to-use:** Extremely intuitive and does not require advanced technical skills.
+- **Easy-to-use:** Extremely intuitive, does not require advanced technical skills.
 - **Portable:** Both Kure and the database compile to binary files and they can be easily carried around in an external device.
 - **Multiple formats:** Store entries, cards and files of any type.
 
@@ -70,11 +70,7 @@ Out-of-the-box Kure needs no configuration. It sets default values, creates the 
 
 However, you may want to store the configuration file elsewhere or use a different one, this can be done by setting the path to it in the `KURE_CONFIG` environment variable.
 
-Moving forward to the configuration file itself, in it we can specify the clipboard and session timeouts, the location of the database (if it doesn't exist it will be automatically created), the argon2 parameters, the editor used and whether or not a keyfile is required. Head over [configuration](/docs/configuration/configuration.md) for further details.
-
-> Paths inside the file must be **absolute**.
-
-*Formats supported*: JSON, TOML, YAML. [Samples](/docs/configuration/samples).
+Head over [configuration](/docs/configuration/configuration.md) for a detailed explanation of the configuration file. Here are some [samples](/docs/configuration/samples/).
 
 ### Requirements
 
@@ -124,7 +120,7 @@ Names are **case insensitive**, every name's Unicode letter is mapped to its low
 
 > Remember: the stronger your master password, the harder it will be for the attacker to get access to your information.
 
-Kure uses the [Argon2](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf) (winner of the Password Hashing Competition in 2015) with the **id** version as the **key derivation function**, it uses a **32 byte salt** along with the master password and three parameters: *memory*, *iterations* and *threads*. The final key is **256-bit** long.
+Kure uses the [Argon2](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf) (winner of the Password Hashing Competition in 2015) with the **id** version as the **key derivation function**, which utilizes a **32 byte salt** along with the master password and three parameters: *memory*, *iterations* and *threads*. These parameters can modified by the user on registration/restoration. The final key is **256-bit** long.
 
 > When encrypting a record, the salt used by Argon2 is randomly generated and appended to the ciphertext, everytime the record is decrypted, the salt is extracted from the end of the ciphertext and used to derive the key. Every record is encrypted using a **unique** password, protecting the user against precomputation attacks, such as rainbow tables.
 
@@ -174,7 +170,7 @@ The user can opt to **serve** the database on a **local server** (`kure backup -
 
 > **Important**: on interrupt signals the database will finish all the remaining transactions before closing the connection.
 
-The database can be restored using [`kure restore`](https://github.com/GGP1/kure/blob/master/docs/commands/restore.md). The user will be asked to provide new parameters. Every record is decrypted and deleted with the old configuration and re-created with the new one.
+The database can be restored using [`kure restore`](https://github.com/GGP1/kure/blob/master/docs/commands/restore.md). The user will be asked to provide new authentication parameters. Every record is decrypted and deleted with the old configuration and re-created with the new one.
 
 ### Synchronization
 
@@ -191,28 +187,28 @@ The session command is, essentially, a wrapper of the **root** command and all i
 Here's a simplified implementation of [session.go](/cmd/session/session.go):
 
 ```go
-func runSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) error {
-          ...
-
-    go startSession(cmd, r, opts)
-
-	if opts.timeout == 0 {
-		block := make(chan struct{})
-		<-block
+func runSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) {
+	timeout := &timeout{
+		t:     opts.timeout,
+		start: time.Now(),
+		timer: time.NewTimer(opts.timeout),
 	}
 
-	<-time.After(opts.timeout)
-    return nil
+	go startSession(cmd, r, opts.prefix, timeout)
+
+	if timeout.t == 0 {
+		timeout.timer.Stop()
+	}
+
+	<-timeout.timer.C
 }
 
-func startSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) {
+func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeout) {
 	reader := bufio.NewReader(r)
   	root := cmd.Root()
-	scripts := config.GetStringMapString("session.scripts")
-	start := time.Now()
 
 	for {
-		fmt.Printf("%s ", opts.prefix)
+		fmt.Printf("%s ", prefix)
 
 		text, _, err := reader.ReadLine()
 		if err != nil {
@@ -222,13 +218,7 @@ func startSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) {
 
 		args := strings.Split(string(text), " ")
 
-		script, ok := scripts[args[0]]
-		if ok {
-			script = fillScript(args[1:], script)
-			args = strings.Split(script, " ")
-		}
-
-		if err := execute(root, args, start, opts); err != nil {
+		if err := execute(root, args, timeout); err != nil {
 			fmt.Fprintln(os.Stderr, "error:", err)
 		}
 	}
@@ -245,7 +235,7 @@ The time-step size used is 30 seconds, a balance between security and usability 
 
 > TOTP codes can be either 6, 7 or 8 digits long. The hash algorithm used is SHA1.
 
-Two-factor authentication adds an extra layer of security to your accounts. In case an attacker gets access to the secrets, he will still need the **constantly refreshing code** to get into the account making it, not impossible, but much more complicated.
+Two-factor authentication adds an extra layer of security to your accounts. In case an attacker gets access to the secrets, he will still need the **constantly refreshing code** to get into the account, making it not impossible but much more complicated.
 
 ## Caveats and limitations
 
