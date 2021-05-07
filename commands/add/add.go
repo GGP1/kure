@@ -107,9 +107,9 @@ func genPassword(opts *addOptions) (string, error) {
 	for i, lvl := range opts.levels {
 		switch lvl {
 		case 1:
-			levels[i] = atoll.Lowercase
+			levels[i] = atoll.Lower
 		case 2:
-			levels[i] = atoll.Uppercase
+			levels[i] = atoll.Upper
 		case 3:
 			levels[i] = atoll.Digit
 		case 4:

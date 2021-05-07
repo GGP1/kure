@@ -87,7 +87,7 @@ func GetString(key string) string {
 	return cast.ToString(config.Get(key))
 }
 
-// GetString returns a map[string]string from the config map.
+// GetStringMapString returns a map[string]string from the config map.
 func GetStringMapString(key string) map[string]string {
 	return cast.ToStringMapString(config.Get(key))
 }

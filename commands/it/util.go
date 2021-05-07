@@ -7,7 +7,7 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 )
 
-var template string = `{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+var template = `{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
 {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}`
 
 func format() survey.AskOpt {

@@ -215,5 +215,27 @@ func FormatSecretSecurity(keyspace, avgTimeToCrack float64) (space, time string)
 		time = fmt.Sprintf("%.2f minutes", avgTimeToCrack/minute)
 	}
 
-	return space, time
+	return prettify(space), prettify(time)
+}
+
+// prettify adds commas to the number inside the string to make it easier for humans to read.
+//
+// Example: 51334.21 -> 51,334.21
+func prettify(str string) string {
+	idx := strings.IndexByte(str, '.')
+	num := str[:idx]
+
+	sb := strings.Builder{}
+	j := 0
+	for i := len(num) - 1; i >= 0; i-- {
+		sb.WriteByte(num[j])
+		if i%3 == 0 && i != 0 {
+			sb.WriteByte(',')
+		}
+		j++
+	}
+
+	// Append remaining characters
+	sb.WriteString(str[idx:])
+	return sb.String()
 }

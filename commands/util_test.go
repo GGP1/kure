@@ -17,6 +17,7 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -122,44 +123,32 @@ func TestExistsTrue(t *testing.T) {
 	db := SetContext(t, "../db/testdata/database")
 
 	name := "naboo/tatooine"
-	e := &pb.Entry{
-		Name:    name,
-		Expires: "Never",
-	}
+	createObjects(t, db, name)
 
 	cases := []struct {
 		desc   string
 		object object
-		create func() error
 	}{
 		{
 			desc:   "card",
 			object: Card,
-			create: func() error { return card.Create(db, &pb.Card{Name: name}) },
 		},
 		{
 			desc:   "entry",
 			object: Entry,
-			create: func() error { return entry.Create(db, e) },
 		},
 		{
 			desc:   "file",
 			object: File,
-			create: func() error { return file.Create(db, &pb.File{Name: name}) },
 		},
 		{
 			desc:   "totp",
 			object: TOTP,
-			create: func() error { return totp.Create(db, &pb.TOTP{Name: name}) },
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := tc.create(); err != nil {
-				t.Fatal(err)
-			}
-
 			if err := Exists(db, name, tc.object); err == nil {
 				t.Error("Expected exists to fail but got nil")
 			}
@@ -262,7 +251,7 @@ func TestMustExist(t *testing.T) {
 	cmd := &cobra.Command{}
 	objects := []object{Card, Entry, File, TOTP}
 
-	name := "test"
+	name := "test/testing"
 	createObjects(t, db, name)
 
 	t.Run("Success", func(t *testing.T) {
@@ -280,8 +269,8 @@ func TestMustExist(t *testing.T) {
 			name string
 		}{
 			{
-				desc: "Does not exist",
-				name: "non-existent",
+				desc: "Record does not exist",
+				name: "test",
 			},
 			{
 				desc: "Empty name",
@@ -289,7 +278,7 @@ func TestMustExist(t *testing.T) {
 			},
 			{
 				desc: "Invalid name",
-				name: "testing//test",
+				name: "test//testing",
 			},
 		}
 
@@ -301,6 +290,25 @@ func TestMustExist(t *testing.T) {
 				}
 			})
 		}
+	})
+
+	t.Run("Folders", func(t *testing.T) {
+		// Take folders into account
+		cmd.Flags().AddFlag(&pflag.Flag{
+			Name:    "dir",
+			Changed: true,
+		})
+
+		cmd.Args = MustExist(db, Card)
+		if err := cmd.Args(cmd, []string{"test"}); err != nil {
+			t.Error(err)
+		}
+
+		t.Run("Fail", func(t *testing.T) {
+			if err := cmd.Args(cmd, []string{"not-exists"}); err == nil {
+				t.Error("Expected an error and got nil")
+			}
+		})
 	})
 }
 

@@ -3,7 +3,6 @@ package restore
 import (
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
@@ -11,9 +10,9 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/db/totp"
-	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
@@ -35,79 +34,70 @@ Overwrite the registered credentials and re-encrypt every record with the new on
 
 func runRestore(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
+		// Operations are run synchronously to avoid exhausting the user's pc
+		listBar := progressbar.New64(4)
+		listBar.Describe("Loading records")
 		// List all records with the old credentials
 		cards, err := card.List(db)
 		if err != nil {
 			return err
 		}
+		listBar.Add64(1)
 		entries, err := entry.List(db)
 		if err != nil {
 			return err
 		}
+		listBar.Add64(1)
 		files, err := file.List(db)
 		if err != nil {
 			return err
 		}
+		listBar.Add64(1)
 		totps, err := totp.List(db)
 		if err != nil {
 			return err
 		}
-
-		fmt.Println("\n────────── NEW CREDENTIALS ──────────")
+		listBar.Add64(1)
+		fmt.Print("\n")
 
 		// Initialize registration and re-encrypt the records with the new credentials
 		if err := auth.Register(db, os.Stdin); err != nil {
 			return err
 		}
 
-		fmt.Println("Restoring database, this may take a few minutes...")
-
-		var (
-			wg   sync.WaitGroup
-			errs []error
-		)
-		wg.Add(len(cards) + len(entries) + len(files) + len(totps))
+		var errs []error
+		createBar := progressbar.New(len(cards) + len(entries) + len(files) + len(totps))
+		createBar.Describe("Re-encrypting records")
 
 		for _, c := range cards {
-			go func(c *pb.Card) {
-				if err := card.Create(db, c); err != nil {
-					errs = append(errs, errors.Wrap(err, c.Name))
-				}
-				wg.Done()
-			}(c)
+			if err := card.Create(db, c); err != nil {
+				errs = append(errs, errors.Wrap(err, c.Name))
+			}
+			createBar.Add64(1)
 		}
 		for _, e := range entries {
-			go func(e *pb.Entry) {
-				if err := entry.Create(db, e); err != nil {
-					errs = append(errs, errors.Wrap(err, e.Name))
-				}
-				wg.Done()
-			}(e)
+			if err := entry.Create(db, e); err != nil {
+				errs = append(errs, errors.Wrap(err, e.Name))
+			}
+			createBar.Add64(1)
 		}
 		for _, f := range files {
-			go func(f *pb.File) {
-				if err := file.Create(db, f); err != nil {
-					errs = append(errs, errors.Wrap(err, f.Name))
-				}
-				wg.Done()
-			}(f)
+			if err := file.Create(db, f); err != nil {
+				errs = append(errs, errors.Wrap(err, f.Name))
+			}
+			createBar.Add64(1)
 		}
 		for _, t := range totps {
-			go func(t *pb.TOTP) {
-				if err := totp.Create(db, t); err != nil {
-					errs = append(errs, errors.Wrap(err, t.Name))
-				}
-				wg.Done()
-			}(t)
+			if err := totp.Create(db, t); err != nil {
+				errs = append(errs, errors.Wrap(err, t.Name))
+			}
+			createBar.Add64(1)
 		}
-
-		wg.Wait()
 
 		for _, err := range errs {
 			fmt.Fprintln(os.Stderr, "error:", err)
 		}
 
-		fmt.Println("\nDatabase restored successfully")
 		return nil
 	}
 }

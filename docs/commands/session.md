@@ -17,9 +17,11 @@ Once into a session:
 Session commands:
 - block - block execution (to be manually unlocked).
 - exit|quit|Ctrl+C - close the session.
-- timeout - show time left.
 - pwd - show current directory.
-- sleep - sleep for x time.
+- timeout - show time left.
+- ttadd [duration] - increase/decrease timeout.
+- ttset [duration] - set a new timeout.
+- sleep [duration] - sleep for x time.
 
 ## Flags
 

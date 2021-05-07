@@ -73,26 +73,29 @@ func Get(db *bolt.DB, name string) (*pb.Entry, error) {
 
 // List returns a list with all the entries.
 func List(db *bolt.DB) ([]*pb.Entry, error) {
-	var entries []*pb.Entry
+	tx, err := db.Begin(false)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(entryBucket)
+	b := tx.Bucket(entryBucket)
+	entries := make([]*pb.Entry, 0, b.Stats().KeyN)
 
-		return b.ForEach(func(k, v []byte) error {
-			entry := &pb.Entry{}
+	err = b.ForEach(func(k, v []byte) error {
+		entry := &pb.Entry{}
 
-			decEntry, err := crypt.Decrypt(v)
-			if err != nil {
-				return errors.Wrap(err, "decrypt entry")
-			}
+		decEntry, err := crypt.Decrypt(v)
+		if err != nil {
+			return errors.Wrap(err, "decrypt entry")
+		}
 
-			if err := proto.Unmarshal(decEntry, entry); err != nil {
-				return errors.Wrap(err, "unmarshal entry")
-			}
+		if err := proto.Unmarshal(decEntry, entry); err != nil {
+			return errors.Wrap(err, "unmarshal entry")
+		}
 
-			entries = append(entries, entry)
-			return nil
-		})
+		entries = append(entries, entry)
+		return nil
 	})
 	if err != nil {
 		return nil, err

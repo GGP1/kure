@@ -73,26 +73,29 @@ func Get(db *bolt.DB, name string) (*pb.Card, error) {
 
 // List returns a list with all the cards.
 func List(db *bolt.DB) ([]*pb.Card, error) {
-	var cards []*pb.Card
+	tx, err := db.Begin(false)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(cardBucket)
+	b := tx.Bucket(cardBucket)
+	cards := make([]*pb.Card, 0, b.Stats().KeyN)
 
-		return b.ForEach(func(k, v []byte) error {
-			card := &pb.Card{}
+	err = b.ForEach(func(k, v []byte) error {
+		card := &pb.Card{}
 
-			decCard, err := crypt.Decrypt(v)
-			if err != nil {
-				return errors.Wrap(err, "decrypt card")
-			}
+		decCard, err := crypt.Decrypt(v)
+		if err != nil {
+			return errors.Wrap(err, "decrypt card")
+		}
 
-			if err := proto.Unmarshal(decCard, card); err != nil {
-				return errors.Wrap(err, "unmarshal card")
-			}
+		if err := proto.Unmarshal(decCard, card); err != nil {
+			return errors.Wrap(err, "unmarshal card")
+		}
 
-			cards = append(cards, card)
-			return nil
-		})
+		cards = append(cards, card)
+		return nil
 	})
 	if err != nil {
 		return nil, err

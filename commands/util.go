@@ -177,7 +177,9 @@ func Confirm(r io.Reader, message string) bool {
 
 	for {
 		var res string
-		if _, err := fmt.Fscanln(r, &res); err != nil {
+		// Scanln returns an error when the input is an empty string,
+		// we do accept it here
+		if _, err := fmt.Fscanln(r, &res); err != nil && res != "" {
 			if err != io.EOF {
 				fmt.Fprintln(os.Stderr, "error:", err)
 			}
@@ -240,35 +242,13 @@ func Erase(filename string) error {
 //
 // Returns an error if a match was found.
 func Exists(db *bolt.DB, name string, obj object) error {
-	var (
-		records []string
-		objName string
-		err     error
-	)
-
-	switch obj {
-	case Card:
-		objName = "card"
-		records, err = card.ListNames(db)
-
-	case Entry:
-		objName = "entry"
-		records, err = entry.ListNames(db)
-
-	case File:
-		objName = "file"
-		records, err = file.ListNames(db)
-
-	case TOTP:
-		objName = "TOTP"
-		records, err = totp.ListNames(db)
-	}
+	records, objType, err := ListNames(db, obj)
 	if err != nil {
 		return err
 	}
 
 	found := func(name string) error {
-		return errors.Errorf("already exists a folder or %s named %q", objName, name)
+		return errors.Errorf("already exists a folder or %s named %q", objType, name)
 	}
 
 	for _, record := range records {
@@ -326,6 +306,39 @@ func FmtExpires(expires string) (string, error) {
 	}
 }
 
+// ListNames lists all the records depending on the object passed.
+// It returns a list and the type of object used.
+func ListNames(db *bolt.DB, obj object) ([]string, string, error) {
+	var (
+		err     error
+		objType string
+		records []string
+	)
+
+	switch obj {
+	case Card:
+		objType = "card"
+		records, err = card.ListNames(db)
+
+	case Entry:
+		objType = "entry"
+		records, err = entry.ListNames(db)
+
+	case File:
+		objType = "file"
+		records, err = file.ListNames(db)
+
+	case TOTP:
+		objType = "TOTP"
+		records, err = totp.ListNames(db)
+	}
+	if err != nil {
+		return nil, "", err
+	}
+
+	return records, objType, nil
+}
+
 // MustExist returns an error if a record does not exist or if the name is invalid.
 func MustExist(db *bolt.DB, obj object) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
@@ -335,7 +348,28 @@ func MustExist(db *bolt.DB, obj object) cobra.PositionalArgs {
 		}
 		name = NormalizeName(name)
 
-		if err := Exists(db, name, obj); err == nil {
+		// Take folders into consideration only when the user is trying to perform
+		// an action with one
+		if cmd.Flags().Changed("dir") {
+			if err := Exists(db, name, obj); err == nil {
+				return errors.Errorf("%q does not exist", name)
+			}
+			return nil
+		}
+
+		records, _, err := ListNames(db, obj)
+		if err != nil {
+			return err
+		}
+
+		exists := false
+		for _, record := range records {
+			if name == record {
+				exists = true
+				break
+			}
+		}
+		if !exists {
 			return errors.Errorf("%q does not exist", name)
 		}
 
@@ -343,7 +377,7 @@ func MustExist(db *bolt.DB, obj object) cobra.PositionalArgs {
 	}
 }
 
-// MustExistLs is like MustExist but for ls commands, it doesn't fail if
+// MustExistLs is like MustExist but it doesn't fail if
 // there are no arguments or if the user is using the filter flag.
 func MustExistLs(db *bolt.DB, obj object) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {

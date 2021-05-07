@@ -72,8 +72,6 @@ func Get(db *bolt.DB, name string) (*pb.TOTP, error) {
 }
 
 // List returns a list with all the TOTPs.
-// Since this function is used more frequently than other objects' List
-// functions, make it as efficient as possible.
 func List(db *bolt.DB) ([]*pb.TOTP, error) {
 	tx, err := db.Begin(false)
 	if err != nil {
