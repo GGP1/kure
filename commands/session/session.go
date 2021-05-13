@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime/debug"
+	"runtime"
 	"strings"
 	"time"
 
@@ -108,7 +108,7 @@ func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeo
 	for {
 		// Force a garbage collection so the memory used by argon2 isn't reserved
 		// for us by the system while sleeping
-		debug.FreeOSMemory()
+		runtime.GC()
 		fmt.Printf("%s ", prefix)
 
 		text, _, err := reader.ReadLine()
