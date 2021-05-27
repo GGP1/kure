@@ -7,6 +7,10 @@ Kure is a free and open-source password manager for the command-line.
 
 This project aims to offer the most secure and private way of operating with sensitive data on the terminal, as well as providing a feature-rich and interactive interface to make the user experience simple and enjoyable.
 
+<p align="center">
+	<img  align="middle" src="https://user-images.githubusercontent.com/51374959/109099553-0efc7c80-7702-11eb-8bab-ad51c004446f.gif" alt="overview" />
+</p>
+
 ## Features 
 
 - **Cross-Platform:** Linux, macOS, BSD and Windows supported.
@@ -24,19 +28,15 @@ Linux, macOS, BSD and Windows pre-compiled binaries can be found [here](https://
 
 #### Homebrew (Tap)
 ```
-brew install GGP1/tap/kure
+$ brew install GGP1/tap/kure
 ```
 
 #### Scoop (Windows)
-```
-scoop bucket add GGP1 https://github.com/GGP1/scoop-bucket.git
-scoop install GGP1/kure
-```
-
-or
-
-```
-scoop install https://raw.githubusercontent.com/GGP1/scoop-bucket/master/bucket/kure.json
+```bash
+$ scoop bucket add GGP1 https://github.com/GGP1/scoop-bucket.git
+$ scoop install GGP1/kure
+# or
+$ scoop install https://raw.githubusercontent.com/GGP1/scoop-bucket/master/bucket/kure.json
 ```
 
 #### Docker
@@ -44,20 +44,18 @@ scoop install https://raw.githubusercontent.com/GGP1/scoop-bucket/master/bucket/
 > For details about persisting the information check the [docker-compose.yml](/docker-compose.yml) file.
 
 ```
-docker run -it gastonpalomeque/kure sh
+$ docker run -it gastonpalomeque/kure sh
 ```
 
 For a container with limited privileges and kernel capabilities, use:
 
 ```
-docker run -it --security-opt=no-new-privileges --cap-drop=all gastonpalomeque/kure-secure sh
+$ docker run -it --security-opt=no-new-privileges --cap-drop=all gastonpalomeque/kure-secure sh
 ```
 
 #### Compìle from source
-
-Requirements: [Go](https://golang.org/doc/install)
 ```
-git clone https://github.com/GGP1/kure && cd kure && make install
+$ git clone https://github.com/GGP1/kure && cd kure && make install
 ```
 
 ## Configuration
@@ -82,13 +80,7 @@ Head over [configuration](/docs/configuration/configuration.md) for a detailed e
 
 Further information and examples about each command under [docs/commands](/docs/commands).
 
-<div>
-    <img align="middle" src="https://user-images.githubusercontent.com/51374959/109055273-b4413180-76bd-11eb-8e71-ae73e7e06522.png" height=500 width=500 />
-</div>
-
-### Overview
-
-![Overview](https://user-images.githubusercontent.com/51374959/109099553-0efc7c80-7702-11eb-8bab-ad51c004446f.gif)
+<img src="https://user-images.githubusercontent.com/51374959/109055273-b4413180-76bd-11eb-8e71-ae73e7e06522.png" height=550 width=550 />
 
 ## Documentation
 
@@ -96,7 +88,7 @@ This is a simplified version of the documentation, for further details, examples
 
 ### Database
 
-Kure's database is a mantained fork of Bolt ([bbolt](https://github.com/etcd-io/bbolt)), a **key-value** store that uses a single file and a B+Tree structure. Bolt locks the database file when it's opened, any other simultaneous process attempting to interact with the database will receive a panic.
+Kure's database is a mantained fork of Bolt ([bbolt](https://github.com/etcd-io/bbolt)), a **key-value** store that uses a single file and a B+Tree structure. The database file is locked when opened, any other simultaneous process attempting to interact with the database will receive a panic.
 
 All collections of key/value pairs are stored in **buckets**, five of them are used, one for each type of object and one for storing the authentication parameters. Keys within a bucket must be **unique**, the user will receive an error when trying to create a record with an already used name.
 
@@ -162,8 +154,6 @@ To sum up, the attacker may (depending on the names) be able to choose which rec
 
 ### Backups
 
-We highly encourage to keep a backup of both the database and the key file (in case it's used) in an external hard drive.
-
 The user can opt to **serve** the database on a **local server** (`kure backup --http --port 8080`) or create a **file** backup (`kure backup --path path/to/file`).
 
 ### Restoration
@@ -212,14 +202,14 @@ func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeo
 
 		text, _, err := reader.ReadLine()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "error:", err)
+			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
 
 		args := strings.Split(string(text), " ")
 
 		if err := execute(root, args, timeout); err != nil {
-			fmt.Fprintln(os.Stderr, "error:", err)
+			fmt.Fprintln(os.Stderr, err)
 		}
 	}
 }
@@ -243,26 +233,6 @@ Two-factor authentication adds an extra layer of security to your accounts. In c
 - There isn't any backdoor or key that can open your database. There is no way of recovering your data if you forget your master password.
 - Sharing keys is not implemented as there is no connection with the internet.
 - **Windows**: Cygwin/mintty/git-bash aren't supported because they are unable to reach down to the OS API.
-
-## Feedback
-
-We would really appreciate your feedback, feel free to leave your comment [here](https://github.com/GGP1/kure/discussions/categories/feedback).
-
-## Contributing
-
-Any contribution is welcome. We appreciate your time and help. Please follow these steps to do it:
-
-> Do not hesitate to leave any ideas [here](https://github.com/GGP1/kure/discussions/categories/ideas).
-
-1. **Fork** the repository on Github
-1. **Clone** your fork - `git clone github.com/<your-username>/kure.git`
-1. **Create** your feature branch - `git checkout -b <your-branch>`
-1. Make changes, update documentation and tests
-1. **Run tests** - `make test-race`
-1. **Add** them to staging - `git add .`
-1. **Commit** your changes - `git commit -m '<changes>'`
-1. **Push** to the branch - `git push origin <your-branch>`
-1. Create a **Pull request**
 
 ## License
 
