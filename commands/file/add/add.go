@@ -91,13 +91,13 @@ func runAdd(db *bolt.DB, r io.Reader, opts *addOptions) cmdutil.RunEFunc {
 			name += filepath.Ext(opts.path)
 		}
 
-		dirs, err := os.ReadDir(opts.path)
+		dir, err := os.ReadDir(opts.path)
 		if err != nil {
 			// If it's not a directory, attempt storing a file
 			return storeFile(db, opts.path, name)
 		}
 
-		if len(dirs) == 0 {
+		if len(dir) == 0 {
 			return errors.Errorf("%q directory is empty", filepath.Base(opts.path))
 		}
 
@@ -106,7 +106,8 @@ func runAdd(db *bolt.DB, r io.Reader, opts *addOptions) cmdutil.RunEFunc {
 		// Allocations are reduced and performance improved.
 		var wg sync.WaitGroup
 		sem := make(chan struct{}, opts.semaphore)
-		walkDir(db, dirs, opts.path, name, opts.ignore, &wg, sem)
+		wg.Add(len(dir))
+		walkDir(db, dir, opts.path, name, opts.ignore, &wg, sem)
 		wg.Wait()
 		return nil
 	}
@@ -114,7 +115,6 @@ func runAdd(db *bolt.DB, r io.Reader, opts *addOptions) cmdutil.RunEFunc {
 
 // walkDir iterates over the items of a folder and calls checkFile.
 func walkDir(db *bolt.DB, dir []os.DirEntry, path, name string, ignore bool, wg *sync.WaitGroup, sem chan struct{}) {
-	wg.Add(len(dir))
 	for _, f := range dir {
 		// If it's not a directory or a regular file, skip
 		if !f.IsDir() && !f.Type().IsRegular() {
@@ -165,6 +165,7 @@ func checkFile(db *bolt.DB, file os.DirEntry, path, name string, ignore bool, wg
 	}
 
 	if len(subdir) != 0 {
+		wg.Add(len(subdir))
 		go walkDir(db, subdir, path, name, ignore, wg, sem)
 	}
 }
