@@ -44,6 +44,7 @@ func CmdForDocs() *cobra.Command {
 func Execute(version, commit string, db *bolt.DB) error {
 	setVersion(version, commit)
 	registerCmds(db)
+	cmd.CompletionOptions.DisableDefaultCmd = true
 
 	return cmd.Execute()
 }
