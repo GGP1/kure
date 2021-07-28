@@ -45,9 +45,7 @@ func Build(paths []string) *Node {
 //
 // path will be something like [root, folder, subfolder, file]
 func build(root *Node, path []string) {
-	child := &Node{
-		Name: path[0],
-	}
+	child := &Node{Name: path[0]}
 
 	// len(path) will be never < 1 and if there is only
 	// one element it must be unique as we already verified
@@ -113,10 +111,10 @@ func printChildren(root *Node, indent, start string) {
 		add := " │  "
 
 		if i == len(root.Children)-1 {
-			fmt.Printf("%s └── %s\n", indent, r.Name)
+			fmt.Println(indent, "└──", r.Name)
 			add = "    "
 		} else {
-			fmt.Printf("%s ├── %s\n", indent, r.Name)
+			fmt.Println(indent, "├──", r.Name)
 		}
 
 		printChildren(r, indent+add, start)

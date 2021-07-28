@@ -24,7 +24,9 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Short: "Restore the database using new credentials",
 		Long: `Restore the database using new credentials.
 
-Overwrite the registered credentials and re-encrypt every record with the new ones.`,
+Overwrite the registered credentials and re-encrypt every record with the new ones.
+
+Warning: all the records will be stored in memory during the process, restoring a big set of them can cause an OOM error. In these cases it's preferred to create a database with new credentials and use kure commands to write and read the data from the filesystem.`,
 		PreRunE: auth.Login(db),
 		RunE:    runRestore(db),
 	}
