@@ -20,15 +20,17 @@ func init() {
 
 // Config contains the elements for handling the configuration.
 type Config struct {
-	filename string
-	mp       map[string]interface{}
+	filename  string
+	mp        map[string]interface{}
+	separator string
 }
 
 // New returns a new Config.
 func New() *Config {
 	return &Config{
-		filename: "",
-		mp:       make(map[string]interface{}),
+		filename:  "",
+		mp:        make(map[string]interface{}),
+		separator: ".",
 	}
 }
 
@@ -38,7 +40,7 @@ func (c *Config) Get(key string) interface{} {
 		return nil
 	}
 
-	path := strings.Split(key, ".")
+	path := strings.Split(key, c.separator)
 	return search(c.mp, path)
 }
 
@@ -63,7 +65,7 @@ func (c *Config) Set(key string, value interface{}) {
 		return
 	}
 
-	path := strings.Split(key, ".")
+	path := strings.Split(key, c.separator)
 	insert(c.mp, path, value)
 }
 
