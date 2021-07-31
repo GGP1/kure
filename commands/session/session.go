@@ -91,7 +91,9 @@ func runSession(r io.Reader, opts *sessionOptions) cmdutil.RunEFunc {
 		go startSession(cmd, r, opts.prefix, timeout)
 
 		if timeout.t == 0 {
-			timeout.timer.Stop()
+			if !timeout.timer.Stop() {
+				<-timeout.timer.C
+			}
 		}
 
 		<-timeout.timer.C
