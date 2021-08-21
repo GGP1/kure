@@ -47,6 +47,10 @@ func askOne(p survey.Prompt, response interface{}) error {
 }
 
 func selectQs(message, help string, options []string) []*survey.Question {
+	pageSize := len(options)
+	if pageSize > 20 {
+		pageSize = 20
+	}
 	return []*survey.Question{
 		{
 			Name: "name",
@@ -54,7 +58,7 @@ func selectQs(message, help string, options []string) []*survey.Question {
 				Message:  message,
 				Help:     help,
 				Options:  options,
-				PageSize: len(options),
+				PageSize: pageSize,
 				VimMode:  true,
 			},
 		},
