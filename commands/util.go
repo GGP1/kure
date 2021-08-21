@@ -103,22 +103,22 @@ func BuildBox(name string, mp *orderedmap.Map) string {
 
 	// -4-: 2 spaces that wrap name and 2 corners
 	headerLen := longestKey + longestValue - nameLen + 4
-	half := headerLen / 2
+	headerHalfLen := headerLen / 2
 
 	// Left side header
 	sb.WriteString(upperLeft)
-	sb.WriteString(strings.Repeat(hBar, half))
+	sb.WriteString(strings.Repeat(hBar, headerHalfLen))
 
 	// Header name
 	sb.WriteString(fmt.Sprintf(" %s ", name))
 
-	// Adjust the right side of the header if the width is odd
+	// Adjust the right side of the header if its width is even
 	if headerLen%2 == 0 {
-		half--
+		headerHalfLen--
 	}
 
 	// Right side header
-	sb.WriteString(strings.Repeat(hBar, half))
+	sb.WriteString(strings.Repeat(hBar, headerHalfLen))
 	sb.WriteString(upperRight)
 	sb.WriteString("\n")
 
