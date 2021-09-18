@@ -124,28 +124,22 @@ func readTmpFile(filename string) (*pb.Entry, error) {
 // updateEntry takes the name of the entry that's being edited to check if the name was
 // changed. If it was, it will remove the old one.
 func updateEntry(db *bolt.DB, name string, e *pb.Entry) error {
-	var err error
 	if e.Name == "" {
 		return cmdutil.ErrInvalidName
 	}
 
 	// Verify that the "expires" field has a valid format
-	e.Expires, err = cmdutil.FmtExpires(e.Expires)
+	expires, err := cmdutil.FmtExpires(e.Expires)
 	if err != nil {
 		return err
 	}
 
-	// If the name was modified, remove the old entry
 	name = cmdutil.NormalizeName(name)
 	e.Name = cmdutil.NormalizeName(e.Name)
-	if name != e.Name {
-		if err := entry.Remove(db, name); err != nil {
-			return errors.Wrap(err, "removing old entry")
-		}
-	}
+	e.Expires = expires
 
-	if err := entry.Create(db, e); err != nil {
-		errors.Wrap(err, "updating entry")
+	if err := entry.Update(db, name, e); err != nil {
+		return err
 	}
 
 	fmt.Printf("%q updated\n", e.Name)
@@ -232,7 +226,6 @@ func useTextEditor(db *bolt.DB, oldEntry *pb.Entry) error {
 	// Block until an event is received or an error occurs
 	select {
 	case <-done:
-
 	case err := <-errCh:
 		return err
 	}

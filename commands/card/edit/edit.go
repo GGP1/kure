@@ -120,17 +120,11 @@ func updateCard(db *bolt.DB, name string, c *pb.Card) error {
 		return cmdutil.ErrInvalidName
 	}
 
-	// If the name was modified, remove the old card
 	name = cmdutil.NormalizeName(name)
 	c.Name = cmdutil.NormalizeName(c.Name)
-	if name != c.Name {
-		if err := card.Remove(db, name); err != nil {
-			return errors.Wrap(err, "removing old card")
-		}
-	}
 
-	if err := card.Create(db, c); err != nil {
-		errors.Wrap(err, "updating card")
+	if err := card.Update(db, name, c); err != nil {
+		return err
 	}
 
 	fmt.Printf("%q updated\n", c.Name)
@@ -201,7 +195,6 @@ func useTextEditor(db *bolt.DB, oldCard *pb.Card) error {
 	// Block until an event is received or an error occurs
 	select {
 	case <-done:
-
 	case err := <-errCh:
 		return err
 	}

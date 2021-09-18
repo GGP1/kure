@@ -2,14 +2,13 @@ package card
 
 import (
 	"testing"
-	"time"
 
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
+	dbutils "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
-	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -30,6 +29,7 @@ func TestCard(t *testing.T) {
 	t.Run("List", list(db))
 	t.Run("List names", listNames(db))
 	t.Run("Remove", remove(db, c.Name))
+	t.Run("Update", update(db))
 }
 
 func create(db *bolt.DB, c *pb.Card) func(*testing.T) {
@@ -95,6 +95,24 @@ func remove(db *bolt.DB, name string) func(*testing.T) {
 	}
 }
 
+func update(db *bolt.DB) func(*testing.T) {
+	return func(t *testing.T) {
+		oldCard := &pb.Card{Name: "old"}
+		if err := Create(db, oldCard); err != nil {
+			t.Fatal(err)
+		}
+
+		newCard := &pb.Card{Name: "new"}
+		if err := Update(db, oldCard.Name, newCard); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := Get(db, newCard.Name); err != nil {
+			t.Error(err)
+		}
+	}
+}
+
 func TestCreateErrors(t *testing.T) {
 	db := setContext(t)
 
@@ -126,21 +144,6 @@ func TestGetError(t *testing.T) {
 
 	if _, err := Get(db, "non-existent"); err == nil {
 		t.Error("Expected 'does not exist' error, got nil")
-	}
-}
-
-func TestListNameNil(t *testing.T) {
-	db := setContext(t)
-	err := db.Update(func(tx *bolt.Tx) error {
-		return tx.DeleteBucket(cardBucket)
-	})
-	if err != nil {
-		t.Fatalf("Failed deleting the card bucket: %v", err)
-	}
-
-	list, err := ListNames(db)
-	if err != nil || list != nil {
-		t.Errorf("Expected to receive a nil list and error, got: %v list, %v error", list, err)
 	}
 }
 
@@ -193,39 +196,6 @@ func TestKeyError(t *testing.T) {
 	}
 }
 
-func setContext(t *testing.T) *bolt.DB {
-	db, err := bolt.Open("../testdata/database", 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		t.Fatalf("Failed connecting to the database: %v", err)
-	}
-
-	config.Reset()
-	// Reduce argon2 parameters to speed up tests
-	auth := map[string]interface{}{
-		"password":   memguard.NewEnclave([]byte("1")),
-		"iterations": 1,
-		"memory":     1,
-		"threads":    1,
-	}
-	config.Set("auth", auth)
-
-	err = db.Update(func(tx *bolt.Tx) error {
-		bucket := "kure_card"
-		tx.DeleteBucket([]byte(bucket))
-		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
-			return errors.Wrapf(err, "couldn't create %q bucket", bucket)
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("Failed closing the database: %v", err)
-		}
-	})
-
-	return db
+func setContext(t testing.TB) *bolt.DB {
+	return dbutils.SetContext(t, "../testdata/database", cardBucket)
 }

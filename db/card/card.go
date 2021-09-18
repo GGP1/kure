@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/GGP1/kure/crypt"
+	dbutils "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
@@ -15,29 +16,13 @@ var cardBucket = []byte("kure_card")
 
 // Create a new bank card.
 func Create(db *bolt.DB, card *pb.Card) error {
+	if strings.ContainsRune(card.Name, '\x00') {
+		return errors.New("card name contains null characters")
+	}
+
 	return db.Batch(func(tx *bolt.Tx) error {
-		// Ensure the name does not contain null characters
-		if strings.ContainsRune(card.Name, '\x00') {
-			return errors.New("card name contains null characters")
-		}
-
 		b := tx.Bucket(cardBucket)
-
-		buf, err := proto.Marshal(card)
-		if err != nil {
-			return errors.Wrap(err, "marshal card")
-		}
-
-		encCard, err := crypt.Encrypt(buf)
-		if err != nil {
-			return errors.Wrap(err, "encrypt card")
-		}
-
-		if err := b.Put([]byte(card.Name), encCard); err != nil {
-			return errors.Wrap(err, "save card")
-		}
-
-		return nil
+		return save(b, card)
 	})
 }
 
@@ -106,37 +91,45 @@ func List(db *bolt.DB) ([]*pb.Card, error) {
 
 // ListNames returns a list with all the cards names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	tx, err := db.Begin(false)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	// b will be nil only if the user attempts to add
-	// a card on registration
-	b := tx.Bucket(cardBucket)
-	if b == nil {
-		return nil, nil
-	}
-
-	cards := make([]string, 0, b.Stats().KeyN)
-	_ = b.ForEach(func(k, _ []byte) error {
-		cards = append(cards, string(k))
-		return nil
-	})
-
-	return cards, nil
+	return dbutils.ListNames(db, cardBucket)
 }
 
 // Remove removes a card from the database.
 func Remove(db *bolt.DB, name string) error {
+	return dbutils.Remove(db, cardBucket, name)
+}
+
+// Update updates a card, it removes the old one if the name differs.
+func Update(db *bolt.DB, oldName string, card *pb.Card) error {
+	if strings.ContainsRune(card.Name, '\x00') {
+		return errors.New("entry name contains null characters")
+	}
+
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(cardBucket)
-
-		if err := b.Delete([]byte(name)); err != nil {
-			return errors.Wrap(err, "remove card")
+		if oldName != card.Name {
+			if err := b.Delete([]byte(oldName)); err != nil {
+				return errors.Wrap(err, "remove old card")
+			}
 		}
-
-		return nil
+		return save(b, card)
 	})
+}
+
+func save(b *bolt.Bucket, card *pb.Card) error {
+	buf, err := proto.Marshal(card)
+	if err != nil {
+		return errors.Wrap(err, "marshal card")
+	}
+
+	encCard, err := crypt.Encrypt(buf)
+	if err != nil {
+		return errors.Wrap(err, "encrypt card")
+	}
+
+	if err := b.Put([]byte(card.Name), encCard); err != nil {
+		return errors.Wrap(err, "save card")
+	}
+
+	return nil
 }

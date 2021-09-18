@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
-	"time"
 
-	"github.com/GGP1/kure/config"
+	dbutil "github.com/GGP1/kure/db"
 
-	"github.com/awnumar/memguard"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -113,70 +111,6 @@ func TestSetParametersInvalidKeys(t *testing.T) {
 	}
 }
 
-func setContext(t *testing.T) *bolt.DB {
-	db, err := bolt.Open("../testdata/database", 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		t.Fatalf("Failed connecting to the database: %v", err)
-	}
-
-	config.Reset()
-	// Reduce argon2 parameters to speed up tests
-	auth := map[string]interface{}{
-		"password":   memguard.NewEnclave([]byte("1")),
-		"iterations": 1,
-		"memory":     1,
-		"threads":    1,
-	}
-	config.Set("auth", auth)
-
-	err = db.Update(func(tx *bolt.Tx) error {
-		tx.DeleteBucket(authBucket)
-		tx.CreateBucketIfNotExists(authBucket)
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("Failed closing the database: %v", err)
-		}
-	})
-
-	return db
-}
-
-func setContextB(b *testing.B) *bolt.DB {
-	db, err := bolt.Open("../testdata/database", 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		b.Fatalf("Failed connecting to the database: %v", err)
-	}
-
-	config.Reset()
-	// Reduce argon2 parameters to speed up tests
-	auth := map[string]interface{}{
-		"password":   memguard.NewEnclave([]byte("1")),
-		"iterations": 1,
-		"memory":     1,
-		"threads":    1,
-	}
-	config.Set("auth", auth)
-
-	err = db.Update(func(tx *bolt.Tx) error {
-		tx.DeleteBucket(authBucket)
-		tx.CreateBucketIfNotExists(authBucket)
-		return nil
-	})
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	b.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			b.Fatalf("Failed closing the database: %v", err)
-		}
-	})
-
-	return db
+func setContext(t testing.TB) *bolt.DB {
+	return dbutil.SetContext(t, "../testdata/database", authBucket)
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/GGP1/kure/crypt"
+	dbutils "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
@@ -182,37 +183,10 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 
 // ListNames returns a slice with all the files names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	tx, err := db.Begin(false)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	// b will be nil only if the user attempts to add
-	// a file on registration
-	b := tx.Bucket(fileBucket)
-	if b == nil {
-		return nil, nil
-	}
-
-	files := make([]string, 0, b.Stats().KeyN)
-	_ = b.ForEach(func(k, _ []byte) error {
-		files = append(files, string(k))
-		return nil
-	})
-
-	return files, nil
+	return dbutils.ListNames(db, fileBucket)
 }
 
 // Remove removes a file from the database.
 func Remove(db *bolt.DB, name string) error {
-	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(fileBucket)
-
-		if err := b.Delete([]byte(name)); err != nil {
-			return errors.Wrap(err, "remove file")
-		}
-
-		return nil
-	})
+	return dbutils.Remove(db, fileBucket, name)
 }
