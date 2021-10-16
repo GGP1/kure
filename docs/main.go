@@ -8,18 +8,18 @@ import (
 	"log"
 	"os"
 	"strings"
+	"text/template"
 	"unicode"
 
 	"github.com/GGP1/kure/commands/root"
 
-	"github.com/atotto/clipboard"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 // Utils to help developers update Kure's documentation.
 // Remember to update the wiki if necessary.
-// build "go build main.go" and execute "./main [flags] [args]"
+// go run main.go [flags] [args]
 
 func main() {
 	cmd := flag.Bool("cmd", false, "specific command documentation")
@@ -65,84 +65,41 @@ func cmdDocs(args []string) error {
 
 // customMarkdown creates custom markdown output.
 func customMarkdown(cmd *cobra.Command, w io.Writer) error {
-	buf := new(bytes.Buffer)
+	funcs := template.FuncMap{
+		"sub": func(a, b int) int {
+			return a - b
+		},
+		"replace": func(s, old, new string, n int) string {
+			return strings.Replace(s, old, new, n)
+		},
+		"visitFlags": func(cmd *cobra.Command) string {
+			return visitFlags(cmd)
+		},
+		"visitFlagsTable": func(cmd *cobra.Command) string {
+			buf := new(bytes.Buffer)
+			cmd.Flags().VisitAll(func(f *pflag.Flag) {
+				// Uppercase the first letter only
+				usage := []byte(f.Usage)
+				usage[0] = byte(unicode.ToUpper(rune(usage[0])))
 
-	buf.WriteString("## Use\n\n")
-	buf.WriteString("`")
-	buf.WriteString(strings.Replace(cmd.UseLine(), "[flags]", "", 1))
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		var shorthand string
-		if f.Shorthand != "" {
-			shorthand = fmt.Sprintf("-%s ", f.Shorthand)
-		}
-		buf.WriteString(fmt.Sprintf("[%s%s] ", shorthand, f.Name))
-	})
-	buf.WriteString("`\n\n")
-
-	if len(cmd.Aliases) > 0 {
-		buf.WriteString("*Aliases*: ")
-		for i, a := range cmd.Aliases {
-			buf.WriteString(a)
-			if i != len(cmd.Aliases)-1 {
-				buf.WriteString(", ")
-			}
-		}
-		buf.WriteString(".\n\n")
+				buf.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n", f.Name, f.Shorthand, f.Value.Type(), f.DefValue, usage))
+			})
+			return buf.String()
+		},
+		"getURL": func(cmd *cobra.Command) string {
+			return getURL(cmd)
+		},
+		"split": func(s, sep string) []string {
+			return strings.Split(s, sep)
+		},
+		"hasPrefix": func(s, prefix string) bool {
+			return strings.HasPrefix(s, prefix)
+		},
 	}
-
-	buf.WriteString("## Description\n\n")
-	if cmd.Long != "" {
-		buf.WriteString(cmd.Long)
-		buf.WriteString("\n\n")
-	} else {
-		buf.WriteString(cmd.Short)
-		buf.WriteString(".\n\n")
-	}
-
-	if cmd.HasSubCommands() {
-		url := getURL(cmd)
-		buf.WriteString("## Subcommands\n\n")
-		for _, c := range cmd.Commands() {
-			name := c.Name()
-			if !c.HasSubCommands() {
-				name += ".md"
-			}
-			buf.WriteString(fmt.Sprintf("- [`%s`](%s%s): %s.\n", c.CommandPath(), url, name, c.Short))
-		}
-	}
-	buf.WriteString("\n")
-
-	buf.WriteString("## Flags\n\n")
-	flags := cmd.Flags()
-	if flags.HasFlags() {
-		buf.WriteString("| Name | Shorthand | Type | Default | Description |\n")
-		buf.WriteString("|------|-----------|------|---------|-------------|\n")
-		flags.VisitAll(func(f *pflag.Flag) {
-			// Uppercase the first letter only
-			usage := []byte(f.Usage)
-			usage[0] = byte(unicode.ToUpper(rune(usage[0])))
-
-			buf.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n", f.Name, f.Shorthand, f.Value.Type(), f.DefValue, usage))
-		})
-	} else {
-		buf.WriteString("No flags.\n")
-	}
-
-	if cmd.Example != "" {
-		buf.WriteString("\n### Examples\n\n")
-		examples := strings.Split(cmd.Example, "\n")
-
-		for _, e := range examples {
-			if strings.HasPrefix(e, "*") {
-				buf.WriteString(strings.Replace(e, "* ", "", 1) + ":\n")
-			} else if e != "" {
-				buf.WriteString("```\n" + e + "\n```\n\n")
-			}
-		}
-	}
-
-	_, err := buf.WriteTo(w)
-	return err
+	t := template.Must(template.New("cmd.go.tpl").
+		Funcs(funcs).
+		ParseFiles("./templates/cmd.go.tpl"))
+	return t.Execute(w, cmd)
 }
 
 func getURL(cmd *cobra.Command) string {
@@ -156,105 +113,93 @@ func getURL(cmd *cobra.Command) string {
 	return url
 }
 
+func visitFlags(cmd *cobra.Command) string {
+	buf := new(bytes.Buffer)
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		var shorthand string
+		if f.Shorthand != "" {
+			shorthand = fmt.Sprintf("-%s ", f.Shorthand)
+		}
+		buf.WriteString(fmt.Sprintf("[%s%s] ", shorthand, f.Name))
+	})
+	return buf.String()
+}
+
 // Generate code completion files. By default it generates all the files.
 //
 // Usage: main --completion bash.
 func completion(args []string) error {
 	root := root.CmdForDocs()
+	bash := "completion/bash.sh"
+	fish := "completion/fish.sh"
+	powershell := "completion/powershell.ps1"
+	zsh := "completion/zsh.sh"
 
 	if len(args) < 3 {
-		if err := root.GenBashCompletionFile("completion/bash.sh"); err != nil {
+		if err := root.GenBashCompletionFile(bash); err != nil {
 			return err
 		}
-		if err := root.GenFishCompletionFile("completion/fish.sh", true); err != nil {
+		if err := root.GenFishCompletionFile(fish, true); err != nil {
 			return err
 		}
-		if err := root.GenPowerShellCompletionFile("completion/powershell.ps1"); err != nil {
+		if err := root.GenPowerShellCompletionFile(powershell); err != nil {
 			return err
 		}
-		return root.GenZshCompletionFile("completion/zsh.sh")
+		return root.GenZshCompletionFile(zsh)
 	}
 
 	switch args[2] {
 	case "bash":
-		return root.GenBashCompletionFile("completion/bash.sh")
+		return root.GenBashCompletionFile(bash)
 	case "fish":
-		return root.GenFishCompletionFile("completion/fish.sh", true)
+		return root.GenFishCompletionFile(fish, true)
 	case "powershell":
-		return root.GenPowerShellCompletionFile("completion/powershell.ps1")
+		return root.GenPowerShellCompletionFile(powershell)
 	case "zsh":
-		return root.GenZshCompletionFile("completion/zsh.sh")
+		return root.GenZshCompletionFile(zsh)
 	}
 
 	return nil
 }
 
-// Generate the wiki commands summary page.
+// Generate the wiki commands' summary page.
 // https://www.github.com/kure/wiki/Commands-summary
 //
-// Usage: main --summary copy.
+// Usage: main --summary.
 func summary(args []string) error {
-	root := root.CmdForDocs()
-	docs := fmtSummary(root)
-
-	if len(args) == 3 {
-		if args[2] == "copy" {
-			if err := clipboard.WriteAll(docs); err != nil {
-				return err
-			}
-		}
+	cmdAndFlags := func(c *cobra.Command) string {
+		buf := new(bytes.Buffer)
+		buf.WriteString(c.Use)
+		buf.WriteByte(' ')
+		buf.WriteString(visitFlags(c))
+		return buf.String()
 	}
-
-	if _, err := fmt.Fprint(os.Stdout, docs); err != nil {
-		return err
-	}
-	return nil
-}
-
-func fmtSummary(cmd *cobra.Command) string {
-	var (
-		sb      strings.Builder
-		subCmds func(*cobra.Command, string)
-	)
-
-	cmdAndFlags := func(c *cobra.Command) {
-		sb.WriteString(fmt.Sprintf("%s ", c.Use))
-
-		c.Flags().VisitAll(func(f *pflag.Flag) {
-			if f.Shorthand != "" {
-				f.Shorthand = fmt.Sprintf("-%s ", f.Shorthand)
-			}
-			sb.WriteString(fmt.Sprintf("[%s%s] ", f.Shorthand, f.Name))
-		})
-	}
-	// Add subcommands and flags using recursion
-	subCmds = func(cmd *cobra.Command, indent string) {
+	// Write subcommands and flags using recursion
+	var subCmds func(cmd *cobra.Command, indent string) string
+	subCmds = func(cmd *cobra.Command, indent string) string {
+		buf := new(bytes.Buffer)
 		// Add indent on each call
 		indent += "    "
 		for _, sub := range cmd.Commands() {
-			sb.WriteString("\n" + indent)
-			cmdAndFlags(sub)
-			subCmds(sub, indent)
+			buf.WriteString("\n")
+			buf.WriteString(indent)
+			buf.WriteString(cmdAndFlags(sub))
+			buf.WriteString(subCmds(sub, indent))
 		}
+		return buf.String()
 	}
 
-	sb.WriteString(`For further information about each each command, its flags and examples please visit the [commands folder](https://github.com/GGP1/kure/tree/master/docs/commands).
-`)
-
-	// Index
-	for _, c := range cmd.Commands() {
-		sb.WriteString(fmt.Sprintf("\n- [%s](#%s)", c.Name(), c.Name()))
+	root := root.CmdForDocs()
+	funcs := template.FuncMap{
+		"cmdAndFlags": func(cmd *cobra.Command) string {
+			return cmdAndFlags(cmd)
+		},
+		"subCmds": func(cmd *cobra.Command, indent string) string {
+			return subCmds(cmd, indent)
+		},
 	}
-	// Separation
-	sb.WriteString("\n\n\n")
-
-	// Each command name and its flags
-	for _, c := range cmd.Commands() {
-		sb.WriteString(fmt.Sprintf("### %s\n```\n", c.Name()))
-		cmdAndFlags(c)
-		subCmds(c, "")
-		sb.WriteString("\n```\n\n---\n\n")
-	}
-
-	return sb.String()
+	t := template.Must(template.New("summary.go.tpl").
+		Funcs(funcs).
+		ParseFiles("./templates/summary.go.tpl"))
+	return t.Execute(os.Stdout, root)
 }
