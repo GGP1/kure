@@ -44,13 +44,11 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "session",
 		Short: "Run a session",
-		Long: `Sessions are used for doing multiple operations by providing the master password once, it's encrypted and stored inside a locked buffer, decrypted when needed and destroyed right after it.
+		Long: `Sessions let you do multiple operations by providing the master password once. 
+		
+They support running scripts using the logical AND (&&) operator and executing pre-defined ones from the configuration file by using their aliases.
 
-Scripts can be created in the configuration file and executed inside sessions by using their aliases and, optionally, passing arguments.
-
-Once into a session:
-• use "&&" to execute a commands sequence.
-• it's optional to use the word "kure" to run a command.
+During a session, the master password is encrypted and stored inside a protected buffer.
 
 Session commands:
 • block - block execution (to be manually unlocked).

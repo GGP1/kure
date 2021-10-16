@@ -73,4 +73,4 @@ Scripts can be used to run a sequence of commands inside sessions. Each one of t
 #### Timeout
 
 Time until the session is closed.
-Set to "0s" or leave blank for no timeout.ç
+Set to "0s" or leave blank for no timeout.
