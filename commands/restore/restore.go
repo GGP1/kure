@@ -6,16 +6,16 @@ import (
 
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
-	"github.com/GGP1/kure/db/card"
-	"github.com/GGP1/kure/db/entry"
-	"github.com/GGP1/kure/db/file"
-	"github.com/GGP1/kure/db/totp"
+	"github.com/GGP1/kure/crypt"
+	dbutil "github.com/GGP1/kure/db"
+	"github.com/GGP1/kure/sig"
 
 	"github.com/pkg/errors"
-	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
+
+var buckets = [][]byte{dbutil.CardBucket, dbutil.EntryBucket, dbutil.FileBucket, dbutil.TOTPBucket}
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
@@ -26,7 +26,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 Overwrite the registered credentials and re-encrypt every record with the new ones.
 
-Warning: all the records will be stored in memory during the process, restoring a big set of them can cause an OOM error. In these cases it's preferred to create a database with new credentials and use kure commands to write and read the data from the filesystem.`,
+Warning: this command is computationally expensive, it may cause memory (OOM) and CPU errors.`,
 		PreRunE: auth.Login(db),
 		RunE:    runRestore(db),
 	}
@@ -36,70 +36,95 @@ Warning: all the records will be stored in memory during the process, restoring 
 
 func runRestore(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		// Operations are run synchronously to avoid exhausting the user's pc
-		listBar := progressbar.New64(4)
-		listBar.Describe("Loading records")
-		// List all records with the old credentials
-		cards, err := card.List(db)
-		if err != nil {
-			return err
+		logs := make([]*log, 0, len(buckets))
+		for _, bucket := range buckets {
+			log, err := newLog(bucket)
+			if err != nil {
+				return err
+			}
+			defer log.Close()
+			sig.Signal.AddCleanup(func() error { return log.Close() })
+			logs = append(logs, log)
 		}
-		listBar.Add64(1)
-		entries, err := entry.List(db)
-		if err != nil {
-			return err
+
+		if err := writeLogs(db, logs); err != nil {
+			return errors.Wrap(err, "writing logs")
 		}
-		listBar.Add64(1)
-		files, err := file.List(db)
-		if err != nil {
-			return err
-		}
-		listBar.Add64(1)
-		totps, err := totp.List(db)
-		if err != nil {
-			return err
-		}
-		listBar.Add64(1)
-		fmt.Print("\n")
 
 		// Initialize registration and re-encrypt the records with the new credentials
 		if err := auth.Register(db, os.Stdin); err != nil {
 			return err
 		}
+		fmt.Println("Re-encrypting records...")
 
-		var errs []error
-		createBar := progressbar.New(len(cards) + len(entries) + len(files) + len(totps))
-		createBar.Describe("Re-encrypting records")
-
-		for _, c := range cards {
-			if err := card.Create(db, c); err != nil {
-				errs = append(errs, errors.Wrap(err, c.Name))
-			}
-			createBar.Add64(1)
-		}
-		for _, e := range entries {
-			if err := entry.Create(db, e); err != nil {
-				errs = append(errs, errors.Wrap(err, e.Name))
-			}
-			createBar.Add64(1)
-		}
-		for _, f := range files {
-			if err := file.Create(db, f); err != nil {
-				errs = append(errs, errors.Wrap(err, f.Name))
-			}
-			createBar.Add64(1)
-		}
-		for _, t := range totps {
-			if err := totp.Create(db, t); err != nil {
-				errs = append(errs, errors.Wrap(err, t.Name))
-			}
-			createBar.Add64(1)
-		}
-
-		for _, err := range errs {
-			fmt.Fprintln(os.Stderr, "error:", err)
+		if err := readLogs(db, logs); err != nil {
+			return errors.Wrap(err, "recreating records")
 		}
 
 		return nil
 	}
+}
+
+func readLogs(db *bolt.DB, logs []*log) error {
+	tx, err := db.Begin(true)
+	if err != nil {
+		return errors.Wrap(err, "starting transaction")
+	}
+	defer tx.Rollback()
+
+	for _, log := range logs {
+		b := tx.Bucket(log.BucketName())
+		data, err := log.Read()
+		if err != nil {
+			return err
+		}
+
+		for i := 0; i < len(data)-1; i += 2 {
+			key := data[i]
+			value := data[i+1]
+			encValue, err := crypt.Encrypt(value)
+			if err != nil {
+				return errors.Wrap(err, "encrypt record value")
+			}
+			if err := b.Put(key, encValue); err != nil {
+				return errors.Wrap(err, "saving record")
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
+func writeLogs(db *bolt.DB, logs []*log) error {
+	tx, err := db.Begin(false)
+	if err != nil {
+		return errors.Wrap(err, "starting transaction")
+	}
+	defer tx.Rollback()
+
+	for _, l := range logs {
+		b := tx.Bucket(l.BucketName())
+
+		err = b.ForEach(func(k, v []byte) error {
+			decValue, err := crypt.Decrypt(v)
+			if err != nil {
+				return errors.Wrap(err, "decrypt record value")
+			}
+
+			if err := l.Write(k); err != nil {
+				return err
+			}
+			return l.Write(decValue)
+		})
+		if err != nil {
+			return err
+		}
+
+		// Flush data to stable storage
+		if err := l.Sync(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

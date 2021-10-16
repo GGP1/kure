@@ -4,15 +4,13 @@ import (
 	"strings"
 
 	"github.com/GGP1/kure/crypt"
-	dbutils "github.com/GGP1/kure/db"
+	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
-
-var entryBucket = []byte("kure_entry")
 
 // Create a new entry.
 func Create(db *bolt.DB, entry *pb.Entry) error {
@@ -21,7 +19,7 @@ func Create(db *bolt.DB, entry *pb.Entry) error {
 	}
 
 	return db.Batch(func(tx *bolt.Tx) error {
-		b := tx.Bucket(entryBucket)
+		b := tx.Bucket(dbutil.EntryBucket)
 		return save(b, entry)
 	})
 }
@@ -31,7 +29,7 @@ func Get(db *bolt.DB, name string) (*pb.Entry, error) {
 	entry := &pb.Entry{}
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(entryBucket)
+		b := tx.Bucket(dbutil.EntryBucket)
 
 		encEntry := b.Get([]byte(name))
 		if encEntry == nil {
@@ -64,7 +62,7 @@ func List(db *bolt.DB) ([]*pb.Entry, error) {
 	}
 	defer tx.Rollback()
 
-	b := tx.Bucket(entryBucket)
+	b := tx.Bucket(dbutil.EntryBucket)
 	entries := make([]*pb.Entry, 0, b.Stats().KeyN)
 
 	err = b.ForEach(func(k, v []byte) error {
@@ -91,12 +89,12 @@ func List(db *bolt.DB) ([]*pb.Entry, error) {
 
 // ListNames returns a list with all the entries names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutils.ListNames(db, entryBucket)
+	return dbutil.ListNames(db, dbutil.EntryBucket)
 }
 
 // Remove removes an entry from the database.
 func Remove(db *bolt.DB, name string) error {
-	return dbutils.Remove(db, entryBucket, name)
+	return dbutil.Remove(db, dbutil.EntryBucket, name)
 }
 
 // Update updates an entry, it removes the old one if the name differs.
@@ -106,7 +104,7 @@ func Update(db *bolt.DB, oldName string, entry *pb.Entry) error {
 	}
 
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(entryBucket)
+		b := tx.Bucket(dbutil.EntryBucket)
 		if oldName != entry.Name {
 			if err := b.Delete([]byte(oldName)); err != nil {
 				return errors.Wrap(err, "remove old entry")

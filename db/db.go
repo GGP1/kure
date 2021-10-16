@@ -11,6 +11,14 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+// Database bucket
+var (
+	CardBucket  = []byte("kure_card")
+	EntryBucket = []byte("kure_entry")
+	FileBucket  = []byte("kure_file")
+	TOTPBucket  = []byte("kure_totp")
+)
+
 // ListNames returns a list with all the records names.
 func ListNames(db *bolt.DB, bucketName []byte) ([]string, error) {
 	tx, err := db.Begin(false)

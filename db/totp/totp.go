@@ -4,15 +4,13 @@ import (
 	"strings"
 
 	"github.com/GGP1/kure/crypt"
-	dbutils "github.com/GGP1/kure/db"
+	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
-
-var totpBucket = []byte("kure_totp")
 
 // Create a new TOTP.
 func Create(db *bolt.DB, totp *pb.TOTP) error {
@@ -22,7 +20,7 @@ func Create(db *bolt.DB, totp *pb.TOTP) error {
 			return errors.Errorf("TOTP name contains null characters")
 		}
 
-		b := tx.Bucket(totpBucket)
+		b := tx.Bucket(dbutil.TOTPBucket)
 
 		buf, err := proto.Marshal(totp)
 		if err != nil {
@@ -47,7 +45,7 @@ func Get(db *bolt.DB, name string) (*pb.TOTP, error) {
 	totp := &pb.TOTP{}
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(totpBucket)
+		b := tx.Bucket(dbutil.TOTPBucket)
 
 		encTOTP := b.Get([]byte(name))
 		if encTOTP == nil {
@@ -80,7 +78,7 @@ func List(db *bolt.DB) ([]*pb.TOTP, error) {
 	}
 	defer tx.Rollback()
 
-	b := tx.Bucket(totpBucket)
+	b := tx.Bucket(dbutil.TOTPBucket)
 	totps := make([]*pb.TOTP, 0, b.Stats().KeyN)
 
 	err = b.ForEach(func(k, v []byte) error {
@@ -107,10 +105,10 @@ func List(db *bolt.DB) ([]*pb.TOTP, error) {
 
 // ListNames returns a slice with all the totps names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutils.ListNames(db, totpBucket)
+	return dbutil.ListNames(db, dbutil.TOTPBucket)
 }
 
 // Remove removes a totp from the database.
 func Remove(db *bolt.DB, name string) error {
-	return dbutils.Remove(db, totpBucket, name)
+	return dbutil.Remove(db, dbutil.TOTPBucket, name)
 }

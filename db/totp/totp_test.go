@@ -150,7 +150,7 @@ func TestProtoErrors(t *testing.T) {
 	db := setContext(t)
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(totpBucket))
+		b := tx.Bucket([]byte(dbutil.TOTPBucket))
 		buf := make([]byte, 64)
 		rand.Read(buf)
 		encBuf, _ := crypt.Encrypt(buf)
@@ -177,5 +177,5 @@ func TestKeyError(t *testing.T) {
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutil.SetContext(t, "../testdata/database", totpBucket)
+	return dbutil.SetContext(t, "../testdata/database", dbutil.TOTPBucket)
 }

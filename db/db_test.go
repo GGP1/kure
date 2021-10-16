@@ -9,6 +9,14 @@ import (
 
 var bucketName = []byte("test")
 
+func TestCreateEncoded(t *testing.T) {
+
+}
+
+func TestListEncoded(t *testing.T) {
+
+}
+
 func TestListNames(t *testing.T) {
 	db := SetContext(t, "./testdata/database", bucketName)
 

@@ -188,7 +188,7 @@ func TestProtoErrors(t *testing.T) {
 
 	name := "unformatted"
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(entryBucket))
+		b := tx.Bucket([]byte(dbutil.EntryBucket))
 		buf := make([]byte, 64)
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte(name), encBuf)
@@ -214,5 +214,5 @@ func TestKeyError(t *testing.T) {
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutil.SetContext(t, "../testdata/database", entryBucket)
+	return dbutil.SetContext(t, "../testdata/database", dbutil.EntryBucket)
 }

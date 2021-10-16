@@ -7,15 +7,13 @@ import (
 	"strings"
 
 	"github.com/GGP1/kure/crypt"
-	dbutils "github.com/GGP1/kure/db"
+	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
-
-var fileBucket = []byte("kure_file")
 
 // Create a new file compressing its content.
 func Create(db *bolt.DB, file *pb.File) error {
@@ -24,22 +22,14 @@ func Create(db *bolt.DB, file *pb.File) error {
 		return errors.New("file name contains null characters")
 	}
 
-	// Compress content
-	var gzipBuf bytes.Buffer
-	gw := gzip.NewWriter(&gzipBuf)
-
-	if _, err := gw.Write(file.Content); err != nil {
-		return errors.Wrap(err, "compressing file")
+	compressedContent, err := compress(file.Content)
+	if err != nil {
+		return err
 	}
-
-	if err := gw.Close(); err != nil {
-		return errors.Wrap(err, "closing gzip writer")
-	}
-
-	file.Content = gzipBuf.Bytes()
+	file.Content = compressedContent
 
 	return db.Batch(func(tx *bolt.Tx) error {
-		b := tx.Bucket(fileBucket)
+		b := tx.Bucket(dbutil.FileBucket)
 
 		buf, err := proto.Marshal(file)
 		if err != nil {
@@ -64,7 +54,7 @@ func Get(db *bolt.DB, name string) (*pb.File, error) {
 	file := &pb.File{}
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(fileBucket)
+		b := tx.Bucket(dbutil.FileBucket)
 
 		encFile := b.Get([]byte(name))
 		if encFile == nil {
@@ -86,20 +76,12 @@ func Get(db *bolt.DB, name string) (*pb.File, error) {
 		return nil, err
 	}
 
-	// Decompress
-	compressed := bytes.NewBuffer(file.Content)
-	gr, err := gzip.NewReader(compressed)
+	decompressedContent, err := decompress(file.Content)
 	if err != nil {
-		return nil, errors.Wrap(err, "decompressing file")
-	}
-	defer gr.Close()
-
-	var decompressed bytes.Buffer
-	if _, err = io.Copy(&decompressed, gr); err != nil {
-		return nil, errors.Wrap(err, "copying decompressed file")
+		return nil, err
 	}
 
-	file.Content = decompressed.Bytes()
+	file.Content = decompressedContent
 
 	return file, nil
 }
@@ -109,7 +91,7 @@ func GetCheap(db *bolt.DB, name string) (*pb.FileCheap, error) {
 	file := &pb.FileCheap{}
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(fileBucket)
+		b := tx.Bucket(dbutil.FileBucket)
 
 		encFile := b.Get([]byte(name))
 		if encFile == nil {
@@ -142,7 +124,7 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 	}
 	defer tx.Rollback()
 
-	b := tx.Bucket(fileBucket)
+	b := tx.Bucket(dbutil.FileBucket)
 	files := make([]*pb.File, 0, b.Stats().KeyN)
 
 	err = b.ForEach(func(k, v []byte) error {
@@ -157,20 +139,11 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 			return errors.Wrap(err, "unmarshal file")
 		}
 
-		// Decompress
-		compressed := bytes.NewBuffer(file.Content)
-		gr, err := gzip.NewReader(compressed)
+		decompressedContent, err := decompress(file.Content)
 		if err != nil {
-			return errors.Wrap(err, "decompressing file")
+			return err
 		}
-
-		var decompressed bytes.Buffer
-		if _, err = io.Copy(&decompressed, gr); err != nil {
-			return errors.Wrap(err, "copying decompressed file")
-		}
-		gr.Close()
-
-		file.Content = decompressed.Bytes()
+		file.Content = decompressedContent
 		files = append(files, file)
 		return nil
 	})
@@ -183,10 +156,41 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 
 // ListNames returns a slice with all the files names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutils.ListNames(db, fileBucket)
+	return dbutil.ListNames(db, dbutil.FileBucket)
 }
 
 // Remove removes a file from the database.
 func Remove(db *bolt.DB, name string) error {
-	return dbutils.Remove(db, fileBucket, name)
+	return dbutil.Remove(db, dbutil.FileBucket, name)
+}
+
+func compress(content []byte) ([]byte, error) {
+	var gzipBuf bytes.Buffer
+	gw := gzip.NewWriter(&gzipBuf)
+
+	if _, err := gw.Write(content); err != nil {
+		return nil, errors.Wrap(err, "compressing content")
+	}
+
+	if err := gw.Close(); err != nil {
+		return nil, errors.Wrap(err, "closing gzip writer")
+	}
+
+	return gzipBuf.Bytes(), nil
+}
+
+func decompress(content []byte) ([]byte, error) {
+	compressed := bytes.NewBuffer(content)
+	gr, err := gzip.NewReader(compressed)
+	if err != nil {
+		return nil, errors.Wrap(err, "decompressing content")
+	}
+	defer gr.Close()
+
+	var decompressed bytes.Buffer
+	if _, err = io.Copy(&decompressed, gr); err != nil {
+		return nil, errors.Wrap(err, "copying decompressed content")
+	}
+
+	return decompressed.Bytes(), nil
 }

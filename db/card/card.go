@@ -4,15 +4,13 @@ import (
 	"strings"
 
 	"github.com/GGP1/kure/crypt"
-	dbutils "github.com/GGP1/kure/db"
+	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
-
-var cardBucket = []byte("kure_card")
 
 // Create a new bank card.
 func Create(db *bolt.DB, card *pb.Card) error {
@@ -21,7 +19,7 @@ func Create(db *bolt.DB, card *pb.Card) error {
 	}
 
 	return db.Batch(func(tx *bolt.Tx) error {
-		b := tx.Bucket(cardBucket)
+		b := tx.Bucket(dbutil.CardBucket)
 		return save(b, card)
 	})
 }
@@ -31,7 +29,7 @@ func Get(db *bolt.DB, name string) (*pb.Card, error) {
 	card := &pb.Card{}
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(cardBucket)
+		b := tx.Bucket(dbutil.CardBucket)
 
 		encCard := b.Get([]byte(name))
 		if encCard == nil {
@@ -64,7 +62,7 @@ func List(db *bolt.DB) ([]*pb.Card, error) {
 	}
 	defer tx.Rollback()
 
-	b := tx.Bucket(cardBucket)
+	b := tx.Bucket(dbutil.CardBucket)
 	cards := make([]*pb.Card, 0, b.Stats().KeyN)
 
 	err = b.ForEach(func(k, v []byte) error {
@@ -91,12 +89,12 @@ func List(db *bolt.DB) ([]*pb.Card, error) {
 
 // ListNames returns a list with all the cards names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutils.ListNames(db, cardBucket)
+	return dbutil.ListNames(db, dbutil.CardBucket)
 }
 
 // Remove removes a card from the database.
 func Remove(db *bolt.DB, name string) error {
-	return dbutils.Remove(db, cardBucket, name)
+	return dbutil.Remove(db, dbutil.CardBucket, name)
 }
 
 // Update updates a card, it removes the old one if the name differs.
@@ -106,7 +104,7 @@ func Update(db *bolt.DB, oldName string, card *pb.Card) error {
 	}
 
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(cardBucket)
+		b := tx.Bucket(dbutil.CardBucket)
 		if oldName != card.Name {
 			if err := b.Delete([]byte(oldName)); err != nil {
 				return errors.Wrap(err, "remove old card")
