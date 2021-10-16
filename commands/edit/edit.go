@@ -208,7 +208,7 @@ func useTextEditor(db *bolt.DB, oldEntry *pb.Entry) error {
 	}
 
 	sig.Signal.AddCleanup(func() error { return cmdutil.Erase(filename) })
-	defer func() error { return cmdutil.Erase(filename) }()
+	defer cmdutil.Erase(filename)
 
 	// Open the temporary file with the selected text editor
 	edit := exec.Command(bin, filename)

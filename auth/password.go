@@ -29,7 +29,7 @@ func AskPassword(message string, verify bool) (*memguard.Enclave, error) {
 
 	// Restore the terminal to its previous state
 	sig.Signal.AddCleanup(func() error { return terminal.Restore(fd, oldState) })
-	defer func() error { return terminal.Restore(fd, oldState) }()
+	defer terminal.Restore(fd, oldState)
 
 	fmt.Print(message + ": ")
 	password, err := terminal.ReadPassword(fd)
