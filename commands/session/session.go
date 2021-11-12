@@ -32,9 +32,9 @@ type sessionOptions struct {
 }
 
 type timeout struct {
-	t     time.Duration
 	start time.Time
 	timer *time.Timer
+	t     time.Duration
 }
 
 // NewCmd returns a new command.

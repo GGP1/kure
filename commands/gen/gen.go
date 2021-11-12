@@ -25,10 +25,14 @@ kure gen -l 20 -q
 kure gen -l 25 -cm`
 
 type genOptions struct {
-	copy, mute, qr, repeat bool
-	length                 uint64
-	levels                 []int
-	include, exclude       string
+	include string
+	exclude string
+	levels  []int
+	length  uint64
+	qr      bool
+	repeat  bool
+	copy    bool
+	mute    bool
 }
 
 // NewCmd returns a new command.

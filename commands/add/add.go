@@ -28,10 +28,10 @@ kure add Sample -c
 kure add Sample -l 27 -f 1,2,3,4,5 -i & -e / -r`
 
 type addOptions struct {
-	custom, repeat   bool
-	length           uint64
-	levels           []int
 	include, exclude string
+	levels           []int
+	length           uint64
+	custom, repeat   bool
 }
 
 // NewCmd returns a new command.

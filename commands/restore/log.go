@@ -10,8 +10,8 @@ import (
 
 // log represents a log file.
 type log struct {
-	bucketName []byte
 	file       *os.File
+	bucketName []byte
 	closed     bool
 }
 

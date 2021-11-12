@@ -34,9 +34,9 @@ kure backup --http --port 7777
 curl localhost:7777 > database_name`
 
 type backupOptions struct {
-	httpB bool
-	port  uint16
 	path  string
+	port  uint16
+	httpB bool
 }
 
 // NewCmd returns a new command.

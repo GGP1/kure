@@ -24,9 +24,9 @@ var example = `
 kure add phrase Sample -l 6 -s $ -i atoll -e admin,login --list nolist`
 
 type phraseOptions struct {
-	length          uint64
 	list, separator string
 	incl, excl      []string
+	length          uint64
 }
 
 // NewCmd returns a new command.

@@ -34,9 +34,10 @@ kure file add Sample -p path/to/folder -s 40
 kure file add Sample -p path/to/folder -i`
 
 type addOptions struct {
-	path         string
-	note, ignore bool
-	semaphore    uint32
+	path      string
+	note      bool
+	ignore    bool
+	semaphore uint32
 }
 
 // NewCmd returns a new command.

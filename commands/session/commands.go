@@ -13,8 +13,8 @@ import (
 type params struct {
 	in, out, outErr io.ReadWriter
 
-	args    []string
 	timeout *timeout
+	args    []string
 }
 
 var commands = map[string]func(params){

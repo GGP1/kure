@@ -27,8 +27,8 @@ kure file touch file1 file2 file3
 kure file touch -p path/to/folder`
 
 type touchOptions struct {
-	overwrite bool
 	path      string
+	overwrite bool
 }
 
 // NewCmd returns a new command.
