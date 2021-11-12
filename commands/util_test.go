@@ -65,22 +65,9 @@ func TestConfirm(t *testing.T) {
 }
 
 func TestDisplayQRCode(t *testing.T) {
-	cases := []struct {
-		desc   string
-		secret string
-	}{
-		{desc: "Low", secret: "secret"},
-		{desc: "High", secret: "secret"},
-		{desc: "Highest", secret: "secret"},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			os.Stdout = os.NewFile(0, "") // Mute stdout
-			if err := DisplayQRCode(tc.secret); err != nil {
-				t.Errorf("Failed displaying QR code: %v", err)
-			}
-		})
+	os.Stdout = os.NewFile(0, "") // Mute stdout
+	if err := DisplayQRCode("secret"); err != nil {
+		t.Errorf("Failed displaying QR code: %v", err)
 	}
 }
 
