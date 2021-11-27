@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"os"
 	"testing"
+
+	"github.com/GGP1/kure/pb"
+
+	"github.com/golang/protobuf/proto"
 )
 
 func TestLog(t *testing.T) {
@@ -75,4 +79,60 @@ func TestErrClosed(t *testing.T) {
 	if err := log.Write([]byte("data")); err == nil {
 		t.Error("Expected an error when writing and got nil")
 	}
+}
+
+func BenchmarkRead(b *testing.B) {
+	l, err := newLog([]byte("benchmark"))
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.Cleanup(func() {
+		l.Close()
+	})
+
+	encEntry := createEncodedEntry(b)
+	if err := l.Write(encEntry); err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		l.Read()
+	}
+}
+
+func BenchmarkWrite(b *testing.B) {
+	l, err := newLog([]byte("benchmark"))
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.Cleanup(func() {
+		l.Close()
+	})
+
+	encEntry := createEncodedEntry(b)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		l.Write(encEntry)
+	}
+}
+
+func createEncodedEntry(b *testing.B) []byte {
+	b.Helper()
+	entry := &pb.Entry{
+		Name:     "benchmark",
+		Username: "benchMark",
+		Password: "@RyL8B0'/h{ .xpG9ZD!/itw7",
+		URL:      "https://benchmarkread.com",
+		Expires:  "Never",
+		Notes:    "9Ns1MfBEzLY7JImZj3Xka0GpcPo846nlD5ATegRt",
+	}
+
+	encEntry, err := proto.Marshal(entry)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	return encEntry
 }

@@ -55,29 +55,28 @@ func (l *log) Read() ([][]byte, error) {
 		return nil, os.ErrClosed
 	}
 
-	stat, err := l.file.Stat()
-	if err != nil {
-		return nil, err
-	}
-
 	records := make([][]byte, 0)
 	numSize := int64(binary.MaxVarintLen64)
 	num := make([]byte, numSize) // Reuse
+	offset := int64(0)
 
-	for i := int64(0); i < stat.Size(); {
-		if _, err := l.file.ReadAt(num, i); err != nil {
+	for {
+		if _, err := l.file.ReadAt(num, offset); err != nil {
+			if err == io.EOF {
+				break
+			}
 			return nil, err
 		}
 
 		recordSize, _ := binary.Uvarint(num)
 		record := make([]byte, recordSize)
 
-		if _, err := l.file.ReadAt(record, i+numSize); err != nil && err != io.EOF {
+		if _, err := l.file.ReadAt(record, offset+numSize); err != nil {
 			return nil, err
 		}
 
 		records = append(records, record)
-		i += int64(recordSize) + numSize
+		offset += int64(recordSize) + numSize
 	}
 
 	return records, nil
@@ -97,9 +96,9 @@ func (l *log) Write(data []byte) error {
 
 	dataSize := make([]byte, binary.MaxVarintLen64)
 	binary.PutUvarint(dataSize, uint64(len(data)))
-	data = append(dataSize, data...)
+	dataSize = append(dataSize, data...)
 
-	if _, err := l.file.Write(data); err != nil {
+	if _, err := l.file.Write(dataSize); err != nil {
 		return err
 	}
 
