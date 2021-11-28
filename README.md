@@ -3,70 +3,87 @@
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/GGP1/kure)](https://pkg.go.dev/github.com/GGP1/kure)
 [![Go Report Card](https://goreportcard.com/badge/github.com/GGP1/kure)](https://goreportcard.com/report/github.com/GGP1/kure)
 
-Kure is a free and open-source password manager for the command-line.
-
-This project aims to offer the most secure and private way of operating with sensitive data on the terminal, as well as providing a feature-rich and interactive interface to make the user experience simple and enjoyable.
-
-<p align="center">
-	<img  align="middle" src="https://user-images.githubusercontent.com/51374959/109099553-0efc7c80-7702-11eb-8bab-ad51c004446f.gif" alt="overview" />
-</p>
+Kure is a free and open-source password manager for the command-line that aims to offer the most secure and private way of operating with sensitive information.
 
 ## Features 
 
 - **Cross-Platform:** Linux, macOS, BSD and Windows supported.
-- **Offline:** Data is handled locally, no connection is established with 3rd parties.
+- **Private:** Completely offline, no connection is established with 3rd parties.
 - **Secure:** Each record is encrypted using **AES-GCM 256-bit** and a **unique** password. Furthermore, the user's master password is **never** stored on disk, it's encrypted and temporarily kept **in-memory** inside a protected buffer, decrypted when it's required and destroyed immediately after it. The key derivation function used is Argon2 with the **id** version.
+- **Sessions:** Run multiple commands by entering the master password only once. They support setting a timeout and running scripts.
 - **Easy-to-use:** Extremely intuitive, does not require advanced technical skills.
-- **Portable:** Both Kure and the database compile to binary files and they can be easily carried around in an external device.
-- **Multiple formats:** Store entries, cards and files of any type.
+- **Portable:** Both Kure and its database compile to binary files and they can be easily carried around in an external device.
+- **Multiple formats:** Store entries, cards, files and TOTPs.
 
 ## Installation
 
-#### Pre-compiled binaries
-
+<details>
+	<summary>Pre-compiled binaries</summary>
+  
 Linux, macOS, BSD and Windows pre-compiled binaries can be found [here](https://github.com/GGP1/kure/releases).
+</details>
 
-#### Homebrew (Tap)
-```
-$ brew install GGP1/tap/kure
-```
+<details>
+	<summary>Homebrew (Tap)</summary>
 
-#### Scoop (Windows)
+```
+brew install GGP1/tap/kure
+```
+</details>
+
+<details>
+	<summary>Scoop (Windows)</summary>
+
 ```bash
-$ scoop bucket add GGP1 https://github.com/GGP1/scoop-bucket.git
-$ scoop install GGP1/kure
-# or
-$ scoop install https://raw.githubusercontent.com/GGP1/scoop-bucket/master/bucket/kure.json
+scoop bucket add GGP1 https://github.com/GGP1/scoop-bucket.git
+scoop install GGP1/kure
 ```
+or
 
-#### Docker
+```bash
+scoop install https://raw.githubusercontent.com/GGP1/scoop-bucket/master/bucket/kure.json
+```
+</details>
 
+<details>
+	<summary>Docker</summary>
+	
 > For details about persisting the information check the [docker-compose.yml](/docker-compose.yml) file.
 
 ```
-$ docker run -it gastonpalomeque/kure sh
+docker run -it gastonpalomeque/kure sh
 ```
 
 For a container with limited privileges and kernel capabilities, use:
 
 ```
-$ docker run -it --security-opt=no-new-privileges --cap-drop=all gastonpalomeque/kure-secure sh
+docker run -it --security-opt=no-new-privileges --cap-drop=all gastonpalomeque/kure-secure sh
 ```
+</details>
 
-#### Compìle from source
+<details>
+	<summary>Compìle from source</summary>
+
+```bash
+git clone https://github.com/GGP1/kure && cd kure && make install
 ```
-$ git clone https://github.com/GGP1/kure && cd kure && make install
-```
+</details>
+
+## Usage
+
+Further information and examples under [docs/commands](/docs/commands).
+
+<img src="https://user-images.githubusercontent.com/51374959/109055273-b4413180-76bd-11eb-8e71-ae73e7e06522.png" height=550 width=550 />
 
 ## Configuration
 
-Out-of-the-box Kure needs no configuration. It sets default values, creates the configuration file and the database at:
+Out-of-the-box Kure needs no configuration. It creates the configuration file with default values and the database at:
 
 - **Linux, BSD**: `$HOME/.kure`
 - **Darwin**: `$HOME/.kure` or `/.kure`
 - **Windows**: `%USERPROFILE%/.kure`
 
-However, you may want to store the configuration file elsewhere or use a different one, this can be done by setting the path to it in the `KURE_CONFIG` environment variable.
+However, to store the configuration file elsewhere or use a different one, set the path to it in the `KURE_CONFIG` environment variable.
 
 Head over [configuration](/docs/configuration/configuration.md) for a detailed explanation of the configuration file. Here are some [samples](/docs/configuration/samples/).
 
@@ -76,15 +93,9 @@ Head over [configuration](/docs/configuration/configuration.md) for a detailed e
 - **macOS**: none.
 - **Windows**: none.
 
-## Usage
-
-Further information and examples about each command under [docs/commands](/docs/commands).
-
-<img src="https://user-images.githubusercontent.com/51374959/109055273-b4413180-76bd-11eb-8e71-ae73e7e06522.png" height=550 width=550 />
-
 ## Documentation
 
-This is a simplified version of the documentation, for further details, examples and demos please visit the [wiki](https://github.com/GGP1/kure/wiki).
+This is a simplified version of the documentation, for the full one please visit the [wiki](https://github.com/GGP1/kure/wiki).
 
 ### Database
 
@@ -112,7 +123,7 @@ Names are **case insensitive**, every name's Unicode letter is mapped to its low
 
 > Remember: the stronger your master password, the harder it will be for the attacker to get access to your information.
 
-Kure uses the [Argon2](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf) (winner of the Password Hashing Competition in 2015) with the **id** version as the **key derivation function**, which utilizes a **32 byte salt** along with the master password and three parameters: *memory*, *iterations* and *threads*. These parameters can modified by the user on registration/restoration. The final key is **256-bit** long.
+Kure uses the [Argon2](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf) password hashing function with the **id** version, which utilizes a **32 byte salt** along with the master password and three parameters: *memory*, *iterations* and *threads*. These parameters can modified by the user on registration/restoration. The final key is **256-bit** long.
 
 > When encrypting a record, the salt used by Argon2 is randomly generated and appended to the ciphertext, everytime the record is decrypted, the salt is extracted from the end of the ciphertext and used to derive the key. Every record is encrypted using a **unique** password, protecting the user against precomputation attacks, such as rainbow tables.
 
@@ -215,17 +226,27 @@ func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeo
 }
 ```
 
-To start a session use `kure session`. [Command documentation](/docs/commands/session.md).
+To start a session use `kure session`. Here's its [documentation](/docs/commands/session.md).
 
 ### Two-factor authentication
 
-Kure offers storing two-factor authentication codes in the form of **time-based one-time password (TOTP)**, a variant of the HOTP algorithm that specifies the calculation of a one-time password value, based on a representation of the counter as a time factor.
+Kure offers storing two-factor authentication codes in the form of **time-based one-time password (TOTP)**, a variant of the HOTP algorithm that specifies the calculation of a one-time password value based on a representation of the counter as a time factor.
 
 The time-step size used is 30 seconds, a balance between security and usability as specified by [RFC6238](https://tools.ietf.org/html/rfc6238#section-5.2).
 
 > TOTP codes can be either 6, 7 or 8 digits long. The hash algorithm used is SHA1.
 
 Two-factor authentication adds an extra layer of security to your accounts. In case an attacker gets access to the secrets, he will still need the **constantly refreshing code** to get into the account, making it not impossible but much more complicated.
+
+### Key files
+
+Kure supports key files as well, where the user is required not only to provide the correct master password but also the path to the key file to access the information.
+
+The key from the file is combined with the password to encrypt the records.
+
+Its usage is optional, the path to it could be set in configuration file or not (if it isn't specified, it will be requested every time you try to access the database).
+
+> It's safe to store the path to the key file in the configuration file if it's stored in an external device that must be plugged to log in.
 
 ## Caveats and limitations
 
