@@ -2,6 +2,7 @@ package session
 
 import (
 	"bytes"
+	"strconv"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
@@ -66,9 +67,9 @@ func TestCleanup(t *testing.T) {
 func TestFillScript(t *testing.T) {
 	cases := []struct {
 		desc     string
-		args     []string
 		script   string
 		expected string
+		args     []string
 	}{
 		{
 			desc:     "No arguments",
@@ -87,12 +88,6 @@ func TestFillScript(t *testing.T) {
 			script:   "file cat $1 && copy $2",
 			args:     []string{"notes/test.txt", "testing"},
 			expected: "file cat notes/test.txt && copy testing",
-		},
-		{
-			desc:     "Enclosed by double quotes",
-			script:   "card ls $1",
-			args:     []string{"\"test", "double", "quotes\""},
-			expected: "card ls test double quotes",
 		},
 	}
 
@@ -133,11 +128,50 @@ func TestParseCmds(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := parseCmds(tc.args)
 
-			for i := 0; i < len(got); i++ {
-				for j := 0; j < len(got[i]); j++ {
+			for i := 0; i < len(tc.expected); i++ {
+				for j := 0; j < len(tc.expected[i]); j++ {
 					if got[i][j] != tc.expected[i][j] {
-						t.Errorf("Expected %v, got %v", tc.expected[i][j], got[i][j])
+						t.Errorf("Expected %#v, got %#v", tc.expected[i], got[i])
 					}
+				}
+			}
+		})
+	}
+}
+
+func TestParseDoubleQuotes(t *testing.T) {
+	cases := []struct {
+		args     []string
+		expected []string
+	}{
+		{
+			args:     []string{"file", "touch", "\"file", "with", "spaces\""},
+			expected: []string{"file", "touch", "file with spaces"},
+		},
+		{
+			args:     []string{"rm", "one", "\"two", "three"},
+			expected: []string{"rm", "one", "\"two", "three"},
+		},
+		{
+			args:     []string{"\"test\""},
+			expected: []string{"test"},
+		},
+		{
+			args:     []string{"\"file\"", "\"the", "wind\"", "\"is", "actually", "\"rocking\""},
+			expected: []string{"file", "the wind", "is actually \"rocking"},
+		},
+		{
+			args:     []string{"\"a\"", "\"little bit", "\"more\"", "testing\""},
+			expected: []string{"a", "little bit \"more", "testing\""},
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			got := parseDoubleQuotes(tc.args)
+			for i := 0; i < len(tc.expected); i++ {
+				if got[i] != tc.expected[i] {
+					t.Errorf("Expected %#v, got %#v", tc.expected, got)
 				}
 			}
 		})

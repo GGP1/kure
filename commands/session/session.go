@@ -19,6 +19,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+const quote = `"`
+
 var example = `
 * Run a session without timeout and using "$" as the prefix
 kure session -p $
@@ -120,7 +122,11 @@ func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeo
 			continue
 		}
 
-		args := strings.Split(string(text), " ")
+		textStr := string(text)
+		args := strings.Split(textStr, " ")
+		if strings.Contains(textStr, quote) {
+			args = parseDoubleQuotes(args)
+		}
 
 		script, ok := scripts[args[0]]
 		if ok {
@@ -144,9 +150,9 @@ func cleanup(cmd *cobra.Command) {
 }
 
 func execute(root *cobra.Command, args []string, timeout *timeout) error {
-	cmdsGroup := parseCmds(args)
+	cmds := parseCmds(args)
 
-	for _, args := range cmdsGroup {
+	for _, args := range cmds {
 		if len(args) == 0 {
 			continue
 		}
@@ -175,30 +181,17 @@ func execute(root *cobra.Command, args []string, timeout *timeout) error {
 	return nil
 }
 
-// fillScript returns the script with the arguments replaced.
+// fillScript replaces any argument placeholder in the script with the user input.
 func fillScript(args []string, script string) string {
-	if !strings.Contains(script, "$") {
+	if !strings.ContainsRune(script, '$') {
 		return script
 	}
 
-	arg := 1 // Start from $1 like bash
-	for i := 0; i < len(args); i++ {
-		name := args[i]
-
-		if strings.HasPrefix(name, "\"") {
-			// Look for the closing quote
-			for j, a := range args[i:] {
-				if strings.HasSuffix(a, "\"") {
-					words := strings.Join(args[i+1:i+j+1], " ") // Add ones to exclude first and include second element
-					name = strings.TrimPrefix(name, "\"") + " " + strings.TrimSuffix(words, "\"")
-					i += j // Skip joined words
-					break
-				}
-			}
-		}
-
-		script = strings.ReplaceAll(script, fmt.Sprintf("$%d", arg), name)
-		arg++
+	n := 1 // Start from $1 like bash
+	for _, arg := range args {
+		placeholder := fmt.Sprintf("$%d", n)
+		script = strings.ReplaceAll(script, placeholder, arg)
+		n++
 	}
 
 	return script
@@ -235,4 +228,41 @@ func parseCmds(args []string) [][]string {
 	group = append(group, args[lastIdx:])
 
 	return group
+}
+
+// parseDoubleQuotes joins two arguments enclosed by doublequotes.
+//
+// Given
+// 		[]string{"file", "touch", "\"file", "with", "spaces\""}
+// return
+// 		[]string{"file", "touch", "file with spaces"}
+func parseDoubleQuotes(args []string) []string {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, quote) {
+			if strings.HasSuffix(arg, quote) {
+				args[i] = trimQuotes(arg)
+				continue
+			}
+
+			for j := i + 1; j < len(args); j++ {
+				if strings.HasSuffix(args[j], quote) {
+					// Join enclosed words, store the sequence where the first one was
+					// and remove the others from the slice
+					words := strings.Join(args[i:j+1], " ")
+					args[i] = trimQuotes(words)
+					args = append(args[:i+1], args[j+1:]...)
+					i = j - 1
+					break
+				}
+			}
+		}
+	}
+	return args
+}
+
+// trimQuotes is used only after making sure the string
+// starts and ends with a quote.
+func trimQuotes(str string) string {
+	return str[1 : len(str)-1]
 }
