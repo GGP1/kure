@@ -25,7 +25,7 @@ const example = `
 kure add Sample -c
 
 * Add an entry generating a random password
-kure add Sample -l 27 -f 1,2,3,4,5 -i & -e / -r`
+kure add Sample -l 27 -L 1,2,3,4,5 -i & -e / -r`
 
 type addOptions struct {
 	include, exclude string

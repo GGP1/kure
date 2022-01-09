@@ -16,7 +16,7 @@ import (
 
 const example = `
 * Generate a random password
-kure gen -l 18 -f 1,2,3 -i %&/ -e ? -r
+kure gen -l 18 -L 1,2,3 -i %&/ -e ? -r
 
 * Generate and show the QR code image
 kure gen -l 20 -q
