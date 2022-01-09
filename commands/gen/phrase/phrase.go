@@ -46,10 +46,10 @@ kure gen phrase -l 5 -q
 kure gen -l 7 -cm`
 
 type phraseOptions struct {
-	copy, mute, qr  bool
-	length          uint64
 	list, separator string
 	incl, excl      []string
+	copy, mute, qr  bool
+	length          uint64
 }
 
 // NewCmd returns a new command.
