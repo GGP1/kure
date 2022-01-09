@@ -10,7 +10,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * No arguments
 kure it
 

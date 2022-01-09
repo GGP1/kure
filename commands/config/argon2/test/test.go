@@ -15,7 +15,7 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-var example = `
+const example = `
 kure config argon2 test -m 500000 -i 2 -t 4`
 
 type testOptions struct {

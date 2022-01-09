@@ -18,7 +18,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Add with setup key
 kure 2fa add Sample
 

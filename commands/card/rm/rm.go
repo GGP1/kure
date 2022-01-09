@@ -15,7 +15,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Remove a card
 kure card rm Sample
 

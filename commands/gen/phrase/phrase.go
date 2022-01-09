@@ -35,7 +35,7 @@ const (
 	millennium = century * 10
 )
 
-var example = `
+const example = `
 * Generate a random passphrase
 kure gen phrase -l 8 -L WordList -s &
 

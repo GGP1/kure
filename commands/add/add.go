@@ -20,7 +20,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Add an entry using a custom password
 kure add Sample -c
 

@@ -18,7 +18,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Read configuration file
 kure config`
 

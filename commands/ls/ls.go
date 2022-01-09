@@ -18,7 +18,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * List one and show sensitive information
 kure ls Sample -s
 

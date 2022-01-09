@@ -15,7 +15,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Remove an entry
 kure rm Sample
 

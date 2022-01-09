@@ -13,7 +13,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 kure card (add|copy|edit|ls|rm)`
 
 // NewCmd returns a new command.

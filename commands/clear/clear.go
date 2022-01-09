@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var example = `
+const example = `
 * Clear both terminal and clipboard
 kure clear
 

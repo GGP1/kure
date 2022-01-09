@@ -21,7 +21,7 @@ import (
 
 const quote = `"`
 
-var example = `
+const example = `
 * Run a session without timeout and using "$" as the prefix
 kure session -p $
 

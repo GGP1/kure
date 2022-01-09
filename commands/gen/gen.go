@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var example = `
+const example = `
 * Generate a random password
 kure gen -l 18 -f 1,2,3 -i %&/ -e ? -r
 

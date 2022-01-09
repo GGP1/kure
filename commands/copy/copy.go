@@ -12,7 +12,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Copy password and clean after 15m
 kure copy Sample -t 15m
 

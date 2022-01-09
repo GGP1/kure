@@ -21,7 +21,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Edit using the standard input
 kure edit Sample
 

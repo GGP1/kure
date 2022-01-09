@@ -20,7 +20,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 kure file edit Sample -e nvim`
 
 type editOptions struct {

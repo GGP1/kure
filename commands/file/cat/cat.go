@@ -14,7 +14,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Write one file
 kure cat Sample
 

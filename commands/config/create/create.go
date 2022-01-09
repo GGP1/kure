@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var example = `
+const example = `
 kure config create -p path/to/file`
 
 type createOptions struct {

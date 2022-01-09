@@ -23,7 +23,7 @@ import (
 
 var once sync.Once
 
-var example = `
+const example = `
 * Create a file backup
 kure backup --path path/to/file
 

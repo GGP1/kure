@@ -20,7 +20,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Add a new file
 kure file add Sample -p path/to/file
 

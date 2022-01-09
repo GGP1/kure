@@ -13,7 +13,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 kure 2fa rm Sample`
 
 // NewCmd returns the a new command.

@@ -15,7 +15,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 kure file (add|cat|edit|ls|mv|rm|touch)`
 
 // NewCmd returns a new command.

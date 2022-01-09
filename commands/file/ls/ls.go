@@ -30,7 +30,7 @@ const (
 	TB
 )
 
-var example = `
+const example = `
 * List a file and copy its content to the clipboard
 kure file ls Sample -c
 

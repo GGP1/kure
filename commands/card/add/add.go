@@ -15,7 +15,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Add a new card
 kure card add Sample`
 

@@ -17,7 +17,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * List one, show sensitive information and QR code
 kure card ls Sample -s -q
 

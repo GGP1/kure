@@ -19,7 +19,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * Add an entry generating a random passphrase
 kure add phrase Sample -l 6 -s $ -i atoll -e admin,login --list nolist`
 

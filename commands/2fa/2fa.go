@@ -25,7 +25,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var example = `
+const example = `
 * List one and copy to the clipboard
 kure 2fa Sample -c
 
