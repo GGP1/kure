@@ -1,4 +1,4 @@
-FROM golang:1.17.0-alpine3.14 as builder
+FROM golang:1.17.6-alpine3.15 as builder
 
 WORKDIR /kure
 
@@ -14,7 +14,7 @@ RUN make install
 
 # ---------------------------------------------
 
-FROM alpine:3.14.1
+FROM alpine:3.15.0
 
 ENV USER=gandalf
 ENV UID=10001
