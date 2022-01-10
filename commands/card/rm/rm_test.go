@@ -23,7 +23,6 @@ func TestRm(t *testing.T) {
 		desc  string
 		name  string
 		input string
-		dir   string
 	}{
 		{
 			desc:  "Do not proceed",
@@ -37,9 +36,8 @@ func TestRm(t *testing.T) {
 		},
 		{
 			desc:  "Remove directory",
-			name:  "directory",
+			name:  "directory/",
 			input: "y",
-			dir:   "true",
 		},
 	}
 
@@ -49,7 +47,6 @@ func TestRm(t *testing.T) {
 
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
-			cmd.Flags().Set("dir", tc.dir)
 
 			if err := cmd.Execute(); err != nil {
 				t.Error(err)
@@ -89,8 +86,4 @@ func TestRmErrors(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestPostRun(t *testing.T) {
-	NewCmd(nil, nil).PostRun(nil, nil)
 }

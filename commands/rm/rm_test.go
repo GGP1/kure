@@ -2,7 +2,6 @@ package rm
 
 import (
 	"bytes"
-	"io"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
@@ -15,11 +14,10 @@ import (
 func TestRm(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	name := "test"
-	createEntry(t, db, name)
+	createEntries(t, db, name)
 
 	buf := bytes.NewBufferString("y")
 	cmd := NewCmd(db, buf)
-	cmd.SetOut(io.Discard)
 	cmd.SetArgs([]string{name})
 
 	if err := cmd.Execute(); err != nil {
@@ -36,12 +34,11 @@ func TestRmDir(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	// Create the entries inside a folder to remove them
 	names := []string{"test/entry1", "test/entry2"}
-	createEntry(t, db, names...)
+	createEntries(t, db, names...)
 
 	buf := bytes.NewBufferString("y")
 	cmd := NewCmd(db, buf)
-	cmd.SetArgs([]string{"test"})
-	cmd.Flags().Set("dir", "true")
+	cmd.SetArgs([]string{"test/"})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Failed removing the entry: %v", err)
@@ -59,7 +56,7 @@ func TestRmDir(t *testing.T) {
 func TestRmAbort(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	name := "may the force be with you"
-	createEntry(t, db, name)
+	createEntries(t, db, name)
 
 	buf := bytes.NewBufferString("n") // Abort operation
 	cmd := NewCmd(db, buf)
@@ -72,13 +69,12 @@ func TestRmAbort(t *testing.T) {
 
 func TestRmErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
-	createEntry(t, db, "fail.txt")
+	createEntries(t, db, "fail.txt")
 
 	cases := []struct {
 		desc  string
 		name  string
 		input string
-		dir   string
 	}{
 		{
 			desc: "Invalid name",
@@ -89,11 +85,6 @@ func TestRmErrors(t *testing.T) {
 			name:  "non-existent",
 			input: "y",
 		},
-		{
-			desc: "Is not a directory",
-			name: "fail.txt",
-			dir:  "true",
-		},
 	}
 
 	for _, tc := range cases {
@@ -101,8 +92,6 @@ func TestRmErrors(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
-			f := cmd.Flags()
-			f.Set("dir", tc.dir)
 
 			if err := cmd.Execute(); err == nil {
 				t.Fatal("Expected Rm() to fail but it didn't")
@@ -111,11 +100,7 @@ func TestRmErrors(t *testing.T) {
 	}
 }
 
-func TestPostRun(t *testing.T) {
-	NewCmd(nil, nil).PostRun(nil, nil)
-}
-
-func createEntry(t *testing.T, db *bolt.DB, names ...string) {
+func createEntries(t *testing.T, db *bolt.DB, names ...string) {
 	t.Helper()
 
 	for _, n := range names {

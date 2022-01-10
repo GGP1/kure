@@ -22,25 +22,21 @@ func TestRm(t *testing.T) {
 	cases := []struct {
 		desc  string
 		name  string
-		dir   string
 		input string
 	}{
 		{
 			desc:  "Do not proceed",
 			name:  "test.txt",
 			input: "n",
-			dir:   "false",
 		},
 		{
 			desc:  "Remove",
 			name:  "test.txt",
-			dir:   "false",
 			input: "y",
 		},
 		{
 			desc:  "Remove directory",
-			name:  "directory",
-			dir:   "true",
+			name:  "directory/",
 			input: "y",
 		},
 	}
@@ -50,8 +46,6 @@ func TestRm(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
-			f := cmd.Flags()
-			f.Set("dir", tc.dir)
 
 			if err := cmd.Execute(); err != nil {
 				t.Error(err)
@@ -90,8 +84,4 @@ func TestRmErrors(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestPostRun(t *testing.T) {
-	NewCmd(nil, nil).PostRun(nil, nil)
 }
