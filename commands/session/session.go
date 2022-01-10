@@ -19,14 +19,15 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const quote = `"`
-
-const example = `
+const (
+	quote   = `"`
+	example = `
 * Run a session without timeout and using "$" as the prefix
 kure session -p $
 
 * Run a session for 1 hour
 kure session -t 1h`
+)
 
 type sessionOptions struct {
 	prefix  string
@@ -241,7 +242,7 @@ func parseDoubleQuotes(args []string) []string {
 		arg := args[i]
 		if strings.HasPrefix(arg, quote) {
 			if strings.HasSuffix(arg, quote) {
-				args[i] = trimQuotes(arg)
+				args[i] = strings.Trim(arg, quote)
 				continue
 			}
 
@@ -250,7 +251,7 @@ func parseDoubleQuotes(args []string) []string {
 					// Join enclosed words, store the sequence where the first one was
 					// and remove the others from the slice
 					words := strings.Join(args[i:j+1], " ")
-					args[i] = trimQuotes(words)
+					args[i] = strings.Trim(words, quote)
 					args = append(args[:i+1], args[j+1:]...)
 					i = j - 1
 					break
@@ -259,10 +260,4 @@ func parseDoubleQuotes(args []string) []string {
 		}
 	}
 	return args
-}
-
-// trimQuotes is used only after making sure the string
-// starts and ends with a quote.
-func trimQuotes(str string) string {
-	return str[1 : len(str)-1]
 }
