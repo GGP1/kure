@@ -33,13 +33,15 @@ func TestFile(t *testing.T) {
 		Content:   buf.Bytes(),
 		CreatedAt: 0,
 	}
+	updatedName := "tested"
 
 	t.Run("Create", create(db, f))
 	t.Run("Get", get(db, f.Name))
-	t.Run("Get cheap", getCheap(db, f.Name))
+	t.Run("Rename", rename(db, f.Name, updatedName))
+	t.Run("Get cheap", getCheap(db, updatedName))
 	t.Run("List", list(db))
-	t.Run("List names", listNames(db))
-	t.Run("Remove", remove(db, f.Name))
+	t.Run("List names", listNames(db, updatedName))
+	t.Run("Remove", remove(db, updatedName))
 }
 
 func create(db *bolt.DB, f *pb.File) func(*testing.T) {
@@ -60,6 +62,18 @@ func get(db *bolt.DB, name string) func(*testing.T) {
 		// They aren't DeepEqual
 		if got.Name != name {
 			t.Errorf("Expected %s, got %s", name, got.Name)
+		}
+	}
+}
+
+func rename(db *bolt.DB, name, updatedName string) func(*testing.T) {
+	return func(t *testing.T) {
+		if err := Rename(db, name, updatedName); err != nil {
+			t.Error(err)
+		}
+
+		if _, err := GetCheap(db, name); err == nil {
+			t.Error("Expected an error and got nil")
 		}
 	}
 }
@@ -91,7 +105,7 @@ func list(db *bolt.DB) func(*testing.T) {
 	}
 }
 
-func listNames(db *bolt.DB) func(*testing.T) {
+func listNames(db *bolt.DB, name string) func(*testing.T) {
 	return func(t *testing.T) {
 		files, err := ListNames(db)
 		if err != nil {
@@ -101,11 +115,9 @@ func listNames(db *bolt.DB) func(*testing.T) {
 			t.Error("Expected one or more files, got 0")
 		}
 
-		expected := "test"
 		got := files[0]
-
-		if got != expected {
-			t.Errorf("Expected %s, got %s", expected, got)
+		if got != name {
+			t.Errorf("Expected %s, got %s", name, got)
 		}
 	}
 }
@@ -142,6 +154,14 @@ func TestGetCheapError(t *testing.T) {
 	}
 }
 
+func TestRenameError(t *testing.T) {
+	db := setContext(t)
+
+	if err := Rename(db, "non-existent", ""); err == nil {
+		t.Error("Expected 'does not exist' error, got nil")
+	}
+}
+
 func TestCryptErrors(t *testing.T) {
 	db := setContext(t)
 
@@ -161,6 +181,9 @@ func TestCryptErrors(t *testing.T) {
 	}
 	if _, err := List(db); err == nil {
 		t.Error("Expected List() to fail but it didn't")
+	}
+	if err := Rename(db, name, "fail"); err == nil {
+		t.Error("Expected Rename() to fail but it didn't")
 	}
 }
 
@@ -187,13 +210,19 @@ func TestProtoErrors(t *testing.T) {
 	if _, err := List(db); err == nil {
 		t.Error("Expected List() to fail but it didn't")
 	}
+	if err := Rename(db, name, "fail"); err == nil {
+		t.Error("Expected Rename() to fail but it didn't")
+	}
 }
 
 func TestKeyError(t *testing.T) {
 	db := setContext(t)
 
 	if err := Create(db, &pb.File{}); err == nil {
-		t.Error("Create() didn't fail")
+		t.Error("Expected Create() to fail but it didn't")
+	}
+	if err := Rename(db, "", ""); err == nil {
+		t.Error("Expected Rename() to fail but it didn't")
 	}
 }
 

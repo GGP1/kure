@@ -31,21 +31,7 @@ func Create(db *bolt.DB, file *pb.File) error {
 	return db.Batch(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dbutil.FileBucket)
 
-		buf, err := proto.Marshal(file)
-		if err != nil {
-			return errors.Wrap(err, "marshal file")
-		}
-
-		encFile, err := crypt.Encrypt(buf)
-		if err != nil {
-			return errors.Wrap(err, "encrypt file")
-		}
-
-		if err := b.Put([]byte(file.Name), encFile); err != nil {
-			return errors.Wrap(err, "save file")
-		}
-
-		return nil
+		return save(b, file)
 	})
 }
 
@@ -164,6 +150,36 @@ func Remove(db *bolt.DB, name string) error {
 	return dbutil.Remove(db, dbutil.FileBucket, name)
 }
 
+// Rename recreates a file with a new key and deletes the old one.
+func Rename(db *bolt.DB, oldName, newName string) error {
+	// Ensure the name does not contain null characters
+	if strings.ContainsRune(newName, '\x00') {
+		return errors.New("new name contains null characters")
+	}
+
+	return db.Batch(func(tx *bolt.Tx) error {
+		b := tx.Bucket(dbutil.FileBucket)
+
+		file, err := Get(db, oldName)
+		if err != nil {
+			return err
+		}
+
+		compressedContent, err := compress(file.Content)
+		if err != nil {
+			return err
+		}
+		file.Name = newName
+		file.Content = compressedContent
+
+		if err := save(b, file); err != nil {
+			return err
+		}
+
+		return b.Delete([]byte(oldName))
+	})
+}
+
 func compress(content []byte) ([]byte, error) {
 	var gzipBuf bytes.Buffer
 	gw := gzip.NewWriter(&gzipBuf)
@@ -193,4 +209,22 @@ func decompress(content []byte) ([]byte, error) {
 	}
 
 	return decompressed.Bytes(), nil
+}
+
+func save(b *bolt.Bucket, file *pb.File) error {
+	buf, err := proto.Marshal(file)
+	if err != nil {
+		return errors.Wrap(err, "marshal file")
+	}
+
+	encFile, err := crypt.Encrypt(buf)
+	if err != nil {
+		return errors.Wrap(err, "encrypt file")
+	}
+
+	if err := b.Put([]byte(file.Name), encFile); err != nil {
+		return errors.Wrap(err, "save file")
+	}
+
+	return nil
 }
