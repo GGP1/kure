@@ -2,7 +2,7 @@
 
 __kure_debug()
 {
-    if [[ -n ${BASH_COMP_DEBUG_FILE} ]]; then
+    if [[ -n ${BASH_COMP_DEBUG_FILE:-} ]]; then
         echo "$*" >> "${BASH_COMP_DEBUG_FILE}"
     fi
 }
@@ -112,7 +112,7 @@ __kure_handle_go_custom_completion()
         $filteringCmd
     elif [ $((directive & shellCompDirectiveFilterDirs)) -ne 0 ]; then
         # File completion for directories only
-        local subDir
+        local subdir
         # Use printf to strip any trailing newline
         subdir=$(printf "%s" "${out[0]}")
         if [ -n "$subdir" ]; then
@@ -165,13 +165,19 @@ __kure_handle_reply()
                     PREFIX=""
                     cur="${cur#*=}"
                     ${flags_completion[${index}]}
-                    if [ -n "${ZSH_VERSION}" ]; then
+                    if [ -n "${ZSH_VERSION:-}" ]; then
                         # zsh completion needs --flag= prefix
                         eval "COMPREPLY=( \"\${COMPREPLY[@]/#/${flag}=}\" )"
                     fi
                 fi
             fi
-            return 0;
+
+            if [[ -z "${flag_parsing_disabled}" ]]; then
+                # If flag parsing is enabled, we have completed the flags and can return.
+                # If flag parsing is disabled, we may not know all (or any) of the flags, so we fallthrough
+                # to possibly call handle_go_custom_completion.
+                return 0;
+            fi
             ;;
     esac
 
@@ -210,13 +216,13 @@ __kure_handle_reply()
     fi
 
     if [[ ${#COMPREPLY[@]} -eq 0 ]]; then
-		if declare -F __kure_custom_func >/dev/null; then
-			# try command name qualified custom func
-			__kure_custom_func
-		else
-			# otherwise fall back to unqualified for compatibility
-			declare -F __custom_func >/dev/null && __custom_func
-		fi
+        if declare -F __kure_custom_func >/dev/null; then
+            # try command name qualified custom func
+            __kure_custom_func
+        else
+            # otherwise fall back to unqualified for compatibility
+            declare -F __custom_func >/dev/null && __custom_func
+        fi
     fi
 
     # available in bash-completion >= 2, not always present on macOS
@@ -250,7 +256,7 @@ __kure_handle_flag()
 
     # if a command required a flag, and we found it, unset must_have_one_flag()
     local flagname=${words[c]}
-    local flagvalue
+    local flagvalue=""
     # if the word contained an =
     if [[ ${words[c]} == *"="* ]]; then
         flagvalue=${flagname#*=} # take in as flagvalue after the =
@@ -269,7 +275,7 @@ __kure_handle_flag()
 
     # keep flag value with flagname as flaghash
     # flaghash variable is an associative array which is only supported in bash > 3.
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         if [ -n "${flagvalue}" ] ; then
             flaghash[${flagname}]=${flagvalue}
         elif [ -n "${words[ $((c+1)) ]}" ] ; then
@@ -281,7 +287,7 @@ __kure_handle_flag()
 
     # skip the argument to a two word flag
     if [[ ${words[c]} != *"="* ]] && __kure_contains_word "${words[c]}" "${two_word_flags[@]}"; then
-			  __kure_debug "${FUNCNAME[0]}: found a flag ${words[c]}, skip the next argument"
+        __kure_debug "${FUNCNAME[0]}: found a flag ${words[c]}, skip the next argument"
         c=$((c+1))
         # if we are looking for a flags value, don't show commands
         if [[ $c -eq $cword ]]; then
@@ -341,7 +347,7 @@ __kure_handle_word()
         __kure_handle_command
     elif __kure_contains_word "${words[c]}" "${command_aliases[@]}"; then
         # aliashash variable is an associative array which is only supported in bash > 3.
-        if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
             words[c]=${aliashash[${words[c]}]}
             __kure_handle_command
         else
@@ -497,7 +503,7 @@ _kure_add()
 
     commands=()
     commands+=("phrase")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("p")
         aliashash["p"]="phrase"
         command_aliases+=("passphrase")
@@ -698,10 +704,6 @@ _kure_card_rm()
     flags_with_completion=()
     flags_completion=()
 
-    flags+=("--dir")
-    flags+=("-d")
-    local_nonpersistent_flags+=("--dir")
-    local_nonpersistent_flags+=("-d")
 
     must_have_one_flag=()
     must_have_one_noun=()
@@ -716,14 +718,14 @@ _kure_card()
 
     commands=()
     commands+=("add")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("create")
         aliashash["create"]="add"
         command_aliases+=("new")
         aliashash["new"]="add"
     fi
     commands+=("copy")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("cp")
         aliashash["cp"]="copy"
     fi
@@ -884,7 +886,7 @@ _kure_config()
 
     commands=()
     commands+=("argon2")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("argon")
         aliashash["argon"]="argon2"
     fi
@@ -1131,10 +1133,6 @@ _kure_file_rm()
     flags_with_completion=()
     flags_completion=()
 
-    flags+=("--dir")
-    flags+=("-d")
-    local_nonpersistent_flags+=("--dir")
-    local_nonpersistent_flags+=("-d")
 
     must_have_one_flag=()
     must_have_one_noun=()
@@ -1179,7 +1177,7 @@ _kure_file()
 
     commands=()
     commands+=("add")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("new")
         aliashash["new"]="add"
     fi
@@ -1189,7 +1187,7 @@ _kure_file()
     commands+=("mv")
     commands+=("rm")
     commands+=("touch")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("t")
         aliashash["t"]="touch"
         command_aliases+=("th")
@@ -1278,7 +1276,7 @@ _kure_gen()
 
     commands=()
     commands+=("phrase")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("p")
         aliashash["p"]="phrase"
         command_aliases+=("passphrase")
@@ -1381,6 +1379,7 @@ _kure_it()
     flags_with_completion=()
     flags_completion=()
 
+    flag_parsing_disabled=1
 
     must_have_one_flag=()
     must_have_one_noun=()
@@ -1453,10 +1452,6 @@ _kure_rm()
     flags_with_completion=()
     flags_completion=()
 
-    flags+=("--dir")
-    flags+=("-d")
-    local_nonpersistent_flags+=("--dir")
-    local_nonpersistent_flags+=("-d")
 
     must_have_one_flag=()
     must_have_one_noun=()
@@ -1524,7 +1519,7 @@ _kure_root_command()
     commands=()
     commands+=("2fa")
     commands+=("add")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("create")
         aliashash["create"]="add"
         command_aliases+=("new")
@@ -1534,12 +1529,12 @@ _kure_root_command()
     commands+=("card")
     commands+=("clear")
     commands+=("config")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("cfg")
         aliashash["cfg"]="config"
     fi
     commands+=("copy")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("cp")
         aliashash["cp"]="copy"
     fi
@@ -1550,7 +1545,7 @@ _kure_root_command()
     commands+=("import")
     commands+=("it")
     commands+=("ls")
-    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    if [[ -z "${BASH_VERSION:-}" || "${BASH_VERSINFO[0]:-}" -gt 3 ]]; then
         command_aliases+=("entries")
         aliashash["entries"]="ls"
         command_aliases+=("list")
@@ -1575,7 +1570,7 @@ _kure_root_command()
 
 __start_kure()
 {
-    local cur prev words cword
+    local cur prev words cword split
     declare -A flaghash 2>/dev/null || :
     declare -A aliashash 2>/dev/null || :
     if declare -F _init_completion >/dev/null 2>&1; then
@@ -1585,17 +1580,20 @@ __start_kure()
     fi
 
     local c=0
+    local flag_parsing_disabled=
     local flags=()
     local two_word_flags=()
     local local_nonpersistent_flags=()
     local flags_with_completion=()
     local flags_completion=()
     local commands=("kure")
+    local command_aliases=()
     local must_have_one_flag=()
     local must_have_one_noun=()
-    local has_completion_function
-    local last_command
+    local has_completion_function=""
+    local last_command=""
     local nouns=()
+    local noun_aliases=()
 
     __kure_handle_word
 }
