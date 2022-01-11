@@ -3,6 +3,7 @@ package mv
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
@@ -15,17 +16,30 @@ import (
 
 const example = `
 * Move a file
-kure file mv oldSample newSample`
+kure file mv oldFile newFile
+
+* Move a directory
+kure file mv oldDir/ newDir/`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mv <src> <dst>",
-		Short: "Rename/move a file",
-		Long: `Rename/move a file.
+		Short: "Move a file or directory",
+		Long: `Move a file or directory.
 
-Renaming a directory is not allowed. In case any of the paths contains spaces within it, it must be enclosed by double quotes.`,
-		Args:    cobra.ExactArgs(2),
+In case any of the paths contains spaces within it, it must be enclosed by double quotes.`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 2 {
+				return errors.Errorf("accepts 2 arg(s), received %d", len(args))
+			}
+
+			oldName := cmdutil.NormalizeName(args[0], true)
+			if err := cmdutil.Exists(db, oldName, cmdutil.File); err == nil {
+				return errors.Errorf("There's no file nor directory named %q", strings.TrimSuffix(oldName, "/"))
+			}
+			return nil
+		},
 		Example: example,
 		PreRunE: auth.Login(db),
 		RunE:    runMv(db),
@@ -42,8 +56,16 @@ func runMv(db *bolt.DB) cmdutil.RunEFunc {
 			return errors.New("invalid format, use: kure file mv <oldName> <newName>")
 		}
 
-		oldName = cmdutil.NormalizeName(oldName)
-		newName = cmdutil.NormalizeName(newName)
+		oldName = cmdutil.NormalizeName(oldName, true)
+		newName = cmdutil.NormalizeName(newName, true)
+
+		if strings.HasSuffix(oldName, "/") {
+			if !strings.HasSuffix(newName, "/") {
+				return errors.New("cannot move a directory into a file")
+			}
+			return mvDir(db, oldName, newName)
+		}
+
 		if filepath.Ext(newName) == "" {
 			newName += filepath.Ext(oldName)
 		}
@@ -52,21 +74,35 @@ func runMv(db *bolt.DB) cmdutil.RunEFunc {
 			return err
 		}
 
-		oldFile, err := file.Get(db, oldName)
-		if err != nil {
-			return err
-		}
-
-		if err := file.Remove(db, oldName); err != nil {
-			return err
-		}
-
-		oldFile.Name = newName
-		if err := file.Create(db, oldFile); err != nil {
+		if err := file.Rename(db, oldName, newName); err != nil {
 			return err
 		}
 
 		fmt.Printf("\n%q renamed as %q\n", oldName, newName)
 		return nil
 	}
+}
+
+func mvDir(db *bolt.DB, oldName, newName string) error {
+	names, err := file.ListNames(db)
+	if err != nil {
+		return err
+	}
+
+	matches := make(map[string]string, 0)
+	for _, name := range names {
+		if strings.HasPrefix(name, oldName) {
+			matches[name] = newName + strings.TrimPrefix(name, oldName)
+		}
+	}
+
+	fmt.Printf("Moving %q directory into %q...\n", strings.TrimSuffix(oldName, "/"), strings.TrimSuffix(newName, "/"))
+
+	for oldFilename, newFilename := range matches {
+		if err := file.Rename(db, oldFilename, newFilename); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
