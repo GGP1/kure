@@ -1,25 +1,23 @@
 ## Use
 
-`kure card rm <name> [-d dir]`
+`kure card rm <name>`
 
 ## Description
 
 Remove a card or directory.
 
-## Flags 
+## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |      Description      |
-|-----------|-----------|---------------|---------------|-----------------------|
-| dir       | d         | bool          | false         | Remove a directory    |
+No flags.
 
-### Examples
+## Examples
 
-Remove card:
+Remove a card:
 ```
 kure card rm Sample
 ```
 
 Remove a directory:
 ```
-kure card rm SampleDir -d
+kure card rm SampleDir/
 ```

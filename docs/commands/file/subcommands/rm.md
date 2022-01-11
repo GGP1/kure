@@ -1,6 +1,6 @@
 ## Use
 
-`kure file rm <name> [-d dir]`
+`kure file rm <name>`
 
 ## Description
 
@@ -8,9 +8,7 @@ Remove a file or directory.
 
 ## Flags 
 
-|  Name     | Shorthand |     Type      |    Default    |                    Description                        |
-|-----------|-----------|---------------|---------------|-------------------------------------------------------|
-| dir       | d         | bool          | false         | Remove a directory and all the files stored in it     |
+No flags.
 
 #### Goroutines
 
@@ -27,5 +25,5 @@ kure file rm example
 
 Remove a directory:
 ``` 
-kure file rm books -d
+kure file rm books/
 ```

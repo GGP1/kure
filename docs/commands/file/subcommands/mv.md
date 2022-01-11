@@ -1,20 +1,25 @@
 ## Use
 
-`kure file mv <old-name> <new-name>`
+`kure file mv <src> <dst>`
 
 ## Description
 
-Rename/move a file.
+Move a file or directory.
 
 In case any of the paths contains spaces within it, it must be enclosed by double quotes.
 
-## Flags 
+## Flags
 
 No flags.
 
-### Examples
+## Examples
 
-Rename a file:
+Move a file:
 ```
-kure file mv Sample Sample-2
+kure file mv oldFile newFile
+```
+
+Move a directory:
+```
+kure file mv oldDir/ newDir/
 ```

@@ -185,47 +185,6 @@ Synchronizing the database between devices can be done in many ways, they may in
 
 The session command is, essentially, a wrapper of the **root** command and all its subcommands, with the difference that it doesn't exit after executing them. This makes sessions great for executing multiple commands passing the master password only **once**, as explained in [master password](#master-password), this is completely secure.
 
-Here's a simplified implementation of [session.go](/cmd/session/session.go):
-
-```go
-func runSession(cmd *cobra.Command, r io.Reader, opts *sessionOptions) {
-	timeout := &timeout{
-		t:     opts.timeout,
-		start: time.Now(),
-		timer: time.NewTimer(opts.timeout),
-	}
-
-	go startSession(cmd, r, opts.prefix, timeout)
-
-	if timeout.t == 0 {
-		timeout.timer.Stop()
-	}
-
-	<-timeout.timer.C
-}
-
-func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeout) {
-	reader := bufio.NewReader(r)
-  	root := cmd.Root()
-
-	for {
-		fmt.Printf("%s ", prefix)
-
-		text, _, err := reader.ReadLine()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			continue
-		}
-
-		args := strings.Split(string(text), " ")
-
-		if err := execute(root, args, timeout); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-	}
-}
-```
-
 To start a session use `kure session`. Here's its [documentation](/docs/commands/session.md).
 
 ### Two-factor authentication
@@ -252,7 +211,6 @@ Its usage is optional, the path to it could be set in configuration file or not 
 
 - Kure cannot provide complete protection against a compromised operating system with malware, keyloggers or viruses.
 - There isn't any backdoor or key that can open your database. There is no way of recovering your data if you forget your master password.
-- Sharing keys is not implemented as there is no connection with the internet.
 - **Windows**: Cygwin/mintty/git-bash aren't supported because they are unable to reach down to the OS API.
 
 ## License
