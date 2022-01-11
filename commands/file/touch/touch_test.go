@@ -23,8 +23,8 @@ func TestTouch(t *testing.T) {
 
 	cases := []struct {
 		desc  string
-		names []string
 		path  string
+		names []string
 	}{
 		{
 			desc:  "Create one file",
@@ -42,7 +42,7 @@ func TestTouch(t *testing.T) {
 		},
 		{
 			desc:  "Create a directory",
-			names: []string{"testdata/subfolder"},
+			names: []string{"testdata/subfolder/"},
 			path:  "testdata/create",
 		},
 	}
@@ -58,7 +58,7 @@ func TestTouch(t *testing.T) {
 			f.Set("path", "../"+tc.path)
 
 			if err := cmd.Execute(); err != nil {
-				t.Errorf("Failed running create: %v", err)
+				t.Errorf("Failed running touch: %v", err)
 			}
 
 			if stderr.Len() > 0 {
@@ -84,7 +84,7 @@ func createTestFiles(t *testing.T, db *bolt.DB) {
 
 	names := []string{"test.txt", "testAll/file.csv", "testAll/file.pdf", "testdata/subfolder/file.txt"}
 	for _, name := range names {
-		if err := file.Create(db, &pb.File{Name: name}); err != nil {
+		if err := file.Create(db, &pb.File{Name: cmdutil.NormalizeName(name)}); err != nil {
 			t.Errorf("Failed creating %q: %v", name, err)
 		}
 	}

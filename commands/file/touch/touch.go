@@ -47,6 +47,12 @@ In case any of the paths contains spaces within it, it must be enclosed by doubl
 In case a path is passed, Kure will create any missing folders for you.`,
 		Aliases: []string{"t", "th"},
 		Example: createExample,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return nil
+			}
+			return cmdutil.MustExist(db, cmdutil.File, true)(cmd, args)
+		},
 		PreRunE: auth.Login(db),
 		RunE:    runTouch(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -104,7 +110,7 @@ func runTouch(db *bolt.DB, opts *touchOptions) cmdutil.RunEFunc {
 			name = strings.ToLower(strings.TrimSpace(name))
 
 			// Assume the user wants to recreate an entire directory
-			if filepath.Ext(name) == "" {
+			if strings.HasSuffix(name, "/") {
 				if err := createDirectory(db, name, opts.path, opts.overwrite); err != nil {
 					fmt.Fprintln(os.Stderr, "error:", err)
 				}
