@@ -242,46 +242,12 @@ func Erase(filename string) error {
 //
 // Returns an error if a match was found.
 func Exists(db *bolt.DB, name string, obj object) error {
-	records, objType, err := ListNames(db, obj)
+	records, objType, err := listNames(db, obj)
 	if err != nil {
 		return err
 	}
 
-	found := func(name string) error {
-		return errors.Errorf("already exists a folder or %s named %q", objType, name)
-	}
-
-	for _, record := range records {
-		if name == record {
-			return found(name)
-		}
-
-		// Comparing Padmé/Amidala (1) and Padmé (2) would be:
-		// 1 starts with 2? Yes, split 1 after 2
-		// Now we have S[Padmé, /Amidala], does S[1] start
-		// with "/"? Yes, this confirms that S[0] is a complete name, return error
-		// The second check performs the exact same operations but the other
-		// way around
-
-		// record = "Padmé/Amidala", name = "Padmé" should return an error
-		if strings.HasPrefix(record, name) {
-			split := strings.SplitAfter(record, name)
-			// Could be thought of as split[1][0] == '/'
-			if strings.HasPrefix(split[1], "/") {
-				return found(name)
-			}
-		}
-
-		// name = "Padmé/Amidala", record = "Padmé" should return an error
-		if strings.HasPrefix(name, record) {
-			split := strings.SplitAfter(name, record)
-			if strings.HasPrefix(split[1], "/") {
-				return found(record)
-			}
-		}
-	}
-
-	return nil
+	return exists(records, name, objType)
 }
 
 // FmtExpires returns expires formatted.
@@ -306,71 +272,43 @@ func FmtExpires(expires string) (string, error) {
 	}
 }
 
-// ListNames lists all the records depending on the object passed.
-// It returns a list and the type of object used.
-func ListNames(db *bolt.DB, obj object) ([]string, string, error) {
-	var (
-		err     error
-		objType string
-		records []string
-	)
-
-	switch obj {
-	case Card:
-		objType = "card"
-		records, err = card.ListNames(db)
-
-	case Entry:
-		objType = "entry"
-		records, err = entry.ListNames(db)
-
-	case File:
-		objType = "file"
-		records, err = file.ListNames(db)
-
-	case TOTP:
-		objType = "TOTP"
-		records, err = totp.ListNames(db)
-	}
-	if err != nil {
-		return nil, "", err
-	}
-
-	return records, objType, nil
-}
-
 // MustExist returns an error if a record does not exist or if the name is invalid.
-func MustExist(db *bolt.DB, obj object) cobra.PositionalArgs {
+func MustExist(db *bolt.DB, obj object, allowDir ...bool) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
-		name := strings.Join(args, " ")
-		if name == "" || strings.Contains(name, "//") {
+		if len(args) == 0 {
 			return ErrInvalidName
 		}
-		name = NormalizeName(name)
 
-		// Take folders into consideration only when the user is trying to perform
-		// an action with one
-		if cmd.Flags().Changed("dir") {
-			if err := Exists(db, name, obj); err == nil {
-				return errors.Errorf("%q does not exist", name)
-			}
-			return nil
-		}
-
-		records, _, err := ListNames(db, obj)
+		records, objType, err := listNames(db, obj)
 		if err != nil {
 			return err
 		}
 
-		exists := false
-		for _, record := range records {
-			if name == record {
-				exists = true
-				break
+		for _, name := range args {
+			if name == "" || strings.Contains(name, "//") {
+				return ErrInvalidName
 			}
-		}
-		if !exists {
-			return errors.Errorf("%q does not exist", name)
+			name = NormalizeName(name, allowDir...)
+
+			if strings.HasSuffix(name, "/") {
+				// Take directories into consideration only when the user
+				// is trying to perform an action with one
+				if err := exists(records, name, objType); err == nil {
+					return errors.Errorf("directory %q does not exist", strings.TrimSuffix(name, "/"))
+				}
+				return nil
+			}
+
+			exists := false
+			for _, record := range records {
+				if name == record {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				return errors.Errorf("%q does not exist", name)
+			}
 		}
 
 		return nil
@@ -397,24 +335,32 @@ func MustExistLs(db *bolt.DB, obj object) cobra.PositionalArgs {
 }
 
 // MustNotExist returns an error if the record exists or if the name is invalid.
-func MustNotExist(db *bolt.DB, obj object) cobra.PositionalArgs {
+func MustNotExist(db *bolt.DB, obj object, allowDir ...bool) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
-		name := strings.Join(args, " ")
-		if name == "" || strings.Contains(name, "//") {
-			return ErrInvalidName
-		}
-		name = NormalizeName(name)
+		for _, name := range args {
+			if name == "" || strings.Contains(name, "//") {
+				return ErrInvalidName
+			}
+			name = NormalizeName(name, allowDir...)
 
-		return Exists(db, name, obj)
+			if err := Exists(db, name, obj); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 }
 
 // NormalizeName sanitizes the user input name.
-func NormalizeName(name string) string {
+func NormalizeName(name string, allowDir ...bool) string {
 	if name == "" {
 		return name // Avoid allocations
 	}
-	return strings.ToLower(strings.TrimSpace(strings.Trim(strings.TrimSpace(name), "/")))
+	if len(allowDir) == 0 {
+		return strings.ToLower(strings.TrimSpace(strings.Trim(strings.TrimSpace(name), "/")))
+	}
+	return strings.ToLower(strings.TrimSpace(name))
 }
 
 // Scanln scans a single line and returns the input.
@@ -556,4 +502,81 @@ func WriteClipboard(cmd *cobra.Command, t time.Duration, field, content string) 
 	}
 
 	return nil
+}
+
+func exists(records []string, name, objType string) error {
+	if len(records) == 0 {
+		return nil
+	}
+
+	found := func(name string) error {
+		return errors.Errorf("already exists a folder or %s named %q", objType, name)
+	}
+	// Remove slash to do the comparison
+	name = strings.TrimSuffix(name, "/")
+
+	for _, record := range records {
+		if name == record {
+			return found(name)
+		}
+
+		// Comparing Padmé/Amidala (1) and Padmé (2) would be:
+		// 1 starts with 2? Yes, split 1 after 2
+		// Now we have S[Padmé, /Amidala], does S[1] start
+		// with "/"? Yes, this confirms that S[0] is a complete name, return error
+		// The second check performs the exact same operations but the other
+		// way around
+
+		// record = "Padmé/Amidala", name = "Padmé" should return an error
+		if strings.HasPrefix(record, name) {
+			split := strings.SplitAfter(record, name)
+			// Could be thought of as split[1][0] == '/'
+			if strings.HasPrefix(split[1], "/") {
+				return found(name)
+			}
+		}
+
+		// name = "Padmé/Amidala", record = "Padmé" should return an error
+		if strings.HasPrefix(name, record) {
+			split := strings.SplitAfter(name, record)
+			if strings.HasPrefix(split[1], "/") {
+				return found(record)
+			}
+		}
+	}
+
+	return nil
+}
+
+// listNames lists all the records depending on the object passed.
+// It returns a list and the type of object used.
+func listNames(db *bolt.DB, obj object) ([]string, string, error) {
+	var (
+		err     error
+		objType string
+		records []string
+	)
+
+	switch obj {
+	case Card:
+		objType = "card"
+		records, err = card.ListNames(db)
+
+	case Entry:
+		objType = "entry"
+		records, err = entry.ListNames(db)
+
+	case File:
+		objType = "file"
+		records, err = file.ListNames(db)
+
+	case TOTP:
+		objType = "TOTP"
+		records, err = totp.ListNames(db)
+	}
+	if err != nil {
+		return nil, "", err
+	}
+
+	return records, objType, nil
 }

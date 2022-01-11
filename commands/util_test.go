@@ -17,7 +17,6 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -137,15 +136,15 @@ func TestExistsTrue(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			if err := Exists(db, name, tc.object); err == nil {
-				t.Error("Expected exists to fail but got nil")
+				t.Error("Expected an error but got nil")
 			}
 
 			if err := Exists(db, "naboo/tatooine/hoth", tc.object); err == nil {
-				t.Error("Expected exists to fail but got nil")
+				t.Error("Expected an error but got nil")
 			}
 
 			if err := Exists(db, "naboo", tc.object); err == nil {
-				t.Error("Expected exists to fail but got nil")
+				t.Error("Expected an error but got nil")
 			}
 		})
 	}
@@ -235,16 +234,14 @@ func TestFmtExpires(t *testing.T) {
 
 func TestMustExist(t *testing.T) {
 	db := SetContext(t, "../db/testdata/database")
-	cmd := &cobra.Command{}
-	objects := []object{Card, Entry, File, TOTP}
 
 	name := "test/testing"
 	createObjects(t, db, name)
 
 	t.Run("Success", func(t *testing.T) {
+		objects := []object{Card, Entry, File, TOTP}
 		for _, obj := range objects {
-			cmd.Args = MustExist(db, obj)
-			if err := cmd.Args(cmd, []string{name}); err != nil {
+			if err := MustExist(db, obj)(nil, []string{name}); err != nil {
 				t.Error(err)
 			}
 		}
@@ -271,28 +268,28 @@ func TestMustExist(t *testing.T) {
 
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
-				cmd.Args = MustExist(db, Card)
-				if err := cmd.Args(cmd, []string{tc.name}); err == nil {
+				if err := MustExist(db, Card)(nil, []string{tc.name}); err == nil {
 					t.Error("Expected an error and got nil")
 				}
 			})
 		}
 	})
 
-	t.Run("Folders", func(t *testing.T) {
-		// Take folders into account
-		cmd.Flags().AddFlag(&pflag.Flag{
-			Name:    "dir",
-			Changed: true,
+	t.Run("Empty args", func(t *testing.T) {
+		if err := MustExist(db, Card)(nil, []string{}); err == nil {
+			t.Error("Expected an error and got nil")
+		}
+	})
+
+	t.Run("Directories", func(t *testing.T) {
+		t.Run("Exists", func(t *testing.T) {
+			if err := MustExist(db, Card, true)(nil, []string{"test/"}); err != nil {
+				t.Error(err)
+			}
 		})
 
-		cmd.Args = MustExist(db, Card)
-		if err := cmd.Args(cmd, []string{"test"}); err != nil {
-			t.Error(err)
-		}
-
-		t.Run("Fail", func(t *testing.T) {
-			if err := cmd.Args(cmd, []string{"not-exists"}); err == nil {
+		t.Run("Not exists", func(t *testing.T) {
+			if err := MustExist(db, Card, true)(nil, []string{"unexistent/"}); err == nil {
 				t.Error("Expected an error and got nil")
 			}
 		})
@@ -370,14 +367,25 @@ func TestMustNotExist(t *testing.T) {
 	})
 
 	t.Run("Fail", func(t *testing.T) {
-		entry.Create(db, &pb.Entry{Name: "test"})
+		if err := entry.Create(db, &pb.Entry{Name: "test"}); err != nil {
+			t.Fatal(err)
+		}
+		if err := entry.Create(db, &pb.Entry{Name: "dir/"}); err != nil {
+			t.Fatal(err)
+		}
 		cases := []struct {
-			desc string
-			name string
+			desc     string
+			name     string
+			allowDir []bool
 		}{
 			{
 				desc: "Exists",
 				name: "test",
+			},
+			{
+				desc:     "Directory exists",
+				name:     "dir/",
+				allowDir: []bool{true},
 			},
 			{
 				desc: "Empty name",
@@ -391,7 +399,7 @@ func TestMustNotExist(t *testing.T) {
 
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
-				cmd.Args = MustNotExist(db, Entry)
+				cmd.Args = MustNotExist(db, Entry, tc.allowDir...)
 
 				if err := cmd.Args(cmd, []string{tc.name}); err == nil {
 					t.Error("Expected an error and got nil")
@@ -406,6 +414,7 @@ func TestNormalizeName(t *testing.T) {
 		desc     string
 		name     string
 		expected string
+		allowDir []bool
 	}{
 		{
 			desc:     "Normalize",
@@ -417,11 +426,17 @@ func TestNormalizeName(t *testing.T) {
 			name:     "",
 			expected: "",
 		},
+		{
+			desc:     "Allow dir",
+			name:     "testing/",
+			expected: "testing/",
+			allowDir: []bool{true},
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			got := NormalizeName(tc.name)
+			got := NormalizeName(tc.name, tc.allowDir...)
 
 			if got != tc.expected {
 				t.Errorf("Expected %q, got %q", tc.expected, got)
@@ -685,7 +700,7 @@ func createObjects(t *testing.T, db *bolt.DB, name string) {
 	}
 }
 
-var longSecret = `hpidf9YBs?5j(]j5vg a#b4pzVk4es\QS G:}t&w~((u[mL\>bMP3Nbhhl.
+const longSecret = `hpidf9YBs?5j(]j5vg a#b4pzVk4es\QS G:}t&w~((u[mL\>bMP3Nbhhl.
 WBnSq4?C/C%'gC%hNlK'1^uMp\%u${W'~0M6_iW$iDn8Tk%|V;bk} *Q+0|,r Ul"7:INCaeyJkpff~e+%nH.
 <!>jxAKO|XYaL]=4/r|/JVi3[pldNZ<p%DM:=6q8=F~-F&*nWLF|R2b=afySN qNxLpk1BUv@J."vC}zzpw U(w4m
 m}=%y7?Swm3hA=vSTh[_8]Y$B".!:jXT)V!UJl:1\ S6-,n(.~a^V,X%MP1>)58ek-]Si}iu!P,A7;v97icAcy}F1z
