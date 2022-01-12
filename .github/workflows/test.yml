@@ -3,20 +3,21 @@ name: Test
 on:
   push:
     branches:
-      - 'master'
+      - "master"
+    tags:
+      - "*"
   pull_request:
 
 jobs:
   build:
-
     runs-on: ${{matrix.os}}
     strategy:
       fail-fast: false
       matrix:
-        os: 
-          - 'ubuntu-latest'
-          - 'macOS-latest'
-          - 'windows-latest'
+        os:
+          - "ubuntu-latest"
+          - "macOS-latest"
+          - "windows-latest"
 
     steps:
       - name: Checkout
@@ -25,7 +26,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.17
 
       - name: Run tests
         run: go test ./... -p 1 -race
