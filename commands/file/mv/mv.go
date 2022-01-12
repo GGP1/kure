@@ -36,7 +36,7 @@ In case any of the paths contains spaces within it, it must be enclosed by doubl
 
 			oldName := cmdutil.NormalizeName(args[0], true)
 			if err := cmdutil.Exists(db, oldName, cmdutil.File); err == nil {
-				return errors.Errorf("There's no file nor directory named %q", strings.TrimSuffix(oldName, "/"))
+				return errors.Errorf("there's no file nor directory named %q", strings.TrimSuffix(oldName, "/"))
 			}
 			return nil
 		},
@@ -89,18 +89,13 @@ func mvDir(db *bolt.DB, oldName, newName string) error {
 		return err
 	}
 
-	matches := make(map[string]string, 0)
-	for _, name := range names {
-		if strings.HasPrefix(name, oldName) {
-			matches[name] = newName + strings.TrimPrefix(name, oldName)
-		}
-	}
-
 	fmt.Printf("Moving %q directory into %q...\n", strings.TrimSuffix(oldName, "/"), strings.TrimSuffix(newName, "/"))
 
-	for oldFilename, newFilename := range matches {
-		if err := file.Rename(db, oldFilename, newFilename); err != nil {
-			return err
+	for _, name := range names {
+		if strings.HasPrefix(name, oldName) {
+			if err := file.Rename(db, name, newName+strings.TrimPrefix(name, oldName)); err != nil {
+				return err
+			}
 		}
 	}
 
