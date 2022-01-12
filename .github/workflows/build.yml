@@ -2,15 +2,13 @@ name: Build
 
 on:
   push:
-    branches:
-      - 'master'
     tags:
-      - '*'
+      - "*"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
