@@ -55,8 +55,6 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 
 		// Remove directory
 		fmt.Printf("Removing %q directory...\n", name)
-		// Unlike the others objects' rm command, we use goroutines as a file folder may contain
-		// subfolders and a lot of files in it
 		files, err := file.ListNames(db)
 		if err != nil {
 			return err
