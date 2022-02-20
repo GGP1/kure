@@ -12,38 +12,9 @@ import (
 
 // Init intializes the configuration.
 func Init() error {
-	configPath := os.Getenv("KURE_CONFIG")
-
-	switch {
-	case configPath != "":
-		ext := filepath.Ext(configPath)
-		if ext == "" || ext == "." {
-			return errors.New("\"KURE_CONFIG\" environment variable must have an extension")
-		}
-
-	default:
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return errors.Wrap(err, "finding home directory")
-		}
-		home = filepath.Join(home, ".kure")
-
-		if err := os.MkdirAll(home, 0700); err != nil {
-			return errors.Wrap(err, "creating the directory")
-		}
-
-		configPath = filepath.Join(home, "kure.yaml")
-
-		if _, err := os.Stat(configPath); err != nil {
-			if os.IsNotExist(err) {
-				SetDefaults(filepath.Join(home, "kure.db"))
-				if err := Write(configPath, true); err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
+	configPath, err := getConfigPath()
+	if err != nil {
+		return err
 	}
 
 	if err := Load(configPath); err != nil {
@@ -55,6 +26,45 @@ func Init() error {
 	}
 
 	return nil
+}
+
+func getConfigPath() (string, error) {
+	configPath := os.Getenv("KURE_CONFIG")
+	if configPath != "" {
+		ext := filepath.Ext(configPath)
+		if ext == "" || ext == "." {
+			return "", errors.New("\"KURE_CONFIG\" environment variable path must have an extension")
+		}
+
+		return configPath, nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", errors.Wrap(err, "finding home directory")
+	}
+
+	homeDir = filepath.Join(homeDir, ".kure")
+	configPath = filepath.Join(homeDir, "kure.yaml")
+
+	if _, err := os.Stat(configPath); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
+		if err := createDefaultConfigFile(homeDir, configPath); err != nil {
+			return "", err
+		}
+	}
+
+	return configPath, nil
+}
+
+func createDefaultConfigFile(homeDir, configPath string) error {
+	if err := os.MkdirAll(homeDir, 0700); err != nil {
+		return errors.Wrap(err, "creating the directory")
+	}
+	SetDefaults(filepath.Join(homeDir, "kure.db"))
+	return Write(configPath, true)
 }
 
 // FileUsed returns the name of the file that the configuration is using.
