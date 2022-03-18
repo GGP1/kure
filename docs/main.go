@@ -53,7 +53,7 @@ func main() {
 //
 // Usage: main --cmd ls.
 func cmdDocs(args []string) error {
-	root := root.CmdForDocs()
+	root := root.DevCmd()
 
 	cmd, _, err := root.Find(args[2:])
 	if err != nil {
@@ -129,7 +129,7 @@ func visitFlags(cmd *cobra.Command) string {
 //
 // Usage: main --completion bash.
 func completion(args []string) error {
-	root := root.CmdForDocs()
+	root := root.DevCmd()
 	bash := "completion/bash.sh"
 	fish := "completion/fish.sh"
 	powershell := "completion/powershell.ps1"
@@ -189,7 +189,7 @@ func summary(args []string) error {
 		return buf.String()
 	}
 
-	root := root.CmdForDocs()
+	root := root.DevCmd()
 	funcs := template.FuncMap{
 		"cmdAndFlags": func(cmd *cobra.Command) string {
 			return cmdAndFlags(cmd)
