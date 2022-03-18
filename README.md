@@ -5,6 +5,8 @@
 
 Kure is a free and open-source password manager for the command-line that aims to offer the most secure and private way of operating with sensitive information.
 
+![Overview](https://user-images.githubusercontent.com/51374959/109099553-0efc7c80-7702-11eb-8bab-ad51c004446f.gif)
+
 ## Features 
 
 - **Cross-Platform:** Linux, macOS, BSD and Windows supported.
@@ -195,7 +197,9 @@ The time-step size used is 30 seconds, a balance between security and usability 
 
 > TOTP codes can be either 6, 7 or 8 digits long. The hash algorithm used is SHA1.
 
-Two-factor authentication adds an extra layer of security to your accounts. In case an attacker gets access to the secrets, he will still need the **constantly refreshing code** to get into the account, making it not impossible but much more complicated.
+Two-factor authentication adds an extra layer of security to your accounts, in case an attacker gets access to the password, he will still need the **constantly refreshing code** to get into the account, making it not impossible but much more complicated.
+
+> Storing an account's password and TOTP key in the same device is not recommended (despite them being encrypted with two totally different keys) as anyone knowing your master password would have access to both.
 
 ### Key files
 
