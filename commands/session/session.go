@@ -168,6 +168,9 @@ func execute(root *cobra.Command, args []string, timeout *timeout) error {
 
 		root.SetArgs(args)
 		subCmd, _, _ := root.Find(args)
+		if subCmd.Name() == "session" {
+			continue
+		}
 
 		if err := root.Execute(); err != nil {
 			if subCmd.PostRun != nil {
