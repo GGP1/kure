@@ -32,10 +32,15 @@ var cmd = &cobra.Command{
 	Short:         "Kure ~ CLI password manager",
 	SilenceErrors: true,
 	SilenceUsage:  true,
+	CompletionOptions: cobra.CompletionOptions{
+		HiddenDefaultCmd: true,
+	},
 }
 
-// CmdForDocs returns the root command and should be used for documentation purposes only.
-func CmdForDocs() *cobra.Command {
+// DevCmd returns the root command with all its sub commands and without a database object.
+//
+// It should be used for documentation or testing purposes only.
+func DevCmd() *cobra.Command {
 	registerCmds(nil)
 	return cmd
 }
@@ -44,7 +49,6 @@ func CmdForDocs() *cobra.Command {
 func Execute(version, commit string, db *bolt.DB) error {
 	setVersion(version, commit)
 	registerCmds(db)
-	cmd.CompletionOptions.DisableDefaultCmd = true
 
 	return cmd.Execute()
 }
