@@ -142,9 +142,9 @@ func printFile(f *pb.FileCheap) {
 	mp := orderedmap.New()
 	mp.Set("Path", "/"+path)
 	mp.Set("Size", size)
-	mp.Set("Created at", fmt.Sprintf("%v", createdAt))
+	mp.Set("Created at", createdAt.String())
 	if !updatedAt.IsZero() {
-		mp.Set("Updated at", fmt.Sprintf("%v", updatedAt))
+		mp.Set("Updated at", updatedAt.String())
 	}
 
 	box := cmdutil.BuildBox(f.Name, mp)
