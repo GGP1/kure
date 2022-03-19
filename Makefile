@@ -2,7 +2,7 @@ VERSION = $(shell git tag --points-at HEAD)
 COMMIT = $(shell git rev-parse --short HEAD)
 
 install:
-	@go install -ldflags="-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT)" .
+	@go install -ldflags="-s -w" .
 
 test:
 	go test ./... -p 1

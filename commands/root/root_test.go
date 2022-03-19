@@ -7,7 +7,7 @@ import (
 )
 
 func TestExecute(t *testing.T) {
-	if err := root.Execute("development", "", nil); err != nil {
+	if err := root.Execute(nil); err != nil {
 		t.Error(err)
 	}
 }
@@ -25,8 +25,9 @@ func TestHasDescription(t *testing.T) {
 func TestHasExample(t *testing.T) {
 	cmd := root.DevCmd()
 	exceptions := map[string]struct{}{
-		"restore": {},
-		"help":    {},
+		"restore":    {},
+		"help":       {},
+		"completion": {},
 	}
 
 	for _, c := range cmd.Commands() {
@@ -42,8 +43,9 @@ func TestHasExample(t *testing.T) {
 func TestRunnable(t *testing.T) {
 	cmd := root.DevCmd()
 	exceptions := map[string]struct{}{
-		"card": {},
-		"file": {},
+		"card":       {},
+		"file":       {},
+		"completion": {},
 	}
 
 	for _, c := range cmd.Commands() {

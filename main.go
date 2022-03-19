@@ -34,7 +34,7 @@ func main() {
 	// Listen for a signal to release resources and delete sensitive information
 	sig.Signal.Listen(db)
 
-	if err := root.Execute(version, commit, db); err != nil {
+	if err := root.Execute(db); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		db.Close()
 		memguard.SafeExit(1)

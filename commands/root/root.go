@@ -3,6 +3,7 @@ package root
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	tfa "github.com/GGP1/kure/commands/2fa"
 	"github.com/GGP1/kure/commands/add"
@@ -27,15 +28,25 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var cmd = &cobra.Command{
-	Use:           "kure",
-	Short:         "Kure ~ CLI password manager",
-	SilenceErrors: true,
-	SilenceUsage:  true,
-	CompletionOptions: cobra.CompletionOptions{
-		HiddenDefaultCmd: true,
-	},
-}
+var (
+	version bool
+	cmd     = &cobra.Command{
+		Use:           "kure",
+		Short:         "Kure ~ CLI password manager",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		CompletionOptions: cobra.CompletionOptions{
+			HiddenDefaultCmd: true,
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			if version {
+				printVersion()
+				return
+			}
+			_ = cmd.Usage()
+		},
+	}
+)
 
 // DevCmd returns the root command with all its sub commands and without a database object.
 //
@@ -46,8 +57,8 @@ func DevCmd() *cobra.Command {
 }
 
 // Execute adds all the subcommands to the root and executes it.
-func Execute(version, commit string, db *bolt.DB) error {
-	setVersion(version, commit)
+func Execute(db *bolt.DB) error {
+	cmd.Flags().BoolVarP(&version, "version", "v", false, "version for kure")
 	registerCmds(db)
 
 	return cmd.Execute()
@@ -75,6 +86,16 @@ func registerCmds(db *bolt.DB) {
 	cmd.AddCommand(stats.NewCmd(db))
 }
 
-func setVersion(version, commit string) {
-	cmd.Version = fmt.Sprintf("%s (%s)", version, commit)
+func printVersion() {
+	bi, _ := debug.ReadBuildInfo()
+
+	var lastCommitHash string
+	for _, setting := range bi.Settings {
+		if setting.Key == "vcs.revision" {
+			lastCommitHash = setting.Value
+			break
+		}
+	}
+
+	fmt.Printf("%s (%s) - [%s]\n", bi.Main.Version, lastCommitHash, bi.GoVersion)
 }
