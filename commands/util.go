@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/GGP1/kure/config"
+	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/file"
@@ -432,11 +433,11 @@ func SetContext(t testing.TB, path string) *bolt.DB {
 	config.Set("auth", auth)
 
 	db.Update(func(tx *bolt.Tx) error {
-		buckets := [4]string{"kure_card", "kure_entry", "kure_file", "kure_totp"}
+		buckets := [][]byte{dbutil.CardBucket, dbutil.EntryBucket, dbutil.FileBucket, dbutil.TOTPBucket}
 		for _, bucket := range buckets {
 			// Ignore errors on purpose
-			tx.DeleteBucket([]byte(bucket))
-			tx.CreateBucketIfNotExists([]byte(bucket))
+			tx.DeleteBucket(bucket)
+			tx.CreateBucketIfNotExists(bucket)
 		}
 		return nil
 	})

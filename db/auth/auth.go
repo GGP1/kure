@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 
 	"github.com/GGP1/kure/crypt"
+	dbutil "github.com/GGP1/kure/db"
 
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
@@ -68,7 +69,7 @@ func GetParameters(db *bolt.DB) (Parameters, error) {
 func Register(db *bolt.DB, params Parameters) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		// Create all the buckets except auth, it will be created in setParameters()
-		buckets := [4]string{"kure_card", "kure_entry", "kure_file", "kure_totp"}
+		buckets := [][]byte{dbutil.CardBucket, dbutil.EntryBucket, dbutil.FileBucket, dbutil.TOTPBucket}
 		for _, bucket := range buckets {
 			if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
 				return errors.Wrapf(err, "creating %q bucket", bucket)
