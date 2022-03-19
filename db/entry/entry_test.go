@@ -15,26 +15,30 @@ import (
 func TestEntry(t *testing.T) {
 	db := setContext(t)
 
-	name := "test"
 	e := &pb.Entry{
-		Name:     name,
+		Name:     "test",
 		Username: "testing",
 		URL:      "golang.org",
 		Expires:  "Never",
 		Notes:    "",
 	}
+	e2 := &pb.Entry{Name: "test2"}
+	names := map[string]struct{}{
+		e.Name:  {},
+		e2.Name: {},
+	}
 
-	t.Run("Create", create(db, e))
-	t.Run("Get", get(db, name))
-	t.Run("List", list(db))
-	t.Run("List names", listNames(db))
-	t.Run("Remove", remove(db, name))
+	t.Run("Create", create(db, e, e2))
+	t.Run("Get", get(db, e.Name))
+	t.Run("List", list(db, names))
+	t.Run("List names", listNames(db, names))
+	t.Run("Remove", remove(db, e.Name, e2.Name))
 	t.Run("Update", update(db))
 }
 
-func create(db *bolt.DB, e *pb.Entry) func(*testing.T) {
+func create(db *bolt.DB, entries ...*pb.Entry) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Create(db, e); err != nil {
+		if err := Create(db, entries...); err != nil {
 			t.Error(err)
 		}
 	}
@@ -54,42 +58,39 @@ func get(db *bolt.DB, name string) func(*testing.T) {
 	}
 }
 
-func list(db *bolt.DB) func(*testing.T) {
+func list(db *bolt.DB, names map[string]struct{}) func(*testing.T) {
 	return func(t *testing.T) {
-		got, err := List(db)
+		entries, err := List(db)
 		if err != nil {
 			t.Error(err)
 		}
 
-		if len(got) == 0 {
-			t.Error("Expected one or more entries, got 0")
+		for _, e := range entries {
+			if _, ok := names[e.Name]; !ok {
+				t.Errorf("Expected %q to be in the list but it isn't", e.Name)
+			}
 		}
 	}
 }
 
-func listNames(db *bolt.DB) func(*testing.T) {
+func listNames(db *bolt.DB, names map[string]struct{}) func(*testing.T) {
 	return func(t *testing.T) {
-		entries, err := ListNames(db)
+		entryNames, err := ListNames(db)
 		if err != nil {
 			t.Error(err)
 		}
 
-		expected := "test"
-		got := entries[0]
-
-		if got != expected {
-			t.Errorf("Expected %s, got %s", expected, got)
-		}
-
-		if len(entries) == 0 {
-			t.Error("Expected one or more entries, got 0")
+		for _, name := range entryNames {
+			if _, ok := names[name]; !ok {
+				t.Errorf("Expected %q to be in the list but it isn't", name)
+			}
 		}
 	}
 }
 
-func remove(db *bolt.DB, name string) func(*testing.T) {
+func remove(db *bolt.DB, names ...string) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Remove(db, name); err != nil {
+		if err := Remove(db, names...); err != nil {
 			t.Error(err)
 		}
 	}
@@ -113,18 +114,19 @@ func update(db *bolt.DB) func(*testing.T) {
 	}
 }
 
-func TestListExpired(t *testing.T) {
+func TestCreateNone(t *testing.T) {
 	db := setContext(t)
-
-	e := &pb.Entry{
-		Name:    "test expired",
-		Expires: "Mon, 10 Jan 2020 15:04:05 -0700",
+	if err := Create(db); err != nil {
+		t.Error(err)
 	}
 
-	t.Run("Create", create(db, e))
+	names, err := ListNames(db)
+	if err != nil {
+		t.Error(err)
+	}
 
-	if _, err := List(db); err != nil {
-		t.Errorf("List() failed: %v", err)
+	if len(names) != 0 {
+		t.Errorf("Expected no entries and got %d", len(names))
 	}
 }
 

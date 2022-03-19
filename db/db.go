@@ -1,15 +1,22 @@
 package dbutil
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/GGP1/kure/config"
+	"github.com/GGP1/kure/crypt"
+	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
+	"google.golang.org/protobuf/proto"
 )
+
+const nullChar = string('\x00')
 
 // Database bucket
 var (
@@ -18,6 +25,68 @@ var (
 	FileBucket  = []byte("kure_file")
 	TOTPBucket  = []byte("kure_totp")
 )
+
+// Record is an interface that all Kure objects implement.
+type Record interface {
+	GetName() string
+	proto.Message
+}
+
+// Get retrieves a record from the database, decrypts it and loads it into record.
+func Get(db *bolt.DB, name string, record Record) error {
+	return db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(getBucketName(record))
+
+		encRecord := b.Get([]byte(name))
+		if encRecord == nil {
+			return errors.Errorf("record %q does not exist", name)
+		}
+
+		decRecord, err := crypt.Decrypt(encRecord)
+		if err != nil {
+			return errors.Wrap(err, "decrypt record")
+		}
+
+		if err := proto.Unmarshal(decRecord, record); err != nil {
+			return errors.Wrap(err, "unmarshal record")
+		}
+
+		return nil
+	})
+}
+
+// List returns a list of decrypted records from the database.
+func List[R Record](db *bolt.DB, record R) ([]R, error) {
+	tx, err := db.Begin(false)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	b := tx.Bucket(getBucketName(record))
+	records := make([]R, 0, b.Stats().KeyN)
+
+	err = b.ForEach(func(k, v []byte) error {
+		decRecord, err := crypt.Decrypt(v)
+		if err != nil {
+			return errors.Wrap(err, "decrypt record")
+		}
+
+		if err := proto.Unmarshal(decRecord, record); err != nil {
+			return errors.Wrap(err, "unmarshal record")
+		}
+
+		records = append(records, record)
+		// Allocate a new protobuf object of type R
+		record = record.ProtoReflect().New().Interface().(R)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return records, nil
+}
 
 // ListNames returns a list with all the records names.
 func ListNames(db *bolt.DB, bucketName []byte) ([]string, error) {
@@ -28,7 +97,8 @@ func ListNames(db *bolt.DB, bucketName []byte) ([]string, error) {
 	defer tx.Rollback()
 
 	// b will be nil only if the user attempts to add
-	// a record on registration
+	// a record on registration as this method is being used
+	// in checks previous to a command execution
 	b := tx.Bucket(bucketName)
 	if b == nil {
 		return nil, nil
@@ -43,13 +113,44 @@ func ListNames(db *bolt.DB, bucketName []byte) ([]string, error) {
 	return records, nil
 }
 
-// Remove removes a record from the database.
-func Remove(db *bolt.DB, bucketName []byte, name string) error {
+// Put encrypts and saves a record into the database.
+func Put(b *bolt.Bucket, record Record) error {
+	name := strings.ReplaceAll(record.GetName(), nullChar, "")
+	if name == "" {
+		return errors.New("record name is empty")
+	}
+
+	buf, err := proto.Marshal(record)
+	if err != nil {
+		return errors.Wrap(err, "marshal record")
+	}
+
+	encRecord, err := crypt.Encrypt(buf)
+	if err != nil {
+		return errors.Wrap(err, "encrypt record")
+	}
+
+	if err := b.Put([]byte(name), encRecord); err != nil {
+		return errors.Wrap(err, "store record")
+	}
+
+	return nil
+}
+
+// Remove removes records from the database.
+func Remove(db *bolt.DB, bucketName []byte, names ...string) error {
+	if len(names) == 0 {
+		return nil
+	}
+
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
-		if err := b.Delete([]byte(name)); err != nil {
-			return errors.Wrap(err, "remove record")
+		for _, name := range names {
+			if err := b.Delete([]byte(name)); err != nil {
+				return errors.Wrapf(err, "delete record %q", name)
+			}
 		}
+
 		return nil
 	})
 }
@@ -89,4 +190,21 @@ func SetContext(t testing.TB, path string, bucketName []byte) *bolt.DB {
 	})
 
 	return db
+}
+
+// getBucketName returns the bucket name depending on the type of the record
+func getBucketName(r Record) []byte {
+	switch r.(type) {
+	case *pb.Card:
+		return CardBucket
+	case *pb.Entry:
+		return EntryBucket
+	case *pb.File, *pb.FileCheap:
+		return FileBucket
+	case *pb.TOTP:
+		return TOTPBucket
+	default:
+		memguard.SafePanic(fmt.Sprintf("invalid object: %v", r))
+		return nil
+	}
 }

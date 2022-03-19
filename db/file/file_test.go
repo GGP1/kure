@@ -130,8 +130,16 @@ func remove(db *bolt.DB, name string) func(*testing.T) {
 	}
 }
 
+func TestRemoveNone(t *testing.T) {
+	db := dbutil.SetContext(t, "../testdata/database", bucketName)
+
+	if err := Remove(db); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestCreateErrors(t *testing.T) {
-	db := dbutil.SetContext(t, "../testdata/database", dbutil.FileBucket)
+	db := dbutil.SetContext(t, "../testdata/database", bucketName)
 
 	if err := Create(db, &pb.File{}); err == nil {
 		t.Error("Expected 'save file' error, got nil")
@@ -192,7 +200,7 @@ func TestProtoErrors(t *testing.T) {
 
 	name := "unformatted"
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(dbutil.FileBucket))
+		b := tx.Bucket(bucketName)
 		buf := make([]byte, 64)
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte(name), encBuf)
@@ -227,5 +235,5 @@ func TestKeyError(t *testing.T) {
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutil.SetContext(t, "../testdata/database", dbutil.FileBucket)
+	return dbutil.SetContext(t, "../testdata/database", bucketName)
 }

@@ -1,53 +1,35 @@
 package entry
 
 import (
-	"strings"
-
-	"github.com/GGP1/kure/crypt"
 	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
-	"google.golang.org/protobuf/proto"
 )
 
-// Create a new entry.
-func Create(db *bolt.DB, entry *pb.Entry) error {
-	if strings.ContainsRune(entry.Name, '\x00') {
-		return errors.New("entry name contains null characters")
+// Create new entries.
+func Create(db *bolt.DB, entries ...*pb.Entry) error {
+	if len(entries) == 0 {
+		return nil
 	}
 
-	return db.Batch(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dbutil.EntryBucket)
-		return save(b, entry)
+		for _, entry := range entries {
+			if err := dbutil.Put(b, entry); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 }
 
 // Get retrieves the entry with the specified name.
 func Get(db *bolt.DB, name string) (*pb.Entry, error) {
 	entry := &pb.Entry{}
-
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(dbutil.EntryBucket)
-
-		encEntry := b.Get([]byte(name))
-		if encEntry == nil {
-			return errors.Errorf("entry %q does not exist", name)
-		}
-
-		decEntry, err := crypt.Decrypt(encEntry)
-		if err != nil {
-			return errors.Wrap(err, "decrypt entry")
-		}
-
-		if err := proto.Unmarshal(decEntry, entry); err != nil {
-			return errors.Wrap(err, "unmarshal entry")
-		}
-
-		return nil
-	})
-	if err != nil {
+	if err := dbutil.Get(db, name, entry); err != nil {
 		return nil, err
 	}
 
@@ -56,35 +38,7 @@ func Get(db *bolt.DB, name string) (*pb.Entry, error) {
 
 // List returns a list with all the entries.
 func List(db *bolt.DB) ([]*pb.Entry, error) {
-	tx, err := db.Begin(false)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	b := tx.Bucket(dbutil.EntryBucket)
-	entries := make([]*pb.Entry, 0, b.Stats().KeyN)
-
-	err = b.ForEach(func(k, v []byte) error {
-		entry := &pb.Entry{}
-
-		decEntry, err := crypt.Decrypt(v)
-		if err != nil {
-			return errors.Wrap(err, "decrypt entry")
-		}
-
-		if err := proto.Unmarshal(decEntry, entry); err != nil {
-			return errors.Wrap(err, "unmarshal entry")
-		}
-
-		entries = append(entries, entry)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return entries, nil
+	return dbutil.List(db, &pb.Entry{})
 }
 
 // ListNames returns a list with all the entries names.
@@ -92,17 +46,13 @@ func ListNames(db *bolt.DB) ([]string, error) {
 	return dbutil.ListNames(db, dbutil.EntryBucket)
 }
 
-// Remove removes an entry from the database.
-func Remove(db *bolt.DB, name string) error {
-	return dbutil.Remove(db, dbutil.EntryBucket, name)
+// Remove removes one or more entries from the database.
+func Remove(db *bolt.DB, names ...string) error {
+	return dbutil.Remove(db, dbutil.EntryBucket, names...)
 }
 
 // Update updates an entry, it removes the old one if the name differs.
 func Update(db *bolt.DB, oldName string, entry *pb.Entry) error {
-	if strings.ContainsRune(entry.Name, '\x00') {
-		return errors.New("entry name contains null characters")
-	}
-
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dbutil.EntryBucket)
 		if oldName != entry.Name {
@@ -110,24 +60,6 @@ func Update(db *bolt.DB, oldName string, entry *pb.Entry) error {
 				return errors.Wrap(err, "remove old entry")
 			}
 		}
-		return save(b, entry)
+		return dbutil.Put(b, entry)
 	})
-}
-
-func save(b *bolt.Bucket, entry *pb.Entry) error {
-	buf, err := proto.Marshal(entry)
-	if err != nil {
-		return errors.Wrap(err, "marshal entry")
-	}
-
-	encEntry, err := crypt.Encrypt(buf)
-	if err != nil {
-		return errors.Wrap(err, "encrypt entry")
-	}
-
-	if err := b.Put([]byte(entry.Name), encEntry); err != nil {
-		return errors.Wrap(err, "save entry")
-	}
-
-	return nil
 }

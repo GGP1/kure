@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"strings"
 
 	"github.com/GGP1/kure/crypt"
 	dbutil "github.com/GGP1/kure/db"
@@ -15,50 +14,26 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Create a new file compressing its content.
-func Create(db *bolt.DB, file *pb.File) error {
-	// Ensure the name does not contain null characters
-	if strings.ContainsRune(file.Name, '\x00') {
-		return errors.New("file name contains null characters")
-	}
+var bucketName = []byte("kure_file")
 
+// Create a new file with its content compressed.
+func Create(db *bolt.DB, file *pb.File) error {
 	compressedContent, err := compress(file.Content)
 	if err != nil {
 		return err
 	}
 	file.Content = compressedContent
 
-	return db.Batch(func(tx *bolt.Tx) error {
-		b := tx.Bucket(dbutil.FileBucket)
-
-		return save(b, file)
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucketName)
+		return dbutil.Put(b, file)
 	})
 }
 
 // Get retrieves the file with the specified name.
 func Get(db *bolt.DB, name string) (*pb.File, error) {
 	file := &pb.File{}
-
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(dbutil.FileBucket)
-
-		encFile := b.Get([]byte(name))
-		if encFile == nil {
-			return errors.Errorf("file %q does not exist", name)
-		}
-
-		decFile, err := crypt.Decrypt(encFile)
-		if err != nil {
-			return errors.Wrap(err, "decrypt file")
-		}
-
-		if err := proto.Unmarshal(decFile, file); err != nil {
-			return errors.Wrap(err, "unmarshal file")
-		}
-
-		return nil
-	})
-	if err != nil {
+	if err := dbutil.Get(db, name, file); err != nil {
 		return nil, err
 	}
 
@@ -66,7 +41,6 @@ func Get(db *bolt.DB, name string) (*pb.File, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	file.Content = decompressedContent
 
 	return file, nil
@@ -75,27 +49,7 @@ func Get(db *bolt.DB, name string) (*pb.File, error) {
 // GetCheap is like Get but without getting the file content.
 func GetCheap(db *bolt.DB, name string) (*pb.FileCheap, error) {
 	file := &pb.FileCheap{}
-
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(dbutil.FileBucket)
-
-		encFile := b.Get([]byte(name))
-		if encFile == nil {
-			return errors.Errorf("file %q does not exist", name)
-		}
-
-		decFile, err := crypt.Decrypt(encFile)
-		if err != nil {
-			return errors.Wrap(err, "decrypt file")
-		}
-
-		if err := proto.Unmarshal(decFile, file); err != nil {
-			return errors.Wrap(err, "unmarshal file")
-		}
-
-		return nil
-	})
-	if err != nil {
+	if err := dbutil.Get(db, name, file); err != nil {
 		return nil, err
 	}
 
@@ -110,7 +64,7 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 	}
 	defer tx.Rollback()
 
-	b := tx.Bucket(dbutil.FileBucket)
+	b := tx.Bucket(bucketName)
 	files := make([]*pb.File, 0, b.Stats().KeyN)
 
 	err = b.ForEach(func(k, v []byte) error {
@@ -142,23 +96,18 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 
 // ListNames returns a slice with all the files names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutil.ListNames(db, dbutil.FileBucket)
+	return dbutil.ListNames(db, bucketName)
 }
 
-// Remove removes a file from the database.
-func Remove(db *bolt.DB, name string) error {
-	return dbutil.Remove(db, dbutil.FileBucket, name)
+// Remove removes one or more files from the database.
+func Remove(db *bolt.DB, names ...string) error {
+	return dbutil.Remove(db, bucketName, names...)
 }
 
 // Rename recreates a file with a new key and deletes the old one.
 func Rename(db *bolt.DB, oldName, newName string) error {
-	// Ensure the name does not contain null characters
-	if strings.ContainsRune(newName, '\x00') {
-		return errors.New("new name contains null characters")
-	}
-
 	return db.Batch(func(tx *bolt.Tx) error {
-		b := tx.Bucket(dbutil.FileBucket)
+		b := tx.Bucket(bucketName)
 
 		file, err := Get(db, oldName)
 		if err != nil {
@@ -172,7 +121,7 @@ func Rename(db *bolt.DB, oldName, newName string) error {
 		file.Name = newName
 		file.Content = compressedContent
 
-		if err := save(b, file); err != nil {
+		if err := dbutil.Put(b, file); err != nil {
 			return err
 		}
 
@@ -185,11 +134,11 @@ func compress(content []byte) ([]byte, error) {
 	gw := gzip.NewWriter(&gzipBuf)
 
 	if _, err := gw.Write(content); err != nil {
-		return nil, errors.Wrap(err, "compressing content")
+		return nil, errors.Wrap(err, "compress content")
 	}
 
 	if err := gw.Close(); err != nil {
-		return nil, errors.Wrap(err, "closing gzip writer")
+		return nil, errors.Wrap(err, "close gzip writer")
 	}
 
 	return gzipBuf.Bytes(), nil
@@ -199,32 +148,14 @@ func decompress(content []byte) ([]byte, error) {
 	compressed := bytes.NewBuffer(content)
 	gr, err := gzip.NewReader(compressed)
 	if err != nil {
-		return nil, errors.Wrap(err, "decompressing content")
+		return nil, errors.Wrap(err, "decompress content")
 	}
 	defer gr.Close()
 
 	var decompressed bytes.Buffer
 	if _, err = io.Copy(&decompressed, gr); err != nil {
-		return nil, errors.Wrap(err, "copying decompressed content")
+		return nil, errors.Wrap(err, "copy decompressed content")
 	}
 
 	return decompressed.Bytes(), nil
-}
-
-func save(b *bolt.Bucket, file *pb.File) error {
-	buf, err := proto.Marshal(file)
-	if err != nil {
-		return errors.Wrap(err, "marshal file")
-	}
-
-	encFile, err := crypt.Encrypt(buf)
-	if err != nil {
-		return errors.Wrap(err, "encrypt file")
-	}
-
-	if err := b.Put([]byte(file.Name), encFile); err != nil {
-		return errors.Wrap(err, "save file")
-	}
-
-	return nil
 }

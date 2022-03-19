@@ -1,69 +1,24 @@
 package totp
 
 import (
-	"strings"
-
-	"github.com/GGP1/kure/crypt"
 	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
-	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
-	"google.golang.org/protobuf/proto"
 )
 
 // Create a new TOTP.
 func Create(db *bolt.DB, totp *pb.TOTP) error {
-	return db.Batch(func(tx *bolt.Tx) error {
-		// Ensure the name does not contain null characters
-		if strings.ContainsRune(totp.Name, '\x00') {
-			return errors.Errorf("TOTP name contains null characters")
-		}
-
+	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dbutil.TOTPBucket)
-
-		buf, err := proto.Marshal(totp)
-		if err != nil {
-			return errors.Wrap(err, "marshal TOTP")
-		}
-
-		encTOTP, err := crypt.Encrypt(buf)
-		if err != nil {
-			return errors.Wrap(err, "encrypt TOTP")
-		}
-
-		if err := b.Put([]byte(totp.Name), encTOTP); err != nil {
-			return errors.Wrap(err, "saving TOTP")
-		}
-
-		return nil
+		return dbutil.Put(b, totp)
 	})
 }
 
 // Get retrieves the TOTP with the specified name.
 func Get(db *bolt.DB, name string) (*pb.TOTP, error) {
 	totp := &pb.TOTP{}
-
-	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(dbutil.TOTPBucket)
-
-		encTOTP := b.Get([]byte(name))
-		if encTOTP == nil {
-			return errors.Errorf("%q has no TOTP set", name)
-		}
-
-		decTOTP, err := crypt.Decrypt(encTOTP)
-		if err != nil {
-			return errors.Wrap(err, "decrypt TOTP")
-		}
-
-		if err := proto.Unmarshal(decTOTP, totp); err != nil {
-			return errors.Wrap(err, "unmarshal TOTP")
-		}
-
-		return nil
-	})
-	if err != nil {
+	if err := dbutil.Get(db, name, totp); err != nil {
 		return nil, err
 	}
 
@@ -72,35 +27,7 @@ func Get(db *bolt.DB, name string) (*pb.TOTP, error) {
 
 // List returns a list with all the TOTPs.
 func List(db *bolt.DB) ([]*pb.TOTP, error) {
-	tx, err := db.Begin(false)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	b := tx.Bucket(dbutil.TOTPBucket)
-	totps := make([]*pb.TOTP, 0, b.Stats().KeyN)
-
-	err = b.ForEach(func(k, v []byte) error {
-		totp := &pb.TOTP{}
-
-		decTOTP, err := crypt.Decrypt(v)
-		if err != nil {
-			return errors.Wrap(err, "decrypt TOTP")
-		}
-
-		if err := proto.Unmarshal(decTOTP, totp); err != nil {
-			return errors.Wrap(err, "unmarshal TOTP")
-		}
-
-		totps = append(totps, totp)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return totps, nil
+	return dbutil.List(db, &pb.TOTP{})
 }
 
 // ListNames returns a slice with all the totps names.
@@ -108,7 +35,7 @@ func ListNames(db *bolt.DB) ([]string, error) {
 	return dbutil.ListNames(db, dbutil.TOTPBucket)
 }
 
-// Remove removes a totp from the database.
-func Remove(db *bolt.DB, name string) error {
-	return dbutil.Remove(db, dbutil.TOTPBucket, name)
+// Remove removes one or more totps from the database.
+func Remove(db *bolt.DB, names ...string) error {
+	return dbutil.Remove(db, dbutil.TOTPBucket, names...)
 }

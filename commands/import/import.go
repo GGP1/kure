@@ -100,7 +100,7 @@ func runImport(db *bolt.DB, opts *importOptions) cmdutil.RunEFunc {
 }
 
 func createEntries(db *bolt.DB, manager string, records [][]string) error {
-	// [1:] used to avoid headers
+	// [1:] used to skip headers
 	records = records[:][1:]
 	entries := make([]*pb.Entry, len(records))
 
@@ -121,7 +121,7 @@ func createEntries(db *bolt.DB, manager string, records [][]string) error {
 		for i, record := range records {
 			entries[i] = &pb.Entry{
 				// Join folder and name
-				Name:     cmdutil.NormalizeName(fmt.Sprintf("%s/%s", record[0], record[1])),
+				Name:     cmdutil.NormalizeName(record[0] + "/" + record[1]),
 				Username: record[2],
 				Password: record[3],
 				URL:      record[4],
@@ -146,7 +146,7 @@ func createEntries(db *bolt.DB, manager string, records [][]string) error {
 		for i, record := range records {
 			entries[i] = &pb.Entry{
 				// Join folder and name
-				Name:     cmdutil.NormalizeName(fmt.Sprintf("%s/%s", record[5], record[4])),
+				Name:     cmdutil.NormalizeName(record[5] + "/" + record[4]),
 				Username: record[1],
 				Password: record[2],
 				URL:      record[0],
@@ -158,7 +158,7 @@ func createEntries(db *bolt.DB, manager string, records [][]string) error {
 	case "bitwarden":
 		for i, record := range records {
 			// Join folder and name
-			name := cmdutil.NormalizeName(fmt.Sprintf("%s/%s", record[0], record[3]))
+			name := cmdutil.NormalizeName(record[0] + "/" + record[3])
 			entries[i] = &pb.Entry{
 				Name:     name,
 				Username: record[7],
@@ -169,27 +169,23 @@ func createEntries(db *bolt.DB, manager string, records [][]string) error {
 			}
 
 			// Create TOTP if the entry has one
-			createTOTP(db, name, record[9])
+			if err := createTOTP(db, name, record[9]); err != nil {
+				return err
+			}
 		}
 	}
 
-	for _, e := range entries {
-		if err := entry.Create(db, e); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return entry.Create(db, entries...)
 }
 
-func createTOTP(db *bolt.DB, name, raw string) error {
-	if raw == "" {
+func createTOTP(db *bolt.DB, name, rawToken string) error {
+	if rawToken == "" {
 		return nil
 	}
 
 	t := &pb.TOTP{
 		Name: name,
-		Raw:  raw,
+		Raw:  rawToken,
 		// Bitwarden uses 6 digits by default
 		Digits: 6,
 	}

@@ -45,11 +45,11 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 
 		// Remove single file
 		if !strings.HasSuffix(name, "/") {
+			fmt.Println("Remove:", name)
 			if err := file.Remove(db, name); err != nil {
 				return err
 			}
 
-			fmt.Printf("\n%q removed\n", name)
 			return nil
 		}
 
@@ -60,16 +60,14 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return err
 		}
 
+		selected := make([]string, 0)
 		for _, f := range files {
 			if strings.HasPrefix(f, name) {
-				if err := file.Remove(db, f); err != nil {
-					return err
-				}
-
+				selected = append(selected, f)
 				fmt.Println("Remove:", f)
 			}
 		}
 
-		return nil
+		return file.Remove(db, selected...)
 	}
 }
