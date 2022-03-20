@@ -40,7 +40,7 @@ func TestTreeStructure(t *testing.T) {
 
 	for _, p := range paths {
 		if _, ok := folders[p]; !ok {
-			s := strings.Split(p, "/")[0]
+			s, _, _ := strings.Cut(p, "/")
 			folders[s] = struct{}{}
 		}
 	}
@@ -51,7 +51,7 @@ func TestTreeStructure(t *testing.T) {
 	}
 
 	for i, r := range root.Children {
-		name := strings.Split(paths[i], "/")[0]
+		name, _, _ := strings.Cut(paths[i], "/")
 
 		if r.Name != name {
 			t.Errorf("Expected branch name to be %q, got %q", name, r.Name)

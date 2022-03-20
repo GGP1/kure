@@ -144,7 +144,7 @@ func createTOTP(db *bolt.DB, name, key string, digits int32) error {
 func getName(path string) string {
 	// Given "/Example:account@mail.com", return "Example"
 	path = strings.TrimPrefix(path, "/")
-	name := strings.Split(path, ":")[0]
+	name, _, _ := strings.Cut(path, ":")
 	return cmdutil.NormalizeName(name)
 }
 
