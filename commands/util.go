@@ -521,32 +521,24 @@ func exists(records []string, name, objType string) error {
 			return found(name)
 		}
 
-		// Comparing Padmé/Amidala (1) and Padmé (2) would be:
-		// 1 starts with 2? Yes, split 1 after 2
-		// Now we have S[Padmé, /Amidala], does S[1] start
-		// with "/"? Yes, this confirms that S[0] is a complete name, return error
-		// The second check performs the exact same operations but the other
-		// way around
-
-		// record = "Padmé/Amidala", name = "Padmé" should return an error
-		if strings.HasPrefix(record, name) {
-			split := strings.SplitAfter(record, name)
-			// Could be thought of as split[1][0] == '/'
-			if strings.HasPrefix(split[1], "/") {
-				return found(name)
-			}
+		// record = "Padmé/Amidala", name = "Padmé/" should return an error
+		if hasPrefix(record, name) {
+			return found(name)
 		}
 
-		// name = "Padmé/Amidala", record = "Padmé" should return an error
-		if strings.HasPrefix(name, record) {
-			split := strings.SplitAfter(name, record)
-			if strings.HasPrefix(split[1], "/") {
-				return found(record)
-			}
+		// name = "Padmé/Amidala", record = "Padmé/" should return an error
+		if hasPrefix(name, record) {
+			return found(record)
 		}
 	}
 
 	return nil
+}
+
+// hasPrefix is a modified version of strings.HasPrefix() that suits this use case, prefix is not modified to save an allocation.
+func hasPrefix(s, prefix string) bool {
+	prefixLen := len(prefix)
+	return len(s) > prefixLen && s[0:prefixLen] == prefix && s[prefixLen] == '/'
 }
 
 // listNames lists all the records depending on the object passed.
