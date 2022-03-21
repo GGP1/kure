@@ -1,37 +1,38 @@
 ## Use
 
-`kure copy <name> [-t timeout] [-u username]`
+`kure copy <name> [-a all] [-t timeout] [-u username] `
 
-*Aliases*: copy, cp.
+*Aliases*: cp.
 
 ## Description
 
-Copy entry credentials to clipboard.
+Copy entry credentials to the clipboard.
 
 ## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |         Description          |
-|-----------|-----------|---------------|---------------|------------------------------|
-| timeout   | t         | time.Duration | 0             | Clipboard clearing timeout   |
-| username  | u         | bool          | false         | Copy entry username          |
+| Name | Shorthand | Type | Default | Description |
+|------|-----------|------|---------|-------------|
+| all | a | bool | false | Copy entry username and password consecutively |
+| timeout | t | duration | 0s | Clipboard clearing timeout |
+| username | u | bool | false | Copy entry username |
 
 ### Timeout units
 
 Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 
-### Examples
+## Examples
 
-Copy password:
+Copy password and clean after 15m:
 ```
-kure copy Github
+kure copy Sample -t 15m
 ```
 
 Copy username:
 ```
-kure copy Github -u
+kure copy Sample -u
 ```
 
-Copy password and clear clipboard after 5 minutes:
+Copy both username and password consecutively:
 ```
-kure copy Github -t 5m
+kure copy Sample -a
 ```

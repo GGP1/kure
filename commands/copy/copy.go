@@ -17,11 +17,15 @@ const example = `
 kure copy Sample -t 15m
 
 * Copy username
-kure copy Sample -u`
+kure copy Sample -u
+
+* Copy both username and password consecutively
+kure copy Sample -a`
 
 type copyOptions struct {
 	timeout  time.Duration
 	username bool
+	all      bool
 }
 
 // NewCmd returns a new command.
@@ -45,6 +49,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 	f := cmd.Flags()
 	f.DurationVarP(&opts.timeout, "timeout", "t", 0, "clipboard clearing timeout")
 	f.BoolVarP(&opts.username, "username", "u", false, "copy entry username")
+	f.BoolVarP(&opts.all, "all", "a", false, "copy entry username and password consecutively")
 
 	return cmd
 }
@@ -57,6 +62,14 @@ func runCopy(db *bolt.DB, opts *copyOptions) cmdutil.RunEFunc {
 		e, err := entry.Get(db, name)
 		if err != nil {
 			return err
+		}
+
+		if opts.all {
+			if err := cmdutil.WriteClipboard(cmd, opts.timeout, "Username", e.Username); err != nil {
+				return err
+			}
+
+			return cmdutil.WriteClipboard(cmd, opts.timeout, "Password", e.Password)
 		}
 
 		field := "Password"
