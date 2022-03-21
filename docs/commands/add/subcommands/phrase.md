@@ -2,7 +2,7 @@
 
 `kure add phrase <name> [-l length] [-s separator] [-i include] [-e exclude] [-L list]`
 
-*Aliases*: phrase, passphrase, p.
+*Aliases*: passphrase.
 
 ## Description
 

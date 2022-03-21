@@ -36,7 +36,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "phrase <name>",
 		Short:   "Create an entry using a passphrase",
-		Aliases: []string{"passphrase", "p"},
+		Aliases: []string{"passphrase"},
 		Example: example,
 		Args:    cmdutil.MustNotExist(db, cmdutil.Entry),
 		PreRunE: auth.Login(db),

@@ -1,6 +1,6 @@
 ## Use
 
-`kure copy <name> [-a all] [-t timeout] [-u username] `
+`kure copy <name> [-a all] [-t timeout] [-u username]`
 
 *Aliases*: cp.
 

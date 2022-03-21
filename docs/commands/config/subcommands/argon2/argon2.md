@@ -2,7 +2,7 @@
 
 `kure config argon2`
 
-*Aliases*: argon2, argon.
+*Aliases*: argon.
 
 ## Description
 

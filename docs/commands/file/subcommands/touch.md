@@ -2,7 +2,7 @@
 
 `kure file touch <name> [-o overwrite] [-p path]`
 
-*Aliases*: touch, th, t.
+*Aliases*: th.
 
 ## Description
 

@@ -2,7 +2,7 @@
 
 `kure file add <name> [-i ignore] [-n note] [-p path] [-s semaphore]`
 
-*Aliases*: add, a.
+*Aliases*: new.
 
 ## Description
 

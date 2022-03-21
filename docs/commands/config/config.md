@@ -2,7 +2,7 @@
 
 `kure config`
 
-*Aliases*: config, cfg.
+*Aliases*: cfg.
 
 ## Description
 

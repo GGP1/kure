@@ -45,7 +45,7 @@ For creating an specific file the extension must be included in the arguments, i
 In case any of the paths contains spaces within it, it must be enclosed by double quotes.
 
 In case a path is passed, Kure will create any missing folders for you.`,
-		Aliases: []string{"t", "th"},
+		Aliases: []string{"th"},
 		Example: createExample,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -91,7 +91,7 @@ func runTouch(db *bolt.DB, opts *touchOptions) cmdutil.RunEFunc {
 				return err
 			}
 
-			fmt.Printf("Creating files at %s\n", opts.path)
+			fmt.Println("Creating files at", opts.path)
 
 			for _, f := range files {
 				// Log errors, do not return

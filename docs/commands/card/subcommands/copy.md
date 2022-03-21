@@ -2,7 +2,7 @@
 
 `kure card copy <name> [-c cvc] [-t timeout]`
 
-*Aliases*: copy, cp.
+*Aliases*: cp.
 
 ## Description
 

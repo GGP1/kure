@@ -2,7 +2,7 @@
 
 `kure add <name> [-c custom] [-l length] [-L levels] [-i include] [-e exclude] [-r repeat]`
 
-*Aliases*: add, create, new.
+*Aliases*: create, new.
 
 ## Description
 

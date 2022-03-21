@@ -2,7 +2,7 @@
 
 `kure gen phrase [-c copy] [-l length] [-s separator] [-i include] [-e exclude] [-m mute] [-L list] [-q qr]`
 
-*Aliases*: phrase, passphrase, p.
+*Aliases*: passphrase.
 
 ## Description
 

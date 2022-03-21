@@ -63,7 +63,7 @@ func NewCmd() *cobra.Command {
 		
 Keyspace is the number of possible combinations of the passphrase.
 Average time taken to crack is based on a brute force attack scenario where the guesses per second is 1 trillion.`,
-		Aliases: []string{"passphrase", "p"},
+		Aliases: []string{"passphrase"},
 		Example: example,
 		RunE:    runPhrase(&opts),
 		PostRun: func(cmd *cobra.Command, args []string) {

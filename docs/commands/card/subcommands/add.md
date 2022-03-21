@@ -2,7 +2,7 @@
 
 `kure card add <name>`
 
-*Aliases*: add, create, new.
+*Aliases*: create, new.
 
 ## Description
 

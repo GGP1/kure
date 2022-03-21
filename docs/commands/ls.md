@@ -2,7 +2,7 @@
 
 `kure ls <name> [-f filter] [-q qr] [-s show]`
 
-*Aliases*: ls, entries, list.
+*Aliases*: entries, list.
 
 ## Description
 
