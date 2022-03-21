@@ -78,7 +78,7 @@ func runExport(db *bolt.DB, opts *exportOptions) cmdutil.RunEFunc {
 		}
 
 		abs, _ := filepath.Abs(opts.path)
-		fmt.Printf("Created CSV file at %s\n", abs)
+		fmt.Println("Created CSV file at", abs)
 		return nil
 	}
 }

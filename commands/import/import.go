@@ -91,10 +91,10 @@ func runImport(db *bolt.DB, opts *importOptions) cmdutil.RunEFunc {
 			if err := cmdutil.Erase(opts.path); err != nil {
 				return err
 			}
-			fmt.Printf("Erased file at %s\n", opts.path)
+			fmt.Println("Erased file at", opts.path)
 		}
 
-		fmt.Printf("Successfully imported the entries from %s\n", manager)
+		fmt.Println("Successfully imported the entries from", manager)
 		return nil
 	}
 }

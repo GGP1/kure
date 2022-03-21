@@ -127,7 +127,7 @@ func updateCard(db *bolt.DB, name string, c *pb.Card) error {
 		return err
 	}
 
-	fmt.Printf("%q updated\n", c.Name)
+	fmt.Println(c.Name, "updated")
 	return nil
 }
 

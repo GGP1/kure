@@ -111,7 +111,9 @@ func BuildBox(name string, mp *orderedmap.Map) string {
 	sb.WriteString(strings.Repeat(hBar, headerHalfLen))
 
 	// Header name
-	sb.WriteString(fmt.Sprintf(" %s ", name))
+	sb.WriteRune(' ')
+	sb.WriteString(name)
+	sb.WriteRune(' ')
 
 	// Adjust the right side of the header if its width is even
 	if headerLen%2 == 0 {
@@ -130,7 +132,9 @@ func BuildBox(name string, mp *orderedmap.Map) string {
 		sb.WriteString(vBar)
 
 		// Key
-		sb.WriteString(fmt.Sprintf(" %s ", key))
+		sb.WriteRune(' ')
+		sb.WriteString(key)
+		sb.WriteRune(' ')
 		sb.WriteString(strings.Repeat(" ", longestKey-len(key))) // Padding
 
 		// Middle
@@ -150,7 +154,8 @@ func BuildBox(name string, mp *orderedmap.Map) string {
 				sb.WriteString(vBar)
 			}
 
-			sb.WriteString(fmt.Sprintf(" %s", v))
+			sb.WriteRune(' ')
+			sb.WriteString(v)
 			sb.WriteString(strings.Repeat(" ", longestValue-len([]rune(v)))) // Padding
 
 			// End
@@ -174,7 +179,7 @@ func BuildBox(name string, mp *orderedmap.Map) string {
 
 // Confirm requests the user for a yes/no response.
 func Confirm(r io.Reader, message string) bool {
-	fmt.Print(message + " [y/N] ")
+	fmt.Print(message, " [y/N] ")
 
 	for {
 		var res string
@@ -382,7 +387,7 @@ func Scanln(r *bufio.Reader, field string) string {
 
 // Scanlns scans multiple lines and returns the input.
 func Scanlns(r *bufio.Reader, field string) string {
-	fmt.Printf("%s (type < to finish): ", field)
+	fmt.Print(field, " (type < to finish): ")
 
 	text, err := r.ReadString('<')
 	if err != nil {
@@ -487,7 +492,7 @@ func WriteClipboard(cmd *cobra.Command, t time.Duration, field, content string) 
 	if err := clipboard.WriteAll(content); err != nil {
 		return errors.Wrap(err, "writing to clipboard")
 	}
-	fmt.Printf("%s copied to clipboard\n", field)
+	fmt.Println(field, "copied to clipboard")
 	memguard.WipeBytes([]byte(content))
 
 	// Use the config value if it's specified and the timeout flag wasn't used

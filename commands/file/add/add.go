@@ -190,14 +190,14 @@ func storeFile(db *bolt.DB, path, filename string) error {
 	// all the transactions into a single one
 	abs, _ := filepath.Abs(path)
 
-	fmt.Printf("Add: %s\n", abs)
+	fmt.Println("Add:", abs)
 	return file.Create(db, f)
 }
 
 // addNote takes input from the user and creates a file inside the "notes" folder
 // and with the .txt extension.
 func addNote(db *bolt.DB, r io.Reader, name string) error {
-	name = fmt.Sprintf("notes/%s", name)
+	name = "notes/" + name
 	if filepath.Ext(name) == "" {
 		name += ".txt"
 	}
@@ -216,6 +216,6 @@ func addNote(db *bolt.DB, r io.Reader, name string) error {
 		UpdatedAt: time.Time{}.Unix(),
 	}
 
-	fmt.Printf("Add: %s\n", name)
+	fmt.Println("Add:", name)
 	return file.Create(db, f)
 }

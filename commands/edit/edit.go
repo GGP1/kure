@@ -142,7 +142,7 @@ func updateEntry(db *bolt.DB, name string, e *pb.Entry) error {
 		return err
 	}
 
-	fmt.Printf("%q updated\n", e.Name)
+	fmt.Println(e.Name, "updated")
 	return nil
 }
 
