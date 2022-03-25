@@ -5,17 +5,16 @@
 
 Kure is a free and open-source password manager for the command-line that aims to offer the most secure and private way of operating with sensitive information.
 
-![Overview](https://user-images.githubusercontent.com/51374959/109099553-0efc7c80-7702-11eb-8bab-ad51c004446f.gif)
+![Overview](https://user-images.githubusercontent.com/51374959/160201831-4a63c0ae-f9c2-4bc0-8ea6-0edd884a427a.gif)
 
 ## Features 
 
 - **Cross-Platform:** Linux, macOS, BSD and Windows supported.
 - **Private:** Completely offline, no connection is established with 3rd parties.
-- **Secure:** Each record is encrypted using **AES-GCM 256-bit** and a **unique** password. Furthermore, the user's master password is **never** stored on disk, it's encrypted and temporarily kept **in-memory** inside a protected buffer, decrypted when it's required and destroyed immediately after it. The key derivation function used is Argon2 with the **id** version.
+- **Secure:** Each record is encrypted using **AES-GCM 256-bit** and a **unique** password. The user's master password is **never** stored on disk, it's encrypted and temporarily kept **in-memory** inside a protected buffer, decrypted when it's required and destroyed immediately after it. The key derivation function used is Argon2 with the **id** version.
 - **Sessions:** Run multiple commands by entering the master password only once. They support setting a timeout and running scripts.
 - **Easy-to-use:** Extremely intuitive, does not require advanced technical skills.
 - **Portable:** Both Kure and its database compile to binary files and they can be easily carried around in an external device.
-- **Multiple formats:** Store entries, cards, files and TOTPs.
 
 ## Installation
 
@@ -103,9 +102,9 @@ This is a simplified version of the documentation, for the full one please visit
 
 Kure's database is a mantained fork of Bolt ([bbolt](https://github.com/etcd-io/bbolt)), a **key-value** store that uses a single file and a B+Tree structure. The database file is locked when opened, any other simultaneous process attempting to interact with the database will receive a panic.
 
-All collections of key/value pairs are stored in **buckets**, five of them are used, one for each type of object and one for storing the authentication parameters. Keys within a bucket must be **unique**, the user will receive an error when trying to create a record with an already used name.
-
 > The database will always finish all the remaining transactions before closing the connection.
+
+All collections of key/value pairs are stored in **buckets**, five of them are used, one for each type of object and one for storing the authentication parameters. Keys within a bucket must be **unique**, the user will receive an error when trying to create a record with an already used name.
 
 ### Data organization
 
@@ -115,11 +114,11 @@ As you may have noticed, the database file isn't encrypted but each one of the r
 
 > Under the hood, Kure uses *[protocol buffers](https://developers.google.com/protocol-buffers/docs/overview)* (proto 3) for serializing and structuring data.
 
-Names are **case insensitive**, every name's Unicode letter is mapped to its lower case, meaning that "Sample" and "saMple" both will be interpreted as "sample". Spaces within folders and objects names are **allowed**, however, some commands and flags will require the string to be enclosed by double quotes.
+Names are **case insensitive**, every name's Unicode letter is mapped to its lower case, meaning that "Sample" and "saMple" both will be interpreted as "sample". Spaces within folders and objects names are **allowed**, however, some commands and flags will require the name to be enclosed by double quotes.
 
 ### Secret generation
 
-[Atoll](https://www.github.com/GGP1/atoll) library is used for generating cryptographically secure secrets with a high level of randomness (check the repository documentation for further information).
+[Atoll](https://www.github.com/GGP1/atoll) library is used for generating cryptographically secure secrets (check the repository documentation for further information).
 
 ### Master password
 
@@ -127,27 +126,23 @@ Names are **case insensitive**, every name's Unicode letter is mapped to its low
 
 Kure uses the [Argon2](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf) password hashing function with the **id** version, which utilizes a **32 byte salt** along with the master password and three parameters: *memory*, *iterations* and *threads*. These parameters can modified by the user on registration/restoration. The final key is **256-bit** long.
 
-> When encrypting a record, the salt used by Argon2 is randomly generated and appended to the ciphertext, everytime the record is decrypted, the salt is extracted from the end of the ciphertext and used to derive the key. Every record is encrypted using a **unique** password, protecting the user against precomputation attacks, such as rainbow tables.
+When encrypting a record, the salt used by Argon2 is randomly generated and appended to the ciphertext, everytime the record is decrypted, the salt is extracted from the end of the ciphertext and used to derive the key. 
+
+Every record is encrypted using a **unique** password, protecting the user against precomputation attacks, such as rainbow tables.
 
 The Argon2id variant with 1 iteration and maximum available memory is recommended as a default setting for all environments. This setting is secure against side-channel attacks and maximizes adversarial costs on dedicated bruteforce hardware.
 
-If one of the devices that will handle the database has 1GB of memory or less, we recommend setting the *memory* value to the half of that device RAM availability. Otherwise, default values should be fine.
-
-### Key file
-
-Key files are a [two-factor authentication](#two-factor-authentication) method for the database, where the user is required not only to provide the correct password but also the path to the key file, which contains a **key** that is **combined with the password** to encrypt the records. Using a key file is **optional** as well as specifying the path to it in the configuration file (if it isn't specified, it will be requested every time you try to access the database).
-
-> The key file should be as safe as possible and with a limited access.
+> If one of the devices that will handle the database has 1GB of memory or less, we recommend setting the *memory* value to the half of that device RAM availability. Otherwise, default values should be fine.
 
 ### Memory security
 
 Kure encrypts and keeps the master key **in-memory** in a **protected buffer**. When the key is required for an operation, it's **decrypted** and sent into the key derivation function. Right after this, the protected buffer is **destroyed**.
 
-> The *"master key"* is the key that is made of the master password, and optionally, the key file.
+> The library used to perform this operations is called  [memguard](https://github.com/awnumar/memguard). Here are two interesting articles from its author talking about [memory security](https://spacetime.dev/memory-security-go) and [encrypting secrets in memory](https://spacetime.dev/encrypting-secrets-in-memory).
 
 This makes it secure even when the user is into a session and the password resides in the memory.
 
-It's important to mention that **password comparisons are done in constant time** to avoid side-channel attacks and that **additional sensitive information is wiped after being used** as well. The library used to perform this operations is called  [memguard](https://github.com/awnumar/memguard). Here are two interesting articles from its author talking about [memory security](https://spacetime.dev/memory-security-go) and [encrypting secrets in memory](https://spacetime.dev/encrypting-secrets-in-memory).
+Finally, it's important to mention that **password comparisons are done in constant time** to avoid side-channel attacks and that **additional sensitive information is wiped after being used** as well. 
 
 ### Encryption
 
@@ -173,11 +168,15 @@ The user can opt to **serve** the database on a **local server** (`kure backup -
 
 > **Important**: on interrupt signals the database will finish all the remaining transactions before closing the connection.
 
-The database can be restored using [`kure restore`](https://github.com/GGP1/kure/blob/master/docs/commands/restore.md). The user will be asked to provide new authentication parameters. Every record is decrypted and deleted with the old configuration and re-created with the new one.
+The database can be restored using the [`kure restore`](https://github.com/GGP1/kure/blob/master/docs/commands/restore.md) command. Every record is decrypted and deleted with the old configuration and re-created with the new one.
+
+The user will be asked to provide a new master password and new argon2 parameters.
 
 ### Synchronization
 
-Synchronizing the database between devices can be done in many ways, they may introduce new vulnerabilities, use them at your own risk:
+Synchronizing the database between devices can be done in many ways:
+
+> They may introduce new vulnerabilities, use them at your own risk.
 
 1. remotely access a host via ssh with Kure in it.
 2. transfer the database file manually.
@@ -185,9 +184,11 @@ Synchronizing the database between devices can be done in many ways, they may in
 
 ### Sessions
 
-The session command is, essentially, a wrapper of the **root** command and all its subcommands, with the difference that it doesn't exit after executing them. This makes sessions great for executing multiple commands passing the master password only **once**, as explained in [master password](#master-password), this is completely secure.
+The session command is, essentially, a wrapper of the **root** command and all its subcommands, with the difference that it doesn't exit after executing them. 
 
-To start a session use `kure session`. Here's its [documentation](/docs/commands/session.md).
+This makes sessions great for executing multiple commands passing the master password only **once**, as explained in [master password](#master-password), this is completely secure.
+
+To start a session use [`kure session`](/docs/commands/session.md).
 
 ### Two-factor authentication
 
@@ -203,13 +204,11 @@ Two-factor authentication adds an extra layer of security to your accounts, in c
 
 ### Key files
 
-Kure supports key files as well, where the user is required not only to provide the correct master password but also the path to the key file to access the information.
+Key files are a [two-factor authentication](#two-factor-authentication) method but for the database, where the user is required not only to provide the correct password but also the path to the key file, which contains a **key** that is **combined with the password** to encrypt the records. 
 
-The key from the file is combined with the password to encrypt the records.
+Using a key file is **optional**, as well as specifying the path to it in the configuration file (if it isn't, it will be requested every time you try to access the database).
 
-Its usage is optional, the path to it could be set in configuration file or not (if it isn't specified, it will be requested every time you try to access the database).
-
-> It's safe to store the path to the key file in the configuration file if it's stored in an external device that must be plugged to log in.
+> It's safe to store the path to the key file in the configuration file only if it's stored in an external device that must be plugged to log in.
 
 ## Caveats and limitations
 
