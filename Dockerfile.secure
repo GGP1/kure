@@ -6,11 +6,11 @@ COPY go.mod .
 
 RUN go mod download && go mod verify
 
-RUN apk add --update --no-cache make
+RUN apk add --update --no-cache git
 
 COPY . .
 
-RUN make install
+RUN go install -ldflags="-s -w" .
 
 # ---------------------------------------------
 
