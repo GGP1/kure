@@ -50,7 +50,8 @@ var commands = map[string]func(params){
 			fmt.Fprintln(p.out, "The session has no timeout.")
 			return
 		}
-		fmt.Fprintln(p.out, "Time left:", p.timeout.t-time.Since(p.timeout.start))
+		timeLeft := p.timeout.t - time.Since(p.timeout.start)
+		fmt.Fprintln(p.out, "Time left:", timeLeft.Round(time.Second))
 	},
 	"ttadd": func(p params) {
 		if len(p.args) < 1 {
@@ -73,7 +74,8 @@ var commands = map[string]func(params){
 		}
 		p.timeout.timer.Reset(p.timeout.t - time.Since(p.timeout.start) + d)
 		p.timeout.t += d
-		fmt.Fprintln(p.out, "Time left:", p.timeout.t-time.Since(p.timeout.start))
+		timeLeft := p.timeout.t - time.Since(p.timeout.start)
+		fmt.Fprintln(p.out, "Time left:", timeLeft.Round(time.Second))
 	},
 	"ttset": func(p params) {
 		if len(p.args) < 1 {
@@ -96,7 +98,8 @@ var commands = map[string]func(params){
 		p.timeout.start = time.Now()
 		p.timeout.t = d
 		p.timeout.timer.Reset(d)
-		fmt.Fprintln(p.out, "Time left:", p.timeout.t-time.Since(p.timeout.start))
+		timeLeft := p.timeout.t - time.Since(p.timeout.start)
+		fmt.Fprintln(p.out, "Time left:", timeLeft.Round(time.Second))
 	},
 }
 
