@@ -1,6 +1,8 @@
 package it
 
 import (
+	"fmt"
+
 	"github.com/GGP1/kure/db/file"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -11,6 +13,10 @@ func fileMultiselect(db *bolt.DB) ([]string, error) {
 	files, err := file.ListNames(db)
 	if err != nil {
 		return nil, err
+	}
+	if len(files) == 0 {
+		fmt.Println("\nNo files to select")
+		return nil, nil
 	}
 
 	namesQs := []*survey.Question{
@@ -36,6 +42,10 @@ func fileMvNames(db *bolt.DB) ([]string, error) {
 	files, err := file.ListNames(db)
 	if err != nil {
 		return nil, err
+	}
+	if len(files) == 0 {
+		fmt.Println("\nNo files to select")
+		return nil, nil
 	}
 
 	// Request src
