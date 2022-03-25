@@ -5,7 +5,7 @@
 
 Kure is a free and open-source password manager for the command-line that aims to offer the most secure and private way of operating with sensitive information.
 
-![Overview](https://user-images.githubusercontent.com/51374959/160201831-4a63c0ae-f9c2-4bc0-8ea6-0edd884a427a.gif)
+![Overview](https://user-images.githubusercontent.com/51374959/160211818-b30efbfe-1f1e-44f6-9264-d6faa2f9c0ab.gif)
 
 ## Features 
 
