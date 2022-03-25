@@ -68,7 +68,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 func (opts *backupOptions) runBackup(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		if opts.httpB {
-			// Serve on localhost
 			return serveFile(db, opts.port)
 		}
 
@@ -90,7 +89,7 @@ func serveFile(db *bolt.DB, port uint16) error {
 		sig.Signal.KeepAlive()
 		fmt.Println("Shutting down server...")
 
-		ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {
@@ -154,7 +153,7 @@ func fileBackup(db *bolt.DB, path string) error {
 // httpBackup writes a consistent view of the database to a http endpoint.
 func httpBackup(db *bolt.DB) http.HandlerFunc {
 	name := filepath.Base(config.GetString("database.path"))
-	disposition := fmt.Sprintf(`attachment; filename="%s"`, name)
+	disposition := fmt.Sprintf(`attachment; filename=%q`, name)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := db.View(func(tx *bolt.Tx) error {

@@ -71,11 +71,11 @@ func selectFlags(root *cobra.Command, commands []string) ([]string, error) {
 
 	flagQs := &survey.Input{
 		Message: "Flags:",
-		Help:    fmt.Sprintf("\n%s", cmd.LocalFlags().FlagUsages()),
+		Help:    "\n" + cmd.LocalFlags().FlagUsages(),
 	}
 
-	flags := ""
-	if err := askOne(flagQs, &flags); err != nil {
+	flags, err := askOne(flagQs)
+	if err != nil {
 		return nil, err
 	}
 
@@ -150,8 +150,8 @@ func inputName() (string, error) {
 		Help:    "The name mustn't be empty nor include \"//\"",
 	}
 
-	name := ""
-	if err := askOne(nameQs, &name); err != nil {
+	name, err := askOne(nameQs)
+	if err != nil {
 		return "", err
 	}
 

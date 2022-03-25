@@ -49,8 +49,8 @@ func fileMvNames(db *bolt.DB) ([]string, error) {
 	dstQs := &survey.Input{
 		Message: "Destination:",
 	}
-	dst := ""
-	if err := askOne(dstQs, &dst); err != nil {
+	dst, err := askOne(dstQs)
+	if err != nil {
 		return nil, err
 	}
 

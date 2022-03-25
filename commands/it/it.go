@@ -27,7 +27,7 @@ kure sample`
 func NewCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "it <command|flags|name>",
-		Short: "Interactive prompt",
+		Short: "Execute commands through an interactive prompt",
 		Long: `Interactive prompt.
 This command behaves depending on the arguments received, it requests the missing information.
 

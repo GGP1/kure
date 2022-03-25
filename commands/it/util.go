@@ -7,23 +7,21 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 )
 
-var template = `{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+const template = `{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
 {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}`
 
-func format() survey.AskOpt {
-	return survey.WithIcons(func(is *survey.IconSet) {
-		is.Question.Text = ""
-		is.SelectFocus.Format = "red"
-		is.Help.Format = "cyan"
-		is.HelpInput.Format = "red"
-		is.MarkedOption.Format = "red"
-	})
-}
+var formatOpt = survey.WithIcons(func(is *survey.IconSet) {
+	is.Question.Text = ""
+	is.SelectFocus.Format = "red"
+	is.Help.Format = "cyan"
+	is.HelpInput.Format = "red"
+	is.MarkedOption.Format = "red"
+})
 
 // ask is a wrapper of survey.Ask that sets the format and interrupts the process
 // on an interrupt error.
 func ask(qs []*survey.Question, response interface{}) error {
-	if err := survey.Ask(qs, response, format()); err != nil {
+	if err := survey.Ask(qs, response, formatOpt); err != nil {
 		if err == terminal.InterruptErr {
 			sig.Signal.Kill()
 		}
@@ -35,15 +33,16 @@ func ask(qs []*survey.Question, response interface{}) error {
 
 // askOne is a wrapper of survey.AskOne that sets the format and interrupts the process
 // on an interrupt error.
-func askOne(p survey.Prompt, response interface{}) error {
-	if err := survey.AskOne(p, response, format()); err != nil {
+func askOne(p survey.Prompt) (string, error) {
+	response := ""
+	if err := survey.AskOne(p, &response, formatOpt); err != nil {
 		if err == terminal.InterruptErr {
 			sig.Signal.Kill()
 		}
-		return err
+		return "", err
 	}
 
-	return nil
+	return response, nil
 }
 
 func selectQs(message, help string, options []string) []*survey.Question {
