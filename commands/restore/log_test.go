@@ -7,7 +7,7 @@ import (
 
 	"github.com/GGP1/kure/pb"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestLog(t *testing.T) {

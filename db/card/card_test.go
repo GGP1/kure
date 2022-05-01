@@ -10,8 +10,8 @@ import (
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
-	"github.com/golang/protobuf/proto"
 	bolt "go.etcd.io/bbolt"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestCard(t *testing.T) {
