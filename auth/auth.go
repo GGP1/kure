@@ -104,38 +104,25 @@ func Register(db *bolt.DB, r io.Reader) error {
 }
 
 func askArgon2Params(r io.Reader) (iterations, memory, threads uint32, err error) {
-	// Default values
-	iterations = 1
-	// memory is measured in kibibytes, 1 kibibyte = 1024 bytes.
-	memory = 1 << 20 // 1048576 kibibytes -> 1GB
-	threads = uint32(runtime.NumCPU())
-
 	fmt.Println("Set argon2 parameters, leave blank to use the default value")
 	fmt.Println("For more information visit https://github.com/GGP1/kure/wiki/Authentication")
+
 	reader := bufio.NewReader(r)
 
-	if iter := cmdutil.Scanln(reader, " Iterations"); iter != "" {
-		i, err := strconv.Atoi(iter)
-		if err != nil || i < 1 {
-			return 0, 0, 0, errors.New("invalid iterations number")
-		}
-		iterations = uint32(i)
+	iterations, err = scanParameter(reader, "Iterations", 1)
+	if err != nil {
+		return 0, 0, 0, err
 	}
 
-	if mem := cmdutil.Scanln(reader, " Memory"); mem != "" {
-		m, err := strconv.Atoi(mem)
-		if err != nil || m < 1 {
-			return 0, 0, 0, errors.New("invalid memory number")
-		}
-		memory = uint32(m)
+	// memory is measured in kibibytes, 1 kibibyte = 1024 bytes. 1048576 kibibytes -> 1GB
+	memory, err = scanParameter(reader, "Memory", 1<<20)
+	if err != nil {
+		return 0, 0, 0, err
 	}
 
-	if th := cmdutil.Scanln(reader, " Threads"); th != "" {
-		t, err := strconv.Atoi(th)
-		if err != nil || t < 1 {
-			return 0, 0, 0, errors.New("invalid threads number")
-		}
-		threads = uint32(t)
+	threads, err = scanParameter(reader, "Threads", uint32(runtime.NumCPU()))
+	if err != nil {
+		return 0, 0, 0, err
 	}
 
 	return iterations, memory, threads, nil
@@ -143,25 +130,17 @@ func askArgon2Params(r io.Reader) (iterations, memory, threads uint32, err error
 
 // askKeyfile asks the user if he wants to use a key file or not.
 func askKeyfile(r io.Reader) (bool, error) {
-	use := false
+	if !cmdutil.Confirm(r, "Would you like to use a key file?") {
+		return false, nil
+	}
 
-	if cmdutil.Confirm(r, "Would you like to use a key file?") {
-		use = true
-
-		if config.GetString(keyfilePath) != "" {
-			if !cmdutil.Confirm(r,
-				"Would you like to use the path specified in the configuration file?") {
-
-				// Overwrite the path value in the configuration file
-				config.Set(keyfilePath, "")
-				if err := config.Write(config.FileUsed(), false); err != nil {
-					return false, errors.Wrap(err, "writing the configuration file")
-				}
-			}
+	if config.GetString(keyfilePath) != "" {
+		if !cmdutil.Confirm(r, "Would you like to use the path specified in the configuration file?") {
+			config.Set(keyfilePath, "")
 		}
 	}
 
-	return use, nil
+	return true, nil
 }
 
 func combineKeys(r io.Reader, password *memguard.Enclave) (*memguard.Enclave, error) {
@@ -185,17 +164,30 @@ func combineKeys(r io.Reader, password *memguard.Enclave) (*memguard.Enclave, er
 		return nil, errors.Wrap(err, "decrypting password")
 	}
 
-	// If the content is not 32 bytes, hash it an use the hash as the key
+	// If the content is not 32 bytes, hash it and use the hash as the key
 	if len(key) != 32 {
-		h := sha256.New()
-		h.Write(key) // Never fails
-		key = h.Sum(nil)
+		keyHash := sha256.Sum256(key)
+		key = keyHash[:]
 	}
 
 	key = append(key, pwdBuf.Bytes()...)
 	pwdBuf.Destroy()
 
 	return memguard.NewEnclave(key), nil
+}
+
+func scanParameter(r *bufio.Reader, field string, defaultValue uint32) (uint32, error) {
+	valueStr := cmdutil.Scanln(r, " "+field)
+	if valueStr == "" {
+		return defaultValue, nil
+	}
+
+	v, err := strconv.Atoi(valueStr)
+	if err != nil || v < 1 {
+		return 0, errors.Wrapf(err, "invalid %s number", strings.ToLower(field))
+	}
+
+	return uint32(v), nil
 }
 
 // Auth values must be set to the configuration before any encryption/decryption occurs.

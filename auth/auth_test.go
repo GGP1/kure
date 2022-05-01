@@ -161,16 +161,6 @@ func TestAskKeyfile(t *testing.T) {
 			}
 		})
 	}
-
-	t.Run("Error", func(t *testing.T) {
-		config.Reset() // Unset config file and type
-		config.Set(keyfilePath, "./testdata/test-default.key")
-
-		buf := bytes.NewBufferString("y\nn\n")
-		if _, err := askKeyfile(buf); err == nil {
-			t.Error("Expected 'config type could not be determined' error and got nil")
-		}
-	})
 }
 
 func TestCombineKeys(t *testing.T) {
