@@ -1,7 +1,6 @@
 package dbutil
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -35,7 +34,7 @@ type Record interface {
 // Get retrieves a record from the database, decrypts it and loads it into record.
 func Get(db *bolt.DB, name string, record Record) error {
 	return db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(getBucketName(record))
+		b := tx.Bucket(GetBucketName(record))
 
 		encRecord := b.Get([]byte(name))
 		if encRecord == nil {
@@ -55,6 +54,23 @@ func Get(db *bolt.DB, name string, record Record) error {
 	})
 }
 
+// GetBucketName returns the bucket name depending on the type of the record passed.
+func GetBucketName(r Record) []byte {
+	switch r.(type) {
+	case *pb.Card:
+		return CardBucket
+	case *pb.Entry:
+		return EntryBucket
+	case *pb.File, *pb.FileCheap:
+		return FileBucket
+	case *pb.TOTP:
+		return TOTPBucket
+	default:
+		memguard.SafePanic("invalid object: " + r.GetName())
+		return nil
+	}
+}
+
 // List returns a list of decrypted records from the database.
 func List[R Record](db *bolt.DB, record R) ([]R, error) {
 	tx, err := db.Begin(false)
@@ -63,7 +79,7 @@ func List[R Record](db *bolt.DB, record R) ([]R, error) {
 	}
 	defer tx.Rollback()
 
-	b := tx.Bucket(getBucketName(record))
+	b := tx.Bucket(GetBucketName(record))
 	records := make([]R, 0, b.Stats().KeyN)
 
 	err = b.ForEach(func(k, v []byte) error {
@@ -190,21 +206,4 @@ func SetContext(t testing.TB, path string, bucketName []byte) *bolt.DB {
 	})
 
 	return db
-}
-
-// getBucketName returns the bucket name depending on the type of the record
-func getBucketName(r Record) []byte {
-	switch r.(type) {
-	case *pb.Card:
-		return CardBucket
-	case *pb.Entry:
-		return EntryBucket
-	case *pb.File, *pb.FileCheap:
-		return FileBucket
-	case *pb.TOTP:
-		return TOTPBucket
-	default:
-		memguard.SafePanic(fmt.Sprintf("invalid object: %v", r))
-		return nil
-	}
 }
