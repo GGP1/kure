@@ -36,9 +36,10 @@ func TestFile(t *testing.T) {
 	updatedName := "tested"
 
 	t.Run("Create", create(db, f))
-	t.Run("Get", get(db, f.Name))
+	t.Run("Get", get(db, f))
 	t.Run("Rename", rename(db, f.Name, updatedName))
 	t.Run("Get cheap", getCheap(db, updatedName))
+	f.Name = updatedName
 	t.Run("List", list(db))
 	t.Run("List names", listNames(db, updatedName))
 	t.Run("Remove", remove(db, updatedName))
@@ -52,16 +53,16 @@ func create(db *bolt.DB, f *pb.File) func(*testing.T) {
 	}
 }
 
-func get(db *bolt.DB, name string) func(*testing.T) {
+func get(db *bolt.DB, expected *pb.File) func(*testing.T) {
 	return func(t *testing.T) {
-		got, err := Get(db, name)
+		got, err := Get(db, expected.Name)
 		if err != nil {
 			t.Error(err)
 		}
 
-		// They aren't DeepEqual
-		if got.Name != name {
-			t.Errorf("Expected %s, got %s", name, got.Name)
+		// Using proto.Equal fails because of differing content buffers
+		if got.Name != expected.Name {
+			t.Errorf("Expected %s, got %s", expected.Name, got.Name)
 		}
 	}
 }
@@ -78,16 +79,15 @@ func rename(db *bolt.DB, name, updatedName string) func(*testing.T) {
 	}
 }
 
-func getCheap(db *bolt.DB, name string) func(*testing.T) {
+func getCheap(db *bolt.DB, expectedName string) func(*testing.T) {
 	return func(t *testing.T) {
-		got, err := GetCheap(db, name)
+		gotName, err := GetCheap(db, expectedName)
 		if err != nil {
 			t.Error(err)
 		}
 
-		// They aren't DeepEqual
-		if got.Name != name {
-			t.Errorf("Expected %s, got %s", name, got.Name)
+		if gotName.Name != expectedName {
+			t.Errorf("Expected %s, got %s", expectedName, gotName.Name)
 		}
 	}
 }
@@ -105,7 +105,7 @@ func list(db *bolt.DB) func(*testing.T) {
 	}
 }
 
-func listNames(db *bolt.DB, name string) func(*testing.T) {
+func listNames(db *bolt.DB, expectedName string) func(*testing.T) {
 	return func(t *testing.T) {
 		files, err := ListNames(db)
 		if err != nil {
@@ -115,9 +115,9 @@ func listNames(db *bolt.DB, name string) func(*testing.T) {
 			t.Error("Expected one or more files, got 0")
 		}
 
-		got := files[0]
-		if got != name {
-			t.Errorf("Expected %s, got %s", name, got)
+		gotName := files[0]
+		if gotName != expectedName {
+			t.Errorf("Expected %s, got %s", expectedName, gotName)
 		}
 	}
 }

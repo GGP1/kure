@@ -11,6 +11,7 @@ import (
 
 	"github.com/awnumar/memguard"
 	bolt "go.etcd.io/bbolt"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestTOTP(t *testing.T) {
@@ -24,9 +25,9 @@ func TestTOTP(t *testing.T) {
 
 	// Create destroys the buffer, hence we cannot use their fields anymore
 	t.Run("Create", create(db, totp))
-	t.Run("Get", get(db, totp.Name))
-	t.Run("List", list(db))
-	t.Run("List names", listNames(db))
+	t.Run("Get", get(db, totp))
+	t.Run("List", list(db, totp))
+	t.Run("List names", listNames(db, totp))
 	t.Run("Remove", remove(db, totp.Name))
 }
 
@@ -38,21 +39,20 @@ func create(db *bolt.DB, totp *pb.TOTP) func(*testing.T) {
 	}
 }
 
-func get(db *bolt.DB, name string) func(*testing.T) {
+func get(db *bolt.DB, expected *pb.TOTP) func(*testing.T) {
 	return func(t *testing.T) {
-		got, err := Get(db, name)
+		got, err := Get(db, expected.Name)
 		if err != nil {
 			t.Fatalf("Get() failed: %v", err)
 		}
 
-		// They aren't DeepEqual
-		if got.Name != name {
-			t.Errorf("Expected %s, got %s", name, got.Name)
+		if !proto.Equal(expected, got) {
+			t.Errorf("Expected %v, got %v", expected, got)
 		}
 	}
 }
 
-func list(db *bolt.DB) func(*testing.T) {
+func list(db *bolt.DB, expected *pb.TOTP) func(*testing.T) {
 	return func(t *testing.T) {
 		totps, err := List(db)
 		if err != nil {
@@ -62,24 +62,28 @@ func list(db *bolt.DB) func(*testing.T) {
 		if len(totps) == 0 {
 			t.Error("Expected one or more totps, got 0")
 		}
+
+		got := totps[0]
+		if !proto.Equal(expected, got) {
+			t.Errorf("Expected %v, got %v", expected, got)
+		}
 	}
 }
 
-func listNames(db *bolt.DB) func(*testing.T) {
+func listNames(db *bolt.DB, expected *pb.TOTP) func(*testing.T) {
 	return func(t *testing.T) {
 		totps, err := ListNames(db)
 		if err != nil {
 			t.Error(err)
 		}
+
 		if len(totps) == 0 {
 			t.Error("Expected one or more totps, got 0")
 		}
 
-		expected := "test"
 		got := totps[0]
-
-		if got != expected {
-			t.Errorf("Expected %s, got %s", expected, got)
+		if got != expected.Name {
+			t.Errorf("Expected %s, got %s", expected.Name, got)
 		}
 	}
 }

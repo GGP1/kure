@@ -10,6 +10,7 @@ import (
 
 	"github.com/awnumar/memguard"
 	bolt "go.etcd.io/bbolt"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestEntry(t *testing.T) {
@@ -29,8 +30,8 @@ func TestEntry(t *testing.T) {
 	}
 
 	t.Run("Create", create(db, e, e2))
-	t.Run("Get", get(db, e.Name))
-	t.Run("List", list(db, names))
+	t.Run("Get", get(db, e))
+	t.Run("List", list(db, e, e2))
 	t.Run("List names", listNames(db, names))
 	t.Run("Remove", remove(db, e.Name, e2.Name))
 	t.Run("Update", update(db))
@@ -44,30 +45,31 @@ func create(db *bolt.DB, entries ...*pb.Entry) func(*testing.T) {
 	}
 }
 
-func get(db *bolt.DB, name string) func(*testing.T) {
+func get(db *bolt.DB, expected *pb.Entry) func(*testing.T) {
 	return func(t *testing.T) {
-		got, err := Get(db, name)
+		got, err := Get(db, expected.Name)
 		if err != nil {
 			t.Error(err)
 		}
 
-		// They aren't DeepEqual
-		if got.Name != name {
-			t.Errorf("Expected %s, got %s", name, got.Name)
+		if !proto.Equal(expected, got) {
+			t.Errorf("Expected %v, got %v", expected, got)
 		}
 	}
 }
 
-func list(db *bolt.DB, names map[string]struct{}) func(*testing.T) {
+func list(db *bolt.DB, expected ...*pb.Entry) func(*testing.T) {
 	return func(t *testing.T) {
 		entries, err := List(db)
 		if err != nil {
 			t.Error(err)
 		}
 
-		for _, e := range entries {
-			if _, ok := names[e.Name]; !ok {
-				t.Errorf("Expected %q to be in the list but it isn't", e.Name)
+		for _, got := range entries {
+			for _, exp := range expected {
+				if got.Name == exp.Name && !proto.Equal(exp, got) {
+					t.Errorf("Expected %v, got %v", exp, got)
+				}
 			}
 		}
 	}

@@ -8,22 +8,23 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
+
+	"google.golang.org/protobuf/proto"
 )
 
 func TestImport(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 
 	cases := []struct {
+		expected *pb.Entry
 		manager  string
 		path     string
-		name     string
-		expected *pb.Entry
 	}{
 		{
 			manager: "Keepass",
 			path:    "testdata/test_keepass",
-			name:    "keepass",
 			expected: &pb.Entry{
+				Name:     "keepass",
 				Username: "test@keepass.com",
 				Password: "keepass123",
 				URL:      "https://keepass.info/",
@@ -34,8 +35,8 @@ func TestImport(t *testing.T) {
 		{
 			manager: "Keepassxc",
 			path:    "testdata/test_keepassxc",
-			name:    "test/keepassxc",
 			expected: &pb.Entry{
+				Name:     "test/keepassxc",
 				Username: "test@keepassxc.com",
 				Password: "keepassxc123",
 				URL:      "https://keepassxc.org",
@@ -46,8 +47,8 @@ func TestImport(t *testing.T) {
 		{
 			manager: "1password",
 			path:    "testdata/test_1password.csv",
-			name:    "1password",
 			expected: &pb.Entry{
+				Name:     "1password",
 				Username: "test@1password.com",
 				Password: "1password123",
 				URL:      "https://1password.com/",
@@ -59,8 +60,8 @@ func TestImport(t *testing.T) {
 			manager: "Lastpass",
 			path:    "testdata/test_lastpass.csv",
 			// Kure will join folders with the entry names
-			name: "test/lastpass",
 			expected: &pb.Entry{
+				Name:     "test/lastpass",
 				Username: "test@lastpass.com",
 				Password: "lastpass123",
 				URL:      "https://lastpass.com/",
@@ -72,8 +73,8 @@ func TestImport(t *testing.T) {
 			manager: "Bitwarden",
 			path:    "testdata/test_bitwarden.csv",
 			// Kure will join folders with the entry names
-			name: "test/bitwarden",
 			expected: &pb.Entry{
+				Name:     "test/bitwarden",
 				Username: "test@bitwarden.com",
 				Password: "bitwarden123",
 				URL:      "https://bitwarden.com/",
@@ -94,13 +95,14 @@ func TestImport(t *testing.T) {
 				t.Fatalf("Failed importing entries: %v", err)
 			}
 
-			got, err := entry.Get(db, tc.name)
+			got, err := entry.Get(db, tc.expected.Name)
 			if err != nil {
 				t.Fatalf("Failed listing entry: %v", err)
 			}
 
-			// They aren't deeply equal
-			compareEntries(t, got, tc.expected)
+			if !proto.Equal(tc.expected, got) {
+				t.Errorf("Expected %v, got %v", tc.expected, got)
+			}
 		})
 	}
 }
@@ -269,26 +271,4 @@ func TestArgs(t *testing.T) {
 
 func TestPostRun(t *testing.T) {
 	NewCmd(nil).PostRun(nil, nil)
-}
-
-func compareEntries(t *testing.T, got, expected *pb.Entry) {
-	if got.Username != expected.Username {
-		t.Errorf("Expected %s, got %s", expected.Username, got.Username)
-	}
-
-	if got.Password != expected.Password {
-		t.Errorf("Expected %s, got %s", expected.Password, got.Password)
-	}
-
-	if got.URL != expected.URL {
-		t.Errorf("Expected %s, got %s", expected.URL, got.URL)
-	}
-
-	if got.Notes != expected.Notes {
-		t.Errorf("Expected %s, got %s", expected.Notes, got.Notes)
-	}
-
-	if got.Expires != expected.Expires {
-		t.Errorf("Expected %s, got %s", expected.Expires, got.Expires)
-	}
 }
