@@ -13,17 +13,20 @@ import (
 )
 
 const example = `
-* Clear both terminal and clipboard
+* Clear terminal and clipboard
 kure clear
 
-* Clear terminal
+* Clear clipboard
+kure clear -c
+
+* Clear terminal screen
 kure clear -t
 
-* Clear clipboard
-kure clear -c`
+* Clear kure commands from terminal history
+kure clear -h`
 
 type clearOptions struct {
-	clip, term bool
+	clip, term, hist bool
 }
 
 // NewCmd returns a new command.
@@ -32,7 +35,7 @@ func NewCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "clear",
-		Short:   "Clear clipboard, terminal or both",
+		Short:   "Clear clipboard, terminal screen or history",
 		Example: example,
 		RunE:    runClear(&opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -43,15 +46,16 @@ func NewCmd() *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVarP(&opts.clip, "clipboard", "c", false, "clear clipboard")
-	f.BoolVarP(&opts.term, "terminal", "t", false, "clear terminal")
+	f.BoolVarP(&opts.term, "terminal", "t", false, "clear terminal screen")
+	f.BoolVarP(&opts.hist, "history", "H", false, "clear kure commands from terminal history")
 
 	return cmd
 }
 
 func runClear(opts *clearOptions) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		// If no flag is specified, clear both
-		if opts.clip == false && opts.term == false {
+		// If no flags were specified, clear clipboard and terminal
+		if !opts.clip && !opts.term && !opts.hist {
 			opts.clip = true
 			opts.term = true
 		}
@@ -62,23 +66,55 @@ func runClear(opts *clearOptions) cmdutil.RunEFunc {
 			}
 		}
 
-		if opts.term {
-			if runtime.GOOS == "windows" {
-				c := exec.Command("cmd", "/c", "cls")
-				c.Stdout = os.Stdout
-				if err := c.Run(); err != nil {
-					return errors.Wrap(err, "clearing terminal")
-				}
-				return nil
-			}
-
-			c := exec.Command("clear")
-			c.Stdout = os.Stdout
-			if err := c.Run(); err != nil {
-				return errors.Wrap(err, "clearing terminal")
-			}
+		if runtime.GOOS == "windows" {
+			return clearWindowsTerminal(opts)
 		}
 
-		return nil
+		return clearUnixTerminal(opts)
 	}
+}
+
+func clearWindowsTerminal(opts *clearOptions) error {
+	if opts.term {
+		c := exec.Command("cmd", "/c", "cls")
+		c.Stdout = os.Stdout
+		if err := c.Run(); err != nil {
+			return errors.Wrap(err, "clearing terminal")
+		}
+	}
+
+	if opts.hist {
+		clearPSHist := "Set-Content -Path (Get-PSReadLineOption).HistorySavePath -Value (Get-Content -Path (Get-PSReadLineOption).HistorySavePath | Select-String -Pattern '^kure' -NotMatch)"
+		if err := exec.Command("powershell", clearPSHist).Run(); err != nil {
+			return errors.Wrap(err, "clearing kure commands from history file")
+		}
+	}
+
+	return nil
+}
+
+func clearUnixTerminal(opts *clearOptions) error {
+	if opts.term {
+		c := exec.Command("clear")
+		c.Stdout = os.Stdout
+		if err := c.Run(); err != nil {
+			return errors.Wrap(err, "clearing terminal")
+		}
+	}
+
+	if opts.hist {
+		if err := exec.Command("history -a").Run(); err != nil {
+			return errors.Wrap(err, "flushing session commands to terminal history")
+		}
+
+		histFile, ok := os.LookupEnv("HISTFILE")
+		if !ok {
+			histFile = "~./bash_history"
+		}
+		if err := exec.Command("sed -i '/^kure/d'", histFile).Run(); err != nil {
+			return errors.Wrap(err, "clearing kure commands from history file")
+		}
+	}
+
+	return nil
 }
