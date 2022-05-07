@@ -47,7 +47,7 @@ func NewCmd() *cobra.Command {
 	f := cmd.Flags()
 	f.BoolVarP(&opts.clip, "clipboard", "c", false, "clear clipboard")
 	f.BoolVarP(&opts.term, "terminal", "t", false, "clear terminal screen")
-	f.BoolVarP(&opts.hist, "history", "H", false, "clear kure commands from terminal history")
+	f.BoolVarP(&opts.hist, "history", "H", false, "remove kure commands from terminal history")
 
 	return cmd
 }
@@ -103,8 +103,10 @@ func clearUnixTerminal(opts *clearOptions) error {
 	}
 
 	if opts.hist {
-		if err := exec.Command("history", "-a").Run(); err != nil {
-			return errors.Wrap(err, "flushing session commands to terminal history")
+		if history, err := exec.LookPath("history"); err == nil {
+			if err := exec.Command(history, "-a").Run(); err != nil {
+				return errors.Wrap(err, "flushing session commands to terminal history")
+			}
 		}
 
 		histFile, ok := os.LookupEnv("HISTFILE")
