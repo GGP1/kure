@@ -103,7 +103,7 @@ func clearUnixTerminal(opts *clearOptions) error {
 	}
 
 	if opts.hist {
-		if err := exec.Command("history -a").Run(); err != nil {
+		if err := exec.Command("history", "-a").Run(); err != nil {
 			return errors.Wrap(err, "flushing session commands to terminal history")
 		}
 
@@ -111,7 +111,7 @@ func clearUnixTerminal(opts *clearOptions) error {
 		if !ok {
 			histFile = "~./bash_history"
 		}
-		if err := exec.Command("sed -i '/^kure/d'", histFile).Run(); err != nil {
+		if err := exec.Command("sed", "-i", "/^kure/d", histFile).Run(); err != nil {
 			return errors.Wrap(err, "clearing kure commands from history file")
 		}
 	}
