@@ -200,7 +200,7 @@ func TestMarshaler(t *testing.T) {
 		{
 			desc:     "Marshal to TOML",
 			path:     "test.toml",
-			expected: "test = \"Go\"\n",
+			expected: "test = 'Go'\n",
 		},
 	}
 
