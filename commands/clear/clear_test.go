@@ -2,7 +2,7 @@ package clear
 
 import (
 	"bufio"
-	"io"
+	"bytes"
 	"os"
 	"runtime"
 	"strings"
@@ -39,7 +39,8 @@ func TestClearTerminalScreen(t *testing.T) {
 	}
 
 	cmd := NewCmd()
-	cmd.SetOut(io.Discard)
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
 	if err := cmd.Flags().Set("terminal", "true"); err != nil {
 		t.Error(err)
 	}
