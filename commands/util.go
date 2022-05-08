@@ -450,6 +450,8 @@ func SetContext(t testing.TB, path string) *bolt.DB {
 	os.Stdout = os.NewFile(0, "") // Mute stdout
 	os.Stderr = os.NewFile(0, "") // Mute stderr
 	t.Cleanup(func() {
+		// Important: other files being modified inside a Cleanup function may mess up
+		// bolt database file descriptor, it's recommended to use defer instead
 		if err := db.Close(); err != nil {
 			t.Fatalf("Failed closing database: %v", err)
 		}
