@@ -84,7 +84,7 @@ func clearTerminalWindows(opts *clearOptions) error {
 	}
 
 	if opts.hist {
-		clearPSHist := "Set-Content -Path (Get-PSReadLineOption).HistorySavePath -Value (Get-Content -Path (Get-PSReadLineOption).HistorySavePath | Select-String -Pattern '^kure' -NotMatch)"
+		clearPSHist := "Set-Content -Path (Get-PSReadLineOption).HistorySavePath -Value (Get-Content -Path (Get-PSReadLineOption).HistorySavePath | Select-String -Pattern '^\\s*kure\\s' -NotMatch)"
 		if err := exec.Command("powershell", clearPSHist).Run(); err != nil {
 			return errors.Wrap(err, "clearing kure commands from history file")
 		}
@@ -113,7 +113,7 @@ func clearTerminalUnix(opts *clearOptions) error {
 		if !ok {
 			histFile = "~./bash_history"
 		}
-		if err := exec.Command("sed", "-i", "/^kure/d", histFile).Run(); err != nil {
+		if err := exec.Command("sed", "-i", "/^\\s*kure\\s/d", histFile).Run(); err != nil {
 			return errors.Wrap(err, "clearing kure commands from history file")
 		}
 	}
