@@ -1,23 +1,22 @@
 ## Use
 
-`kure clear [-c clipboard] [-t terminal]`
+`kure clear  [-c clipboard] [-H history] [-t terminal]`
 
 ## Description
 
-Manually clear the clipboard, terminal or both of them. Kure clears all by default.
+Clear clipboard, terminal screen or history.
 
-## Flags 
+## Flags
 
-|  Name     | Shorthand |     Type      |    Default    |           Description             |
-|-----------|-----------|---------------|---------------|-----------------------------------|
-| clipboard | c         | bool          | false         | Clear clipboard                   |
-| terminal  | t         | bool          | false         | Clear terminal                    |
+| Name | Shorthand | Type | Default | Description |
+|------|-----------|------|---------|-------------|
+| clipboard | c | bool | false | Clear clipboard |
+| history | H | bool | false | Remove kure commands from terminal history |
+| terminal | t | bool | false | Clear terminal screen |
 
-### Examples
+## Examples
 
-> By default it clears the clipboard and the terminal
-
-Clear both clipboard and terminal:
+Clear terminal and clipboard:
 ```
 kure clear
 ```
@@ -27,7 +26,12 @@ Clear clipboard:
 kure clear -c
 ```
 
-Clear terminal:
+Clear terminal screen:
 ```
 kure clear -t
+```
+
+Clear kure commands from terminal history:
+```
+kure clear -h
 ```
