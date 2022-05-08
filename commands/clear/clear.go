@@ -67,14 +67,14 @@ func runClear(opts *clearOptions) cmdutil.RunEFunc {
 		}
 
 		if runtime.GOOS == "windows" {
-			return clearWindowsTerminal(opts)
+			return clearTerminalWindows(opts)
 		}
 
-		return clearUnixTerminal(opts)
+		return clearTerminalUnix(opts)
 	}
 }
 
-func clearWindowsTerminal(opts *clearOptions) error {
+func clearTerminalWindows(opts *clearOptions) error {
 	if opts.term {
 		c := exec.Command("cmd", "/c", "cls")
 		c.Stdout = os.Stdout
@@ -93,7 +93,7 @@ func clearWindowsTerminal(opts *clearOptions) error {
 	return nil
 }
 
-func clearUnixTerminal(opts *clearOptions) error {
+func clearTerminalUnix(opts *clearOptions) error {
 	if opts.term {
 		c := exec.Command("clear")
 		c.Stdout = os.Stdout
