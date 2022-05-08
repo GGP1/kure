@@ -109,12 +109,10 @@ func clearTerminalUnix(opts *clearOptions) error {
 			}
 		}
 
-		histFile, ok := os.LookupEnv("HISTFILE")
-		if !ok {
-			histFile = "~./bash_history"
-		}
-		if err := exec.Command("sed", "-i", "/^\\s*kure\\s/d", histFile).Run(); err != nil {
-			return errors.Wrap(err, "clearing kure commands from history file")
+		if histFile, ok := os.LookupEnv("HISTFILE"); ok {
+			if err := exec.Command("sed", "-i", "/^\\s*kure\\s/d", histFile).Run(); err != nil {
+				return errors.Wrap(err, "clearing kure commands from history file")
+			}
 		}
 	}
 
