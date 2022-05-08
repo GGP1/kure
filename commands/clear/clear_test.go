@@ -63,11 +63,12 @@ func TestClearTerminalHistory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
+	defer func() {
+		// Restore file content
 		if err := os.WriteFile(mockHistoryPath, originalContent, 0600); err != nil {
 			t.Error(err)
 		}
-	})
+	}()
 
 	cmd := NewCmd()
 	if err := cmd.Flags().Set("history", "true"); err != nil {
