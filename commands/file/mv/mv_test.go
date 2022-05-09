@@ -35,7 +35,7 @@ func TestMvDir(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
 	oldDir := "directory/"
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		createFile(t, db, oldDir+strconv.Itoa(i))
 	}
 
@@ -72,12 +72,12 @@ func TestMvErrors(t *testing.T) {
 	}{
 		{
 			desc:    "Invalid new name",
-			oldName: "test",
+			oldName: "exists",
 			newName: "",
 		},
 		{
 			desc:    "New name already exists",
-			oldName: "test",
+			oldName: "exists",
 			newName: "exists",
 		},
 		{
@@ -101,6 +101,16 @@ func TestMvErrors(t *testing.T) {
 				t.Error("Expected an error and got nil")
 			}
 		})
+	}
+}
+
+func TestMissingArguments(t *testing.T) {
+	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+
+	cmd := NewCmd(db)
+	cmd.SetArgs([]string{"oldName"})
+	if err := cmd.Execute(); err == nil {
+		t.Error("Expected an error and got nil")
 	}
 }
 
