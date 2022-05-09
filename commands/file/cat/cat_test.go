@@ -13,9 +13,6 @@ import (
 )
 
 func TestCat(t *testing.T) {
-	if clipboard.Unsupported {
-		t.Skip("No clipboard utilities available")
-	}
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
 	name1 := "test.txt"
@@ -48,6 +45,10 @@ func TestCat(t *testing.T) {
 			cmd := NewCmd(db, &buf)
 			cmd.SetArgs(tc.args)
 			cmd.Flags().Set("copy", tc.copy)
+
+			if clipboard.Unsupported && tc.copy == "true" {
+				t.Skip("No clipboard utilities available")
+			}
 
 			if err := cmd.Execute(); err != nil {
 				t.Error(err)

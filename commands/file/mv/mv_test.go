@@ -115,9 +115,7 @@ func TestMissingArguments(t *testing.T) {
 }
 
 func createFile(t *testing.T, db *bolt.DB, name string) {
-	t.Helper()
-
 	if err := file.Create(db, &pb.File{Name: name}); err != nil {
-		t.Errorf("Failed creating the file: %v", err)
+		t.Fatalf("Failed creating the file: %v", err)
 	}
 }
