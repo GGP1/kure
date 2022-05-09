@@ -5,6 +5,8 @@
 ## Description
 
 Clear clipboard, terminal screen or history.
+		
+Using the command without passing any flags clears the clipboard and the terminal screen.
 
 ## Flags
 

@@ -37,8 +37,11 @@ func NewCmd() *cobra.Command {
 	opts := clearOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "clear",
-		Short:   "Clear clipboard, terminal screen or history",
+		Use:   "clear",
+		Short: "Clear clipboard, terminal screen or history",
+		Long: `Clear clipboard, terminal screen or history.
+		
+Using the command without passing any flags clears the clipboard and the terminal screen.`,
 		Example: example,
 		RunE:    runClear(&opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
