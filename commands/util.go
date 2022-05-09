@@ -343,6 +343,10 @@ func MustExistLs(db *bolt.DB, obj object) cobra.PositionalArgs {
 // MustNotExist returns an error if the record exists or if the name is invalid.
 func MustNotExist(db *bolt.DB, obj object, allowDir ...bool) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return ErrInvalidName
+		}
+
 		for _, name := range args {
 			if name == "" || strings.Contains(name, "//") {
 				return ErrInvalidName

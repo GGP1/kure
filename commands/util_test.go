@@ -400,11 +400,17 @@ func TestMustNotExist(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
 				cmd.Args = MustNotExist(db, Entry, tc.allowDir...)
-
 				if err := cmd.Args(cmd, []string{tc.name}); err == nil {
 					t.Error("Expected an error and got nil")
 				}
 			})
+		}
+	})
+
+	t.Run("No arguments", func(t *testing.T) {
+		cmd.Args = MustNotExist(db, Entry, false)
+		if err := cmd.Args(cmd, []string{}); err == nil {
+			t.Error("Expected an error and got nil")
 		}
 	})
 }
