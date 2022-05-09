@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	cmdutil "github.com/GGP1/kure/commands"
 
@@ -86,12 +87,13 @@ func clearTerminalWindows(opts *clearOptions) error {
 	}
 
 	if opts.hist {
-		path, err := exec.Command("powershell", "(Get-PSReadLineOption).HistorySavePath").Output()
+		output, err := exec.Command("powershell", "(Get-PSReadLineOption).HistorySavePath").Output()
 		if err != nil {
 			return errors.Wrap(err, "getting powershell history file path")
 		}
+		path := strings.TrimRight(string(output), "\r\n")
 
-		if err := clearHistoryFile(string(path)); err != nil {
+		if err := clearHistoryFile(path); err != nil {
 			return errors.Wrap(err, "clearing terminal history")
 		}
 	}
