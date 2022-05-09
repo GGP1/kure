@@ -11,8 +11,6 @@ import (
 	"github.com/atotto/clipboard"
 )
 
-const mockHistoryPath = "./testdata/.history"
-
 func TestClearClipboard(t *testing.T) {
 	if clipboard.Unsupported {
 		t.Skip("No clipboard utilities available")
@@ -50,33 +48,15 @@ func TestClearTerminalScreen(t *testing.T) {
 }
 
 func TestClearTerminalHistory(t *testing.T) {
-	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
-		// Windows: Apparently there's no persistent way to modify the powershell history file path
-		// Setting it with `Set-PSReadLineOption -HistorySavePath` is not shared across sessions
-		//
-		// Darwin: The "history" command exits with status 1
-		t.Skip()
-	}
+	mockHistoryPath := "./testdata/.history"
 
-	os.Setenv("HISTFILE", mockHistoryPath)
 	originalContent, err := os.ReadFile(mockHistoryPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		// Restore file content
-		if err := os.WriteFile(mockHistoryPath, originalContent, 0600); err != nil {
-			t.Error(err)
-		}
-	}()
 
-	cmd := NewCmd()
-	if err := cmd.Flags().Set("history", "true"); err != nil {
+	if err := clearHistoryFile(mockHistoryPath); err != nil {
 		t.Error(err)
-	}
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Failed: %v", err)
 	}
 
 	f, err := os.Open(mockHistoryPath)
@@ -87,12 +67,17 @@ func TestClearTerminalHistory(t *testing.T) {
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), "kure") {
+		if strings.HasPrefix(strings.TrimSpace(scanner.Text()), "kure ") {
 			t.Errorf("The history file contains kure commands: %s", scanner.Text())
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
+		t.Error(err)
+	}
+
+	// Restore file content
+	if err := os.WriteFile(mockHistoryPath, originalContent, 0600); err != nil {
 		t.Error(err)
 	}
 }

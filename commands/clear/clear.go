@@ -1,6 +1,8 @@
 package clear
 
 import (
+	"bufio"
+	"bytes"
 	"os"
 	"os/exec"
 	"runtime"
@@ -84,9 +86,13 @@ func clearTerminalWindows(opts *clearOptions) error {
 	}
 
 	if opts.hist {
-		clearPSHist := "Set-Content -Path (Get-PSReadLineOption).HistorySavePath -Value (Get-Content -Path (Get-PSReadLineOption).HistorySavePath | Select-String -Pattern '^\\s*kure\\s' -NotMatch)"
-		if err := exec.Command("powershell", clearPSHist).Run(); err != nil {
-			return errors.Wrap(err, "clearing kure commands from history file")
+		path, err := exec.Command("powershell", "(Get-PSReadLineOption).HistorySavePath").Output()
+		if err != nil {
+			return errors.Wrap(err, "getting powershell history file path")
+		}
+
+		if err := clearHistoryFile(string(path)); err != nil {
+			return errors.Wrap(err, "clearing terminal history")
 		}
 	}
 
@@ -110,10 +116,49 @@ func clearTerminalUnix(opts *clearOptions) error {
 		}
 
 		if histFile, ok := os.LookupEnv("HISTFILE"); ok {
-			if err := exec.Command("sed", "-i", "/^\\s*kure\\s/d", histFile).Run(); err != nil {
-				return errors.Wrap(err, "clearing kure commands from history file")
+			if err := clearHistoryFile(histFile); err != nil {
+				return errors.Wrap(err, "clearing terminal history")
 			}
 		}
+	}
+
+	return nil
+}
+
+func clearHistoryFile(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return errors.Wrap(err, "opening file")
+	}
+
+	stat, err := f.Stat()
+	if err != nil {
+		return errors.Wrap(err, "getting file stats")
+	}
+
+	b := make([]byte, stat.Size())
+	buf := bytes.NewBuffer(b)
+	scanner := bufio.NewScanner(f)
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if bytes.HasPrefix(bytes.TrimSpace(line), []byte("kure ")) {
+			continue
+		}
+		buf.Write(line)
+		buf.WriteByte('\n')
+	}
+
+	if err := f.Close(); err != nil {
+		return errors.Wrap(err, "closing file")
+	}
+
+	if err := scanner.Err(); err != nil {
+		return errors.Wrap(err, "scanning file")
+	}
+
+	if err := os.WriteFile(path, buf.Bytes(), 0600); err != nil {
+		return errors.Wrap(err, "writing file")
 	}
 
 	return nil
