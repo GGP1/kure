@@ -136,13 +136,7 @@ func clearHistoryFile(path string) error {
 		return errors.Wrap(err, "opening file")
 	}
 
-	stat, err := f.Stat()
-	if err != nil {
-		return errors.Wrap(err, "getting file stats")
-	}
-
-	b := make([]byte, stat.Size())
-	buf := bytes.NewBuffer(b)
+	buf := new(bytes.Buffer)
 	scanner := bufio.NewScanner(f)
 
 	for scanner.Scan() {
