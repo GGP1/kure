@@ -555,19 +555,23 @@ func TestSetContext(t *testing.T) {
 }
 
 func TestWatchFile(t *testing.T) {
-	done := make(chan struct{}, 1)
-	errCh := make(chan error, 1)
+	f, err := os.CreateTemp("", "*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
 
-	filename := "test_watch_file"
-	if err := os.WriteFile(filename, []byte("test"), 0600); err != nil {
+	if _, err := f.Write([]byte("test")); err != nil {
 		t.Fatal(err)
 	}
 
-	go WatchFile(filename, done, errCh)
+	done := make(chan struct{}, 1)
+	errCh := make(chan error, 1)
+	go WatchFile(f.Name(), done, errCh)
 
 	// Sleep to write after the file is being watched
 	time.Sleep(50 * time.Millisecond)
-	if err := os.WriteFile(filename, []byte("test watch file"), 0600); err != nil {
+	if _, err := f.Write([]byte("test-watch-file")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -575,12 +579,7 @@ func TestWatchFile(t *testing.T) {
 	case <-done:
 
 	case <-errCh:
-		t.Error("Watching file failed")
-	}
-
-	// Remove test file
-	if err := os.Remove(filename); err != nil {
-		t.Fatal(err)
+		t.Errorf("Watching file failed: %v", err)
 	}
 }
 
