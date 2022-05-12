@@ -1,50 +1,84 @@
 package clear
 
 import (
-	"bytes"
+	"bufio"
+	"io"
+	"os"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/atotto/clipboard"
 )
 
-func TestClear(t *testing.T) {
+func TestClearClipboard(t *testing.T) {
 	if clipboard.Unsupported {
 		t.Skip("No clipboard utilities available")
 	}
 
-	cases := []struct {
-		flag  string
-		value string
-		run   string
-	}{
-		{flag: "clipboard", value: "true"},
-		{flag: "terminal", value: "true"},
+	cmd := NewCmd()
+	if err := cmd.Flags().Set("clipboard", "true"); err != nil {
+		t.Error(err)
+	}
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Failed: %v", err)
+	}
+
+	got, _ := clipboard.ReadAll()
+	if got != "" {
+		t.Errorf("Expected clipboard to be empty but got: %s", got)
+	}
+}
+
+func TestClearTerminalScreen(t *testing.T) {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
+		t.Skip("linux and macOS return an exit status 1 when clearing the terminal")
 	}
 
 	cmd := NewCmd()
-	for _, tc := range cases {
-		t.Run("Clear "+tc.flag, func(t *testing.T) {
-			var buf bytes.Buffer
-			cmd.SetOut(&buf)
-			f := cmd.Flags()
-			f.Set(tc.flag, tc.value)
+	cmd.SetOut(io.Discard)
+	if err := cmd.Flags().Set("terminal", "true"); err != nil {
+		t.Error(err)
+	}
 
-			if tc.flag == "terminal" && runtime.GOOS == "darwin" {
-				t.Skip("macOS returns an exit status 1 when clearing the terminal")
-			}
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Failed: %v", err)
+	}
+}
 
-			if err := cmd.Execute(); err != nil {
-				t.Fatalf("Failed: %v", err)
-			}
+func TestClearTerminalHistory(t *testing.T) {
+	mockHistoryPath := "./testdata/.history"
 
-			if tc.flag == "clipboard" {
-				got, _ := clipboard.ReadAll()
-				if got != "" {
-					t.Errorf("Expected clipboard to be empty but got: %s", got)
-				}
-			}
-		})
+	originalContent, err := os.ReadFile(mockHistoryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := clearHistoryFile(mockHistoryPath); err != nil {
+		t.Error(err)
+	}
+
+	f, err := os.Open(mockHistoryPath)
+	if err != nil {
+		t.Error(err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		if strings.HasPrefix(strings.TrimSpace(scanner.Text()), "kure ") {
+			t.Errorf("The history file contains kure commands: %s", scanner.Text())
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		t.Error(err)
+	}
+
+	// Restore file content
+	if err := os.WriteFile(mockHistoryPath, originalContent, 0600); err != nil {
+		t.Error(err)
 	}
 }
 

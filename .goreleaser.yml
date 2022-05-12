@@ -1,7 +1,6 @@
 project_name: kure
 before:
   hooks:
-    - make completion
     - go mod download
     - go mod tidy
 builds:
