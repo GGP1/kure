@@ -60,7 +60,6 @@ func TestCreateTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed creating the file: %v", err)
 	}
-	defer os.Remove(filename)
 
 	got, err := os.ReadFile(filename)
 	if err != nil {
