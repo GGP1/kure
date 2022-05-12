@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"testing"
+	"time"
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
@@ -71,7 +72,27 @@ func TestCreateTempFile(t *testing.T) {
 	}
 }
 
-func TestReadAndUpdate(t *testing.T) {
+func TestWatchFile(t *testing.T) {
+	f, err := os.CreateTemp("", "*")
+	if err != nil {
+		t.Error(err)
+	}
+	defer f.Close()
+
+	go func(f *os.File) {
+		// Sleep to wait for the file to be watched
+		time.Sleep(50 * time.Millisecond)
+		if _, err := f.Write([]byte("anything")); err != nil {
+			t.Error(err)
+		}
+	}(f)
+
+	if err := watchFile(f.Name()); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestUpdate(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
 	name := "test_read_and_update.txt"
@@ -80,8 +101,8 @@ func TestReadAndUpdate(t *testing.T) {
 		Content: []byte("test"),
 	}
 
-	if err := readAndUpdate(db, name, "../testdata/test_read&update.txt", f); err != nil {
-		t.Errorf("readAndUpdate() failed: %v", err)
+	if err := update(db, f, "../testdata/test_read&update.txt"); err != nil {
+		t.Errorf("updating record: %v", err)
 	}
 
 	got, err := file.Get(db, name)
@@ -92,33 +113,6 @@ func TestReadAndUpdate(t *testing.T) {
 	if !bytes.Equal([]byte("test"), got.Content) {
 		t.Error("Failed editing file, corrupted content")
 	}
-}
-
-func TestReadAndUpdateErrors(t *testing.T) {
-	dir, _ := os.Getwd()
-	os.Chdir("testdata")
-
-	cases := []struct {
-		desc     string
-		filename string
-	}{
-		{
-			desc:     "Does not exists",
-			filename: "does_not_exists.txt",
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			err := readAndUpdate(nil, "", tc.filename, &pb.File{Name: "test-read&update-errors.txt"})
-			if err == nil {
-				t.Error("Expected an error and got nil")
-			}
-		})
-	}
-
-	// Go back to the initial directory
-	os.Chdir(dir)
 }
 
 func TestPostRun(t *testing.T) {
