@@ -24,8 +24,8 @@ const example = `
 * Edit a file
 kure file edit Sample -e nvim
 
-* Write a file content to a temporary file and log its path
-krue file edit Sample -l`
+* Write a file's content to a temporary file and log its path
+kure file edit Sample -l`
 
 type editOptions struct {
 	editor string
