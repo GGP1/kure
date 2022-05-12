@@ -1,0 +1,6 @@
+kure ls
+test
+clear
+kure add -l 20 Service
+history
+ kure session

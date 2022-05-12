@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/subtle"
 	"fmt"
+	"os"
 	"syscall"
 
 	"github.com/GGP1/kure/sig"
@@ -31,12 +32,12 @@ func AskPassword(message string, verify bool) (*memguard.Enclave, error) {
 	sig.Signal.AddCleanup(func() error { return terminal.Restore(fd, oldState) })
 	defer terminal.Restore(fd, oldState)
 
-	fmt.Print(message + ": ")
+	fmt.Fprint(os.Stderr, message+": ")
 	password, err := terminal.ReadPassword(fd)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading password")
 	}
-	fmt.Print("\n")
+	fmt.Fprint(os.Stderr, "\n")
 
 	if subtle.ConstantTimeCompare(password, nil) == 1 {
 		return nil, ErrInvalidPassword
@@ -46,12 +47,12 @@ func AskPassword(message string, verify bool) (*memguard.Enclave, error) {
 	memguard.WipeBytes(password)
 
 	if verify {
-		fmt.Print("Retype to verify: ")
+		fmt.Fprint(os.Stderr, "Retype to verify: ")
 		password2, err := terminal.ReadPassword(fd)
 		if err != nil {
 			return nil, errors.Wrap(err, "reading password")
 		}
-		fmt.Print("\n")
+		fmt.Fprint(os.Stderr, "\n")
 
 		if subtle.ConstantTimeCompare(pwd.Bytes(), password2) != 1 {
 			return nil, errors.New("passwords didn't match")

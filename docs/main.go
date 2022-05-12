@@ -23,17 +23,12 @@ import (
 
 func main() {
 	cmd := flag.Bool("cmd", false, "specific command documentation")
-	comp := flag.Bool("completion", false, "generate completion")
 	summ := flag.Bool("summary", false, "commands summary")
 	flag.Parse()
 
 	if *cmd {
 		if err := cmdDocs(os.Args); err != nil {
 			log.Fatalf("failed generating %s documentation: %v", os.Args[1], err)
-		}
-	} else if *comp {
-		if err := completion(os.Args); err != nil {
-			log.Fatalf("failed generating %s completion: %v", os.Args[1], err)
 		}
 	} else if *summ {
 		if err := summary(os.Args); err != nil {
@@ -123,43 +118,6 @@ func visitFlags(cmd *cobra.Command) string {
 		buf.WriteString(fmt.Sprintf("[%s%s] ", shorthand, f.Name))
 	})
 	return buf.String()
-}
-
-// Generate code completion files. By default it generates all the files.
-//
-// Usage: main --completion bash.
-func completion(args []string) error {
-	root := root.DevCmd()
-	bash := "completion/bash.sh"
-	fish := "completion/fish.sh"
-	powershell := "completion/powershell.ps1"
-	zsh := "completion/zsh.sh"
-
-	if len(args) < 3 {
-		if err := root.GenBashCompletionFile(bash); err != nil {
-			return err
-		}
-		if err := root.GenFishCompletionFile(fish, true); err != nil {
-			return err
-		}
-		if err := root.GenPowerShellCompletionFile(powershell); err != nil {
-			return err
-		}
-		return root.GenZshCompletionFile(zsh)
-	}
-
-	switch args[2] {
-	case "bash":
-		return root.GenBashCompletionFile(bash)
-	case "fish":
-		return root.GenFishCompletionFile(fish, true)
-	case "powershell":
-		return root.GenPowerShellCompletionFile(powershell)
-	case "zsh":
-		return root.GenZshCompletionFile(zsh)
-	}
-
-	return nil
 }
 
 // Generate the wiki commands' summary page.

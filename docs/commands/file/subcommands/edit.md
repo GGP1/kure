@@ -1,21 +1,15 @@
 ## Use
 
-`kure file edit <name> [-e editor]`
+`kure file edit <name>  [-e editor] [-l log]`
 
 ## Description
 
 Edit a file.
 
-Command procedure:
-1. Create a file with the content of the stored file.
-2. Execute the text editor to edit it.
-3. Wait for it to be saved.
-4. Read its content and update kure's file.
-5. Overwrite the initially created file with random bytes and delete.
-
-Tips:
-- Some editors will require to exit to modify the file.
-- Use an image editor command to edit images.
+Caution: a temporary file is created with a random name, it will be erased right after the first save but it could still be read by a malicious actor.
+Notes:
+    - Some editors flush the changes to the disk when closed, Kure won't notice any modifications until then.
+    - Modifying the file with a different program will prevent Kure from erasing the file as its being blocked by another process.
 
 #### Text editors commands
 *Editor*: *command*
@@ -47,10 +41,16 @@ Krita: krita
 |  Name     | Shorthand |     Type      |    Default    |      Description     |
 |-----------|-----------|---------------|---------------|----------------------|
 | editor    | e         | string        | ""            | File editor command  |
+| log | l | bool | false | Log the temporary file path and wait for modifications |
 
 ### Examples
 
-Edit file:
+Edit a file:
 ```
-kure file edit Sample -e vim
+kure file edit Sample -e nvim
+```
+
+Write a file's content to a temporary file and log its path:
+```
+kure file edit Sample -l
 ```
