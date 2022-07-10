@@ -36,6 +36,7 @@ func NewCmd(db *bolt.DB, w io.Writer) *cobra.Command {
 		Use:     "cat <name>",
 		Short:   "Read file and write to standard output",
 		Example: example,
+		Args:    cmdutil.MustExist(db, cmdutil.File),
 		PreRunE: auth.Login(db),
 		RunE:    runCat(db, w, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
