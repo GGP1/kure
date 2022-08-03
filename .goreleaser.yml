@@ -62,7 +62,7 @@ brews:
       name: homebrew-tap
     folder: Formula
     homepage: https://github.com/GGP1/kure
-    description: Secure, private and feature-rich CLI password manager
+    description: Cross-platform CLI password manager with sessions
     license: Apache 2.0
 
 scoop:
@@ -70,7 +70,7 @@ scoop:
     owner: GGP1
     name: scoop-bucket
   homepage:  https://github.com/GGP1/kure
-  description: Secure, private and feature-rich CLI password manager
+  description: Cross-platform CLI password manager with sessions
   license: Apache 2.0
 
 nfpms:
@@ -78,7 +78,7 @@ nfpms:
   formats:
     - deb
   maintainer: GGP1
-  description: Secure, private and feature-rich CLI password manager
+  description: Cross-platform CLI password manager with sessions
   homepage: https://github.com/GGP1/kure
   license: Apache 2.0
   file_name_template: '{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
