@@ -9,7 +9,7 @@ import (
 
 func TestRead(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
-	config.SetFile("./testdata/mock_config.yaml")
+	config.SetFilename("./testdata/mock_config.yaml")
 
 	cmd := NewCmd(db, nil)
 	if err := cmd.Execute(); err != nil {
@@ -19,7 +19,7 @@ func TestRead(t *testing.T) {
 
 func TestReadError(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
-	config.SetFile("")
+	config.SetFilename("")
 
 	cmd := NewCmd(db, nil)
 	if err := cmd.Execute(); err == nil {

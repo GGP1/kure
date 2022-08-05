@@ -103,11 +103,11 @@ func TestInitErrors(t *testing.T) {
 	}
 }
 
-func TestFileUsed(t *testing.T) {
+func TestFilename(t *testing.T) {
 	expected := "test"
 	config.filename = expected
 
-	got := FileUsed()
+	got := Filename()
 	if got != expected {
 		t.Errorf("Expected %q, got %q", expected, got)
 	}
@@ -207,9 +207,9 @@ func TestSetDefaults(t *testing.T) {
 	}
 }
 
-func TestSetFile(t *testing.T) {
+func TestSetFilename(t *testing.T) {
 	expected := "test"
-	SetFile(expected)
+	SetFilename(expected)
 
 	if config.filename != expected {
 		t.Errorf("Expected %q, got %q", expected, config.filename)

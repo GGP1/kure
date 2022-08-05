@@ -40,7 +40,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 
 func runConfig(r io.Reader) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		path := config.FileUsed()
+		path := config.Filename()
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return errors.Wrap(err, "reading configuration file")

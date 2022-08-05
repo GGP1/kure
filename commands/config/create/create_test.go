@@ -29,7 +29,7 @@ func TestCreateErrors(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			config.Set("editor", tc.editor)
-			config.SetFile(tc.path)
+			config.SetFilename(tc.path)
 
 			f := cmd.Flags()
 			f.Set("path", tc.path)

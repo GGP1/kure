@@ -67,8 +67,8 @@ func createDefaultConfigFile(homeDir, configPath string) error {
 	return Write(configPath, true)
 }
 
-// FileUsed returns the name of the file that the configuration is using.
-func FileUsed() string {
+// Filename returns the name of the file that the configuration is using.
+func Filename() string {
 	return config.filename
 }
 
@@ -144,8 +144,8 @@ func SetDefaults(dbPath string) {
 	}
 }
 
-// SetFile sets the configuration file.
-func SetFile(filename string) {
+// SetFilename sets the configuration filename.
+func SetFilename(filename string) {
 	config.filename = filename
 }
 

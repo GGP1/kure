@@ -31,7 +31,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 func runEdit() cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		path := config.FileUsed()
+		path := config.Filename()
 
 		f, err := os.OpenFile(path, os.O_RDWR, 0600)
 		if err != nil {
