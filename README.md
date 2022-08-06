@@ -3,18 +3,18 @@
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/GGP1/kure)](https://pkg.go.dev/github.com/GGP1/kure)
 [![Go Report Card](https://goreportcard.com/badge/github.com/GGP1/kure)](https://goreportcard.com/report/github.com/GGP1/kure)
 
-Kure is a free and open-source password manager for the command-line that aims to offer the most secure and private way of operating with sensitive information.
+Kure is a password manager for the command-line that aims to offer a secure (and private) way of operating with sensitive information by reducing the attack surface to its minimum expression.
 
 ![Overview](https://user-images.githubusercontent.com/51374959/160211818-b30efbfe-1f1e-44f6-9264-d6faa2f9c0ab.gif)
 
 ## Features 
 
-- **Cross-Platform:** Linux, macOS, BSD and Windows supported.
+- **Cross-Platform:** Linux, macOS, BSD, Windows and mobile supported.
 - **Private:** Completely offline, no connection is established with 3rd parties.
 - **Secure:** Each record is encrypted using **AES-GCM 256-bit** and a **unique** password. The user's master password is **never** stored on disk, it's encrypted and temporarily kept **in-memory** inside a protected buffer, decrypted when it's required and destroyed immediately after it. The key derivation function used is Argon2 with the **id** version.
-- **Sessions:** Run multiple commands by entering the master password only once. They support setting a timeout and running scripts.
-- **Easy-to-use:** Extremely intuitive, does not require advanced technical skills.
+- **Sessions:** Run multiple commands by entering the master password only once. They support setting a timeout and running custom scripts.
 - **Portable:** Both Kure and its database compile to binary files and they can be easily carried around in an external device.
+- **Easy-to-use:** Intuitive, does not require advanced technical skills.
 
 ## Installation
 
@@ -63,7 +63,17 @@ docker run -it --security-opt=no-new-privileges --cap-drop=all gastonpalomeque/k
 </details>
 
 <details>
-	<summary>Compìle from source</summary>
+	<summary>Mobile phones terminal emulators</summary>
+
+```bash
+curl -LO https://github.com/GGP1/kure/releases/download/{version}/{ARM64 file}
+tar -xvf {ARM64 file}
+mv kure $PATH
+```
+</details>
+
+<details>
+	<summary>Compile from source</summary>
 
 ```bash
 git clone https://github.com/GGP1/kure && cd kure && make install
