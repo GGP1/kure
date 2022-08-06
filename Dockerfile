@@ -10,11 +10,11 @@ RUN apk add --update --no-cache git
 
 COPY . .
 
-RUN go install -ldflags="-s -w" .
+RUN CGO_ENABLED=0 go install -ldflags="-s -w" .
 
 # ---------------------------------------------
 
-FROM alpine:3.15
+FROM alpine:3.16
 
 RUN apk add --update --no-cache vim
 
