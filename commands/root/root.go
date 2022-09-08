@@ -97,5 +97,5 @@ func printVersion() {
 		}
 	}
 
-	fmt.Printf("%s (%s) - [%s]\n", bi.Main.Version, lastCommitHash, bi.GoVersion)
+	fmt.Printf("[%s] %s %s\n", bi.GoVersion, bi.Main.Version, lastCommitHash)
 }
