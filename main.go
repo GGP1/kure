@@ -15,18 +15,13 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var (
-	version = "development"
-	commit  = ""
-)
-
 func main() {
 	if err := config.Init(); err != nil {
 		log.Fatalf("couldn't initialize the configuration: %v", err)
 	}
 
 	dbPath := filepath.Clean(config.GetString("database.path"))
-	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: 200 * time.Millisecond})
+	db, err := bolt.Open(dbPath, 0o600, &bolt.Options{Timeout: 200 * time.Millisecond})
 	if err != nil {
 		log.Fatalf("couldn't open the database: %v", err)
 	}
