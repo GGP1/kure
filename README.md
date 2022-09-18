@@ -11,7 +11,7 @@ Kure is a password manager for the command-line that aims to offer a secure (and
 
 - **Cross-Platform:** Linux, macOS, BSD, Windows and mobile supported.
 - **Private:** Completely offline, no connection is established with 3rd parties.
-- **Secure:** Each record is encrypted using **AES-GCM 256-bit** and a **unique** password. The user's master password is **never** stored on disk, it's encrypted and temporarily kept **in-memory** inside a protected buffer, decrypted when it's required and destroyed immediately after it. The key derivation function used is Argon2 with the **id** version.
+- **Secure:** Each record is encrypted using **AES-GCM 256-bit** and a **unique** password derived using Argon2 (**id** version). The user's master password is **never** stored on disk, it's encrypted and temporarily held **in-memory** inside a protected buffer, which is destroyed immediately after use.
 - **Sessions:** Run multiple commands by entering the master password only once. They support setting a timeout and running custom scripts.
 - **Portable:** Both Kure and its database compile to binary files and they can be easily carried around in an external device.
 - **Easy-to-use:** Intuitive, does not require advanced technical skills.
@@ -88,7 +88,7 @@ Further information and examples under [docs/commands](/docs/commands).
 
 ## Configuration
 
-Out-of-the-box Kure needs no configuration. It creates the configuration file with default values and the database at:
+Out-of-the-box Kure needs no configuration, it creates the configuration file with default values and the database at:
 
 - **Linux, BSD**: `$HOME/.kure`
 - **Darwin**: `$HOME/.kure` or `/.kure`
