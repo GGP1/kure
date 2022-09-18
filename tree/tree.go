@@ -7,92 +7,80 @@ import (
 	"strings"
 )
 
-// Node represents a system folder or file.
-type Node struct {
-	Name     string
-	Children []*Node
+// node represents a system folder or file.
+type node struct {
+	name     string
+	children []*node
+	top      bool
 }
 
 // Print prints the paths passed as a tree on the console.
 func Print(paths []string) {
-	root := Build(paths)
-
-	start := "│  "
-	for i, r := range root.Children {
-		if i == len(root.Children)-1 {
-			fmt.Println("└──", r.Name)
-			start = "   "
-		} else {
-			fmt.Println("├──", r.Name)
-		}
-
-		printChildren(r, "", start)
-	}
+	root := newTree(paths)
+	printTree(root, "")
 }
 
-// Build constructs the tree and returns the root node.
-func Build(paths []string) *Node {
-	root := &Node{}
-
+// newTree builds the tree and returns the root node.
+func newTree(paths []string) *node {
+	root := &node{}
 	for _, p := range paths {
-		build(root, strings.Split(p, "/"))
+		buildBranch(root, strings.Split(p, "/"))
 	}
-
 	return root
 }
 
-// build constructs the tree.
+// buildBranch adds a branch to the root or merges two branches at the deepest matching level.
 //
-// path will be something like [root, folder, subfolder, file]
-func build(root *Node, path []string) {
-	child := &Node{Name: path[0]}
+// path will be something like [root, folder, subfolder, file].
+func buildBranch(root *node, path []string) {
+	child := &node{name: path[0], top: true}
 
 	// len(path) will be never < 1 and if there is only
 	// one element it must be unique as we already verified
 	// it when the user added the record
 	if len(path) == 1 {
-		root.Children = append(root.Children, child)
+		root.children = append(root.children, child)
 		return
 	}
 
 	temp := child
 	// Add each child to its corresponding parent
 	for _, name := range path[1:] {
-		c := &Node{Name: name}
-		child.Children = append(child.Children, c)
+		c := &node{name: name}
+		child.children = append(child.children, c)
 		child = c
 	}
 	child = temp
 
-	for _, r := range root.Children {
+	for _, r := range root.children {
 		// If a node already exists, look for matches until the deepest level
-		if r.Name == child.Name {
-			if !foundMatch(r, child.Children) {
-				// If no match was found in a deeper level,
-				// perform the append in this one
-				r.Children = append(r.Children, child.Children...)
+		if r.name == child.name {
+			if !deeperMatch(r, child) {
+				// If no match was found at a deeper level,
+				// perform the append at this one
+				r.children = append(r.children, child.children...)
 			}
 			return
 		}
 	}
 
 	// child is a new node
-	root.Children = append(root.Children, child)
+	root.children = append(root.children, child)
 }
 
-// foundMatch checks if two nodes of the tree have the same name
+// deeperMatch checks if two nodes of the tree have the same name
 // to merge them once the last level has been checked.
 //
 // It returns a boolean to notify whether or not a match was found.
-func foundMatch(parent *Node, children []*Node) bool {
-	for _, p := range parent.Children {
-		for _, c := range children {
+func deeperMatch(parent, child *node) bool {
+	for _, a := range parent.children {
+		for _, b := range child.children {
 			// If there is a match repeat the process with their children
-			if p.Name == c.Name {
-				if !foundMatch(p, c.Children) {
-					// If no match was found in a deeper level,
-					// perform the append in this one
-					p.Children = append(p.Children, c.Children...)
+			if a.name == b.name {
+				if !deeperMatch(a, b) {
+					// If no match was found at a deeper level,
+					// perform the append at this one
+					a.children = append(a.children, b.children...)
 				}
 				return true
 			}
@@ -102,21 +90,31 @@ func foundMatch(parent *Node, children []*Node) bool {
 	return false
 }
 
-// printChildren uses recursion for printing every folder children and adds
-// indentation every time it prints the last element of a branch.
-func printChildren(root *Node, indent, start string) {
-	for i, r := range root.Children {
-		fmt.Print(start)
+func printTree(parent *node, indent string) {
+	for i, child := range parent.children {
+		symbol, add := getTokens(i, len(parent.children))
 
-		add := " │  "
-
-		if i == len(root.Children)-1 {
-			fmt.Println(indent, "└──", r.Name)
-			add = "    "
-		} else {
-			fmt.Println(indent, "├──", r.Name)
+		if child.top {
+			// Reset indentation for the top children
+			indent = ""
+		}
+		if len(child.children) > 0 {
+			child.name += "/"
 		}
 
-		printChildren(r, indent+add, start)
+		fmt.Println(indent, symbol, child.name)
+
+		if len(child.children) > 0 {
+			indent += add
+		}
+
+		printTree(child, indent)
 	}
+}
+
+func getTokens(i, childrenCount int) (symbol string, add string) {
+	if i == childrenCount-1 {
+		return "└──", "    "
+	}
+	return "├──", " │  "
 }

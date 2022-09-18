@@ -1,13 +1,11 @@
-package tree_test
+package tree
 
 import (
 	"strings"
 	"testing"
-
-	"github.com/GGP1/kure/tree"
 )
 
-func TestTreePrint(t *testing.T) {
+func TestPrint(t *testing.T) {
 	paths := []string{
 		"kure/atoll/password",
 		"kure/atoll/passphrase",
@@ -15,15 +13,15 @@ func TestTreePrint(t *testing.T) {
 		"unsafe/pointer",
 	}
 
-	tree.Print(paths)
+	Print(paths)
 	// Output:
-	// ├── kure
-	// │   └── atoll
+	// ├── kure/
+	// │   └── atoll/
 	// │       ├── password
 	// │       └── passphrase
-	// ├── sync
+	// ├── sync/
 	// │   └── atomic
-	// └── unsafe
+	// └── unsafe/
 	//     └── pointer
 }
 
@@ -35,7 +33,7 @@ func TestTreeStructure(t *testing.T) {
 		"The Lord of the Rings/The return of the king",
 	}
 
-	root := tree.Build(paths)
+	root := newTree(paths)
 	folders := make(map[string]struct{}, len(paths))
 
 	for _, p := range paths {
@@ -46,23 +44,56 @@ func TestTreeStructure(t *testing.T) {
 	}
 
 	expected := len(folders)
-	if len(root.Children) != expected {
-		t.Errorf("Expected %d branches, got %d", expected, len(root.Children))
+	if len(root.children) != expected {
+		t.Errorf("Expected %d branches, got %d", expected, len(root.children))
 	}
 
-	for i, r := range root.Children {
+	for i, r := range root.children {
 		name, _, _ := strings.Cut(paths[i], "/")
 
-		if r.Name != name {
-			t.Errorf("Expected branch name to be %q, got %q", name, r.Name)
+		if r.name != name {
+			t.Errorf("Expected branch name to be %q, got %q", name, r.name)
 		}
 
-		if i == len(root.Children)-1 {
-			if len(r.Children) == 0 {
-				t.Errorf("Expected %q branch to have a child named %q", r.Name, r.Children[0])
+		if i == len(root.children)-1 {
+			if len(r.children) == 0 {
+				t.Errorf("Expected %q branch to have a child named %q", r.name, r.children[0].name)
 			}
 		}
 	}
+}
+
+func TestPrintTree(t *testing.T) {
+	root := &node{
+		children: []*node{
+			{
+				name: "kure",
+				top:  true,
+				children: []*node{
+					{
+						name: "atoll",
+						children: []*node{
+							{name: "password"},
+							{name: "passphrase"},
+						},
+					},
+				},
+			},
+			{name: "sync", top: true, children: []*node{{name: "atomic"}}},
+			{name: "unsafe", top: true, children: []*node{{name: "pointer"}}},
+		},
+	}
+
+	printTree(root, "")
+	// Output:
+	// ├── kure/
+	// │   └── atoll/
+	// │       ├── password
+	// │       └── passphrase
+	// ├── sync/
+	// │   └── atomic
+	// └── unsafe/
+	//     └── pointer
 }
 
 func BenchmarkTree(b *testing.B) {
@@ -76,6 +107,6 @@ func BenchmarkTree(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		tree.Build(paths)
+		newTree(paths)
 	}
 }
