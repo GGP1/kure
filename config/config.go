@@ -60,7 +60,7 @@ func getConfigPath() (string, error) {
 }
 
 func createDefaultConfigFile(homeDir, configPath string) error {
-	if err := os.MkdirAll(homeDir, 0700); err != nil {
+	if err := os.MkdirAll(homeDir, 0o700); err != nil {
 		return errors.Wrap(err, "creating the directory")
 	}
 	SetDefaults(filepath.Join(homeDir, "kure.db"))
@@ -129,7 +129,7 @@ func Set(key string, value interface{}) {
 
 // SetDefaults populates the config map with the default values.
 func SetDefaults(dbPath string) {
-	var defaults = map[string]interface{}{
+	defaults := map[string]interface{}{
 		"clipboard.timeout": "0s",
 		"database.path":     dbPath,
 		"editor":            "vim",
