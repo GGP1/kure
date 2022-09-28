@@ -13,11 +13,13 @@ import (
 func TestParameters(t *testing.T) {
 	db := setContext(t)
 
-	expected := Parameters{
-		AuthKey:    []byte("test"),
-		Iterations: 1,
-		Memory:     1500000,
-		Threads:    4,
+	expected := Params{
+		AuthKey: []byte("test"),
+		Argon2: Argon2{
+			Iterations: 1,
+			Memory:     1500000,
+			Threads:    4,
+		},
 		UseKeyfile: true,
 	}
 
@@ -25,7 +27,7 @@ func TestParameters(t *testing.T) {
 		t.Fatalf("Registration failed: %v", err)
 	}
 
-	got, err := GetParameters(db)
+	got, err := GetParams(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,8 +45,8 @@ func TestEmptyParameters(t *testing.T) {
 	tx.DeleteBucket(authBucket)
 	tx.Commit()
 
-	expected := Parameters{}
-	got, err := GetParameters(db)
+	expected := Params{}
+	got, err := GetParams(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,17 +59,19 @@ func TestEmptyParameters(t *testing.T) {
 func TestSetParametersInvalidKeys(t *testing.T) {
 	db := setContext(t)
 
-	params := Parameters{
-		AuthKey:    []byte("invalid"),
-		Iterations: 1,
-		Memory:     1,
-		Threads:    1,
+	params := Params{
+		AuthKey: []byte("invalid"),
+		Argon2: Argon2{
+			Iterations: 1,
+			Memory:     1,
+			Threads:    1,
+		},
 		UseKeyfile: true,
 	}
 
 	cases := []struct {
-		desc string
 		key  *[]byte
+		desc string
 	}{
 		{
 			desc: "iterations",
@@ -100,7 +104,7 @@ func TestSetParametersInvalidKeys(t *testing.T) {
 				t.Fatalf("Failed opening transaction: %v", err)
 			}
 
-			if err := setParameters(tx, params); err == nil {
+			if err := storeParams(tx, params); err == nil {
 				t.Error("Expected an error and got nil")
 			}
 			tx.Commit()

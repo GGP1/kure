@@ -22,26 +22,31 @@ var (
 	thKey      = []byte("threads")
 )
 
-// Parameters contains all the information needed for logging in.
-type Parameters struct {
+// Params contains all the information needed for logging in.
+type Params struct {
 	AuthKey    []byte
-	Iterations uint32
-	Memory     uint32
-	Threads    uint32
+	Argon2     Argon2
 	UseKeyfile bool
 }
 
-// GetParameters returns the authentication parameters.
-func GetParameters(db *bolt.DB) (Parameters, error) {
+// Argon2 execution parameters.
+type Argon2 struct {
+	Iterations uint32
+	Memory     uint32
+	Threads    uint32
+}
+
+// GetParams returns the authentication parameters.
+func GetParams(db *bolt.DB) (Params, error) {
 	tx, err := db.Begin(false)
 	if err != nil {
-		return Parameters{}, err
+		return Params{}, err
 	}
 	defer tx.Rollback()
 
 	b := tx.Bucket(authBucket)
 	if b == nil {
-		return Parameters{}, nil
+		return Params{}, nil
 	}
 
 	params := make(map[string][]byte, 5)
@@ -49,24 +54,21 @@ func GetParameters(db *bolt.DB) (Parameters, error) {
 		params[string(k)] = v
 		return nil
 	})
+	_, useKeyfile := params[string(keyfileKey)]
 
-	// Key file will be used only if it isn't nil
-	useKeyfile := false
-	if _, ok := params[string(keyfileKey)]; ok {
-		useKeyfile = true
-	}
-
-	return Parameters{
-		AuthKey:    params[string(authKey)],
-		Iterations: binary.BigEndian.Uint32(params[string(iterKey)]),
-		Memory:     binary.BigEndian.Uint32(params[string(memKey)]),
-		Threads:    binary.BigEndian.Uint32(params[string(thKey)]),
+	return Params{
+		AuthKey: params[string(authKey)],
+		Argon2: Argon2{
+			Iterations: binary.BigEndian.Uint32(params[string(iterKey)]),
+			Memory:     binary.BigEndian.Uint32(params[string(memKey)]),
+			Threads:    binary.BigEndian.Uint32(params[string(thKey)]),
+		},
 		UseKeyfile: useKeyfile,
 	}, nil
 }
 
 // Register creates all the buckets, saves the authentication key and the argon2 parameters used.
-func Register(db *bolt.DB, params Parameters) error {
+func Register(db *bolt.DB, params Params) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		// Create all the buckets except auth, it will be created in setParameters()
 		buckets := [][]byte{dbutil.CardBucket, dbutil.EntryBucket, dbutil.FileBucket, dbutil.TOTPBucket}
@@ -76,26 +78,37 @@ func Register(db *bolt.DB, params Parameters) error {
 			}
 		}
 
-		return setParameters(tx, params)
+		return storeParams(tx, params)
 	})
 }
 
-// setParameters creates the auth bucket and sets parameters.
+// storeParams creates the auth bucket and sets the authentication parameters.
 //
 // The transaction shouldn't be closed as it's already handled by Register().
-func setParameters(tx *bolt.Tx, params Parameters) error {
+func storeParams(tx *bolt.Tx, params Params) error {
 	b, err := tx.CreateBucketIfNotExists(authBucket)
 	if err != nil {
 		return errors.Wrap(err, "creating auth bucket")
 	}
 
-	// Argon2
+	if err := storeArgon2Params(b, params); err != nil {
+		return err
+	}
+
+	if err := storeKeyfileFlag(b, params); err != nil {
+		return err
+	}
+
+	return storeAuthKey(b, params)
+}
+
+func storeArgon2Params(b *bolt.Bucket, params Params) error {
 	i := make([]byte, 4)
 	m := make([]byte, 4)
 	t := make([]byte, 4)
-	binary.BigEndian.PutUint32(i, params.Iterations)
-	binary.BigEndian.PutUint32(m, params.Memory)
-	binary.BigEndian.PutUint32(t, params.Threads)
+	binary.BigEndian.PutUint32(i, params.Argon2.Iterations)
+	binary.BigEndian.PutUint32(m, params.Argon2.Memory)
+	binary.BigEndian.PutUint32(t, params.Argon2.Threads)
 
 	if err := b.Put(iterKey, i); err != nil {
 		return errors.Wrap(err, "saving iterations")
@@ -109,19 +122,25 @@ func setParameters(tx *bolt.Tx, params Parameters) error {
 		return errors.Wrap(err, "saving threads")
 	}
 
-	// Keyfile
+	return nil
+}
+
+func storeKeyfileFlag(b *bolt.Bucket, params Params) error {
 	if params.UseKeyfile {
 		if err := b.Put(keyfileKey, []byte("1")); err != nil {
 			return errors.Wrap(err, "saving key file value")
 		}
-	} else {
-		// Does not fail if the key doesn't exist
-		if err := b.Delete(keyfileKey); err != nil {
-			return errors.Wrap(err, "deleting key file value")
-		}
+		return nil
 	}
 
-	// Auth key
+	// Does not fail if the key doesn't exist
+	if err := b.Delete(keyfileKey); err != nil {
+		return errors.Wrap(err, "deleting key file value")
+	}
+	return nil
+}
+
+func storeAuthKey(b *bolt.Bucket, params Params) error {
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
 		return errors.Wrap(err, "generating key")

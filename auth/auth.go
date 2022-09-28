@@ -22,8 +22,11 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// Key file path configuration key
-const keyfilePath string = "keyfile.path"
+const (
+	authKey string = "auth"
+	// Key file path configuration key
+	keyfilePath string = "keyfile.path"
+)
 
 // Login verifies that the human/machine that is trying to execute
 // a command is effectively the owner of the information.
@@ -32,11 +35,11 @@ const keyfilePath string = "keyfile.path"
 func Login(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		// If auth is not nil it means the user is already logged in (session)
-		if auth := config.Get("auth"); auth != nil {
+		if auth := config.Get(authKey); auth != nil {
 			return nil
 		}
 
-		params, err := authDB.GetParameters(db)
+		params, err := authDB.GetParams(db)
 		if err != nil {
 			return err
 		}
@@ -75,7 +78,7 @@ func Register(db *bolt.DB, r io.Reader) error {
 		return err
 	}
 
-	iterations, memory, threads, err := askArgon2Params(r)
+	argon2, err := askArgon2Params(r)
 	if err != nil {
 		return err
 	}
@@ -92,10 +95,12 @@ func Register(db *bolt.DB, r io.Reader) error {
 		}
 	}
 
-	params := authDB.Parameters{
-		Iterations: iterations,
-		Memory:     memory,
-		Threads:    threads,
+	params := authDB.Params{
+		Argon2: authDB.Argon2{
+			Iterations: argon2.Iterations,
+			Memory:     argon2.Memory,
+			Threads:    argon2.Threads,
+		},
 		UseKeyfile: useKeyfile,
 	}
 
@@ -103,29 +108,33 @@ func Register(db *bolt.DB, r io.Reader) error {
 	return authDB.Register(db, params)
 }
 
-func askArgon2Params(r io.Reader) (iterations, memory, threads uint32, err error) {
+func askArgon2Params(r io.Reader) (authDB.Argon2, error) {
 	fmt.Println("Set argon2 parameters, leave blank to use the default value")
 	fmt.Println("For more information visit https://github.com/GGP1/kure/wiki/Authentication")
 
 	reader := bufio.NewReader(r)
 
-	iterations, err = scanParameter(reader, "Iterations", 1)
+	iterations, err := scanParameter(reader, "Iterations", 1)
 	if err != nil {
-		return 0, 0, 0, err
+		return authDB.Argon2{}, err
 	}
 
 	// memory is measured in kibibytes, 1 kibibyte = 1024 bytes. 1048576 kibibytes -> 1GB
-	memory, err = scanParameter(reader, "Memory", 1<<20)
+	memory, err := scanParameter(reader, "Memory", 1<<20)
 	if err != nil {
-		return 0, 0, 0, err
+		return authDB.Argon2{}, err
 	}
 
-	threads, err = scanParameter(reader, "Threads", uint32(runtime.NumCPU()))
+	threads, err := scanParameter(reader, "Threads", uint32(runtime.NumCPU()))
 	if err != nil {
-		return 0, 0, 0, err
+		return authDB.Argon2{}, err
 	}
 
-	return iterations, memory, threads, nil
+	return authDB.Argon2{
+		Iterations: iterations,
+		Memory:     memory,
+		Threads:    threads,
+	}, nil
 }
 
 // askKeyfile asks the user if he wants to use a key file or not.
@@ -191,13 +200,12 @@ func scanParameter(r *bufio.Reader, field string, defaultValue uint32) (uint32, 
 }
 
 // Auth values must be set to the configuration before any encryption/decryption occurs.
-// Probable not the best way of handling the parameters but it's flexible.
-func setAuthToConfig(password *memguard.Enclave, params auth.Parameters) {
+func setAuthToConfig(password *memguard.Enclave, params auth.Params) {
 	auth := map[string]interface{}{
 		"password":   password,
-		"iterations": params.Iterations,
-		"memory":     params.Memory,
-		"threads":    params.Threads,
+		"iterations": params.Argon2.Iterations,
+		"memory":     params.Argon2.Memory,
+		"threads":    params.Argon2.Threads,
 	}
-	config.Set("auth", auth)
+	config.Set(authKey, auth)
 }

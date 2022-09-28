@@ -33,13 +33,13 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 func runArgon2(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		params, err := authDB.GetParameters(db)
+		params, err := authDB.GetParams(db)
 		if err != nil {
 			return err
 		}
 
 		fmt.Printf("Iterations: %d\nMemory: %d\nThreads: %d\n",
-			params.Iterations, params.Memory, params.Threads)
+			params.Argon2.Iterations, params.Argon2.Memory, params.Argon2.Threads)
 		return nil
 	}
 }

@@ -61,21 +61,21 @@ func TestAskArgon2Params(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
 
-			iterations, memory, threads, err := askArgon2Params(buf)
+			argon2, err := askArgon2Params(buf)
 			if err != nil {
 				t.Fatalf("Failed taking argon2 parameters: %v", err)
 			}
 
-			if iterations != tc.expectedIters {
-				t.Errorf("Expected %d, got %d", tc.expectedIters, iterations)
+			if argon2.Iterations != tc.expectedIters {
+				t.Errorf("Expected %d, got %d", tc.expectedIters, argon2.Iterations)
 			}
 
-			if memory != tc.expectedMem {
-				t.Errorf("Expected %d, got %d", tc.expectedMem, memory)
+			if argon2.Memory != tc.expectedMem {
+				t.Errorf("Expected %d, got %d", tc.expectedMem, argon2.Memory)
 			}
 
-			if threads != tc.expectedThreads {
-				t.Errorf("Expected %d, got %d", tc.expectedThreads, threads)
+			if argon2.Threads != tc.expectedThreads {
+				t.Errorf("Expected %d, got %d", tc.expectedThreads, argon2.Threads)
 			}
 		})
 	}
@@ -104,7 +104,7 @@ func TestArgon2ParamsErrors(t *testing.T) {
 		t.Run("Invalid"+tc.desc, func(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
 
-			if _, _, _, err := askArgon2Params(buf); err == nil {
+			if _, err := askArgon2Params(buf); err == nil {
 				t.Error("Expected an error and got nil")
 			}
 		})
@@ -269,10 +269,12 @@ func TestSetAuthToConfig(t *testing.T) {
 		expTh   uint32 = 4
 	)
 
-	authParams := auth.Parameters{
-		Memory:     expMem,
-		Iterations: expIter,
-		Threads:    expTh,
+	authParams := auth.Params{
+		Argon2: auth.Argon2{
+			Iterations: expIter,
+			Memory:     expMem,
+			Threads:    expTh,
+		},
 	}
 
 	setAuthToConfig(expPassword, authParams)
