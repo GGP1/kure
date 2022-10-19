@@ -32,7 +32,7 @@ func TestSessionCommand(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cont := sessionCommand(tc.args, &timeout{})
+			cont := runSessionCommand(tc.args, &timeout{})
 			if cont != tc.cont {
 				t.Errorf("Expected %v, got %v", tc.cont, cont)
 			}
@@ -44,12 +44,12 @@ func TestCommands(t *testing.T) {
 	dir, _ := os.Getwd()
 
 	cases := []struct {
-		desc        string
-		args        []string
 		timeout     *timeout
+		desc        string
 		input       string
 		expectedOut string
 		expectedErr string
+		args        []string
 	}{
 		{
 			desc: "Empty",
@@ -83,7 +83,7 @@ func TestCommands(t *testing.T) {
 		{
 			desc:        "No timeout",
 			args:        []string{"timeout"},
-			timeout:     &timeout{t: 0},
+			timeout:     &timeout{duration: 0},
 			expectedOut: "The session has no timeout.\n",
 		},
 		{
