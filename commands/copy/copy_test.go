@@ -14,6 +14,10 @@ import (
 )
 
 func TestCopy(t *testing.T) {
+	if clipboard.Unsupported {
+		t.Skip("No clipboard utilities available")
+	}
+
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 	e := createEntry(t, db)
 
