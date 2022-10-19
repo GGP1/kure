@@ -17,6 +17,3 @@ TODO.txt
 
 # IntelliJ Project
 .idea
-
-# Test database
-db/testdata/database
