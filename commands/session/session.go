@@ -6,16 +6,13 @@ import (
 	"io"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
-	"github.com/GGP1/kure/sig"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -32,12 +29,6 @@ kure session -t 1h`
 type sessionOptions struct {
 	prefix  string
 	timeout time.Duration
-}
-
-type timeout struct {
-	start time.Time
-	timer *time.Timer
-	t     time.Duration
 }
 
 // NewCmd returns a new command.
@@ -84,14 +75,14 @@ func runSession(r io.Reader, opts *sessionOptions) cmdutil.RunEFunc {
 		}
 
 		timeout := &timeout{
-			t:     opts.timeout,
-			start: time.Now(),
-			timer: time.NewTimer(opts.timeout),
+			duration: opts.timeout,
+			start:    time.Now(),
+			timer:    time.NewTimer(opts.timeout),
 		}
 
 		go startSession(cmd, r, opts.prefix, timeout)
 
-		if timeout.t == 0 {
+		if timeout.duration == 0 {
 			if !timeout.timer.Stop() {
 				<-timeout.timer.C
 			}
@@ -110,50 +101,24 @@ func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeo
 
 	for {
 		// Force a garbage collection so the memory used by argon2 isn't reserved
-		// for us by the system while sleeping
+		// for us by the system while idle
 		runtime.GC()
-		fmt.Printf("%s ", prefix)
 
-		text, _, err := reader.ReadLine()
+		fmt.Printf("%s ", prefix)
+		commands, err := scanInput(reader, timeout, scripts)
 		if err != nil {
-			if err == io.EOF {
-				sig.Signal.Kill()
-			}
 			fmt.Fprintln(os.Stderr, "error:", err)
 			continue
 		}
 
-		textStr := string(text)
-		args := strings.Split(textStr, " ")
-		if strings.Contains(textStr, quote) {
-			args = parseDoubleQuotes(args)
-		}
-
-		script, ok := scripts[args[0]]
-		if ok {
-			script = fillScript(args[1:], script)
-			args = strings.Split(script, " ")
-		}
-
-		if err := execute(root, args, timeout); err != nil {
+		if err := execute(root, commands, timeout); err != nil {
 			fmt.Fprintln(os.Stderr, "error:", err)
 		}
 	}
 }
 
-// cleanup resets signal cleanups and sets all flags as unchanged to keep using default values.
-//
-// It also sets the help flag internal variable to false in case it's used.
-func cleanup(cmd *cobra.Command) {
-	sig.Signal.ResetCleanups()
-	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
-	cmd.Flags().Set("help", "false")
-}
-
-func execute(root *cobra.Command, args []string, timeout *timeout) error {
-	cmds := parseCmds(args)
-
-	for _, args := range cmds {
+func execute(root *cobra.Command, commands [][]string, timeout *timeout) error {
+	for _, args := range commands {
 		if len(args) == 0 {
 			continue
 		}
@@ -161,8 +126,7 @@ func execute(root *cobra.Command, args []string, timeout *timeout) error {
 			args = args[1:]
 		}
 
-		cont := sessionCommand(args, timeout)
-		if cont {
+		if ran := runSessionCommand(args, timeout); ran {
 			continue
 		}
 
@@ -183,84 +147,4 @@ func execute(root *cobra.Command, args []string, timeout *timeout) error {
 		cleanup(subCmd)
 	}
 	return nil
-}
-
-// fillScript replaces any argument placeholder in the script with the user input.
-func fillScript(args []string, script string) string {
-	if !strings.ContainsRune(script, '$') {
-		return script
-	}
-
-	n := 1 // Start from $1 like bash
-	for _, arg := range args {
-		placeholder := fmt.Sprintf("$%d", n)
-		script = strings.ReplaceAll(script, placeholder, arg)
-		n++
-	}
-
-	return script
-}
-
-// Given
-// 		"ls && copy github && 2fa"
-// return
-// 		[{"ls"}, {"copy", "github"}, {"2fa"}].
-func parseCmds(args []string) [][]string {
-	// The underlying array will grow only if the script has multiple "&&" in a row
-	ampersands := make([]int, 0, len(args)/2)
-	for i, a := range args {
-		if a == "&&" {
-			// Store the indices of the ampersands
-			ampersands = append(ampersands, i)
-		}
-	}
-
-	// Pass on the args received if no ampersand was found
-	if len(ampersands) == 0 {
-		return [][]string{args}
-	}
-
-	group := make([][]string, 0, len(ampersands)+1)
-	lastIdx := 0
-	// Append len(ampersands) commands to the group
-	for _, idx := range ampersands {
-		group = append(group, args[lastIdx:idx])
-		lastIdx = idx + 1 // Add one to skip the ampersand
-	}
-
-	// Append the last command
-	group = append(group, args[lastIdx:])
-
-	return group
-}
-
-// parseDoubleQuotes joins two arguments enclosed by doublequotes.
-//
-// Given
-// 		[]string{"file", "touch", "\"file", "with", "spaces\""}
-// return
-// 		[]string{"file", "touch", "file with spaces"}
-func parseDoubleQuotes(args []string) []string {
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		if strings.HasPrefix(arg, quote) {
-			if strings.HasSuffix(arg, quote) {
-				args[i] = strings.Trim(arg, quote)
-				continue
-			}
-
-			for j := i + 1; j < len(args); j++ {
-				if strings.HasSuffix(args[j], quote) {
-					// Join enclosed words, store the sequence where the first one was
-					// and remove the others from the slice
-					words := strings.Join(args[i:j+1], " ")
-					args[i] = strings.Trim(words, quote)
-					args = append(args[:i+1], args[j+1:]...)
-					i = j - 1
-					break
-				}
-			}
-		}
-	}
-	return args
 }
