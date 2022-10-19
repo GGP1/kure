@@ -1,10 +1,10 @@
 package copy
 
 import (
+	"strconv"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
-	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
 
@@ -17,45 +17,57 @@ func TestCopy(t *testing.T) {
 	}
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := card.Create(db, &pb.Card{Name: "test"}); err != nil {
+	c := &pb.Card{
+		Name:         "test",
+		Number:       "1826352187",
+		SecurityCode: "213",
+	}
+	if err := card.Create(db, c); err != nil {
 		t.Fatalf("Failed creating the card: %v", err)
 	}
 
 	cases := []struct {
 		desc    string
-		name    string
-		cvc     string
+		value   string
 		timeout string
+		copyCVC bool
 	}{
 		{
-			desc: "Copy number",
-			name: "test",
-			cvc:  "false",
+			desc:  "Copy number",
+			value: c.Number,
 		},
 		{
-			desc: "Copy CVC",
-			name: "test",
-			cvc:  "true",
+			desc:    "Copy CVC",
+			value:   c.SecurityCode,
+			copyCVC: true,
 		},
 		{
 			desc:    "Copy w/Timeout",
-			name:    "test",
+			value:   "",
 			timeout: "1ns",
 		},
 	}
 
 	cmd := NewCmd(db)
 	f := cmd.Flags()
-	config.Set("clipboard.timeout", "1ns") // Set default
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cmd.SetArgs([]string{tc.name})
+			cmd.SetArgs([]string{c.Name})
 			f.Set("timeout", tc.timeout)
-			f.Set("cvc", tc.cvc)
+			f.Set("cvc", strconv.FormatBool(tc.copyCVC))
 
 			if err := cmd.Execute(); err != nil {
 				t.Error(err)
+			}
+
+			got, err := clipboard.ReadAll()
+			if err != nil {
+				t.Fatalf("Failed reading from clipboard: %v", err)
+			}
+
+			if got != tc.value {
+				t.Errorf("Expected %s, got %s", tc.value, got)
 			}
 		})
 	}
@@ -89,7 +101,6 @@ func TestCopyErrors(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestPostRun(t *testing.T) {
