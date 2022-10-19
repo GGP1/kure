@@ -12,6 +12,7 @@ import (
 	"github.com/GGP1/kure/commands/add/phrase"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/GGP1/atoll"
 
@@ -137,9 +138,9 @@ func entryInput(r io.Reader, name string, custom bool) (*pb.Entry, error) {
 	var password string
 	reader := bufio.NewReader(r)
 
-	username := cmdutil.Scanln(reader, "Username")
+	username := terminal.Scanln(reader, "Username")
 	if custom {
-		enclave, err := auth.AskPassword("Password", true)
+		enclave, err := terminal.ScanPassword("Password", true)
 		if err != nil {
 			return nil, err
 		}
@@ -151,9 +152,9 @@ func entryInput(r io.Reader, name string, custom bool) (*pb.Entry, error) {
 
 		password = pwd.String()
 	}
-	url := cmdutil.Scanln(reader, "URL")
-	expires := cmdutil.Scanln(reader, "Expires [dd/mm/yy]")
-	notes := cmdutil.Scanlns(reader, "Notes")
+	url := terminal.Scanln(reader, "URL")
+	expires := terminal.Scanln(reader, "Expires [dd/mm/yy]")
+	notes := terminal.Scanlns(reader, "Notes")
 
 	exp, err := cmdutil.FmtExpires(expires)
 	if err != nil {

@@ -15,6 +15,7 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
 	"github.com/GGP1/kure/sig"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -151,7 +152,7 @@ func useStdin(db *bolt.DB, r io.Reader, oldEntry *pb.Entry) error {
 	reader := bufio.NewReader(r)
 
 	scanln := func(field, value string) string {
-		input := cmdutil.Scanln(reader, fmt.Sprintf("%s [%s]", field, value))
+		input := terminal.Scanln(reader, fmt.Sprintf("%s [%s]", field, value))
 		if input == "-" {
 			return ""
 		} else if input != "" {
@@ -164,9 +165,9 @@ func useStdin(db *bolt.DB, r io.Reader, oldEntry *pb.Entry) error {
 	newEntry.Name = scanln("Name", oldEntry.Name)
 	newEntry.Username = scanln("Username", oldEntry.Username)
 
-	enclave, err := auth.AskPassword("Password", true)
+	enclave, err := terminal.ScanPassword("Password", true)
 	if err != nil {
-		if err == auth.ErrInvalidPassword {
+		if err == terminal.ErrInvalidPassword {
 			// Assume the user typed an empty string to not modify the password
 			newEntry.Password = oldEntry.Password
 		} else {
@@ -184,7 +185,7 @@ func useStdin(db *bolt.DB, r io.Reader, oldEntry *pb.Entry) error {
 	newEntry.URL = scanln("URL", oldEntry.URL)
 	newEntry.Expires = scanln("Expires", oldEntry.Expires)
 
-	notes := cmdutil.Scanlns(reader, fmt.Sprintf("Notes [%s]", oldEntry.Notes))
+	notes := terminal.Scanlns(reader, fmt.Sprintf("Notes [%s]", oldEntry.Notes))
 	if notes == "" {
 		notes = oldEntry.Notes
 	} else if notes == "-" {

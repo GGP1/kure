@@ -10,6 +10,7 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
@@ -57,11 +58,11 @@ func input(db *bolt.DB, name string, r io.Reader) (*pb.Card, error) {
 	reader := bufio.NewReader(r)
 	c := &pb.Card{
 		Name:         name,
-		Type:         cmdutil.Scanln(reader, "Type"),
-		Number:       cmdutil.Scanln(reader, "Number"),
-		SecurityCode: cmdutil.Scanln(reader, "Security code"),
-		ExpireDate:   cmdutil.Scanln(reader, "Expire date"),
-		Notes:        cmdutil.Scanlns(reader, "Notes"),
+		Type:         terminal.Scanln(reader, "Type"),
+		Number:       terminal.Scanln(reader, "Number"),
+		SecurityCode: terminal.Scanln(reader, "Security code"),
+		ExpireDate:   terminal.Scanln(reader, "Expire date"),
+		Notes:        terminal.Scanlns(reader, "Notes"),
 	}
 
 	return c, nil

@@ -19,6 +19,7 @@ import (
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
+	"github.com/GGP1/kure/terminal"
 	"github.com/GGP1/kure/tree"
 
 	"github.com/spf13/cobra"
@@ -136,7 +137,7 @@ func printKeyInfo(t *pb.TOTP) error {
 	// https://github.com/google/google-authenticator/wiki/Key-Uri-Format
 	URL := fmt.Sprintf("otpauth://totp/%s?secret=%s&digits=%d", strings.Title(t.Name), t.Raw, t.Digits)
 
-	if err := cmdutil.DisplayQRCode(URL); err != nil {
+	if err := terminal.DisplayQRCode(URL); err != nil {
 		return err
 	}
 	mp := orderedmap.New()

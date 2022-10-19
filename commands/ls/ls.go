@@ -11,6 +11,7 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
+	"github.com/GGP1/kure/terminal"
 	"github.com/GGP1/kure/tree"
 
 	"github.com/pkg/errors"
@@ -114,7 +115,7 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 		}
 
 		if opts.qr {
-			if err := cmdutil.DisplayQRCode(e.Password); err != nil {
+			if err := terminal.DisplayQRCode(e.Password); err != nil {
 				return err
 			}
 		}

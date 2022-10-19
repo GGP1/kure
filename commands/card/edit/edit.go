@@ -14,6 +14,7 @@ import (
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
 	"github.com/GGP1/kure/sig"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -136,7 +137,7 @@ func useStdin(db *bolt.DB, r io.Reader, oldCard *pb.Card) error {
 	reader := bufio.NewReader(r)
 
 	scanln := func(field, value string) string {
-		input := cmdutil.Scanln(reader, fmt.Sprintf("%s [%s]", field, value))
+		input := terminal.Scanln(reader, fmt.Sprintf("%s [%s]", field, value))
 		if input == "-" {
 			return ""
 		} else if input != "" {
@@ -153,7 +154,7 @@ func useStdin(db *bolt.DB, r io.Reader, oldCard *pb.Card) error {
 		ExpireDate:   scanln("Expire date", oldCard.ExpireDate),
 	}
 
-	notes := cmdutil.Scanlns(reader, fmt.Sprintf("Notes [%s]", oldCard.Notes))
+	notes := terminal.Scanlns(reader, fmt.Sprintf("Notes [%s]", oldCard.Notes))
 	if notes == "" {
 		notes = oldCard.Notes
 	} else if notes == "-" {
