@@ -15,6 +15,7 @@ import (
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/db/auth"
 	authDB "github.com/GGP1/kure/db/auth"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
@@ -48,7 +49,7 @@ func Login(db *bolt.DB) cmdutil.RunEFunc {
 			return Register(db, os.Stdin)
 		}
 
-		password, err := AskPassword("Enter master password", false)
+		password, err := terminal.ScanPassword("Enter master password", false)
 		if err != nil {
 			return err
 		}
@@ -73,7 +74,7 @@ func Login(db *bolt.DB) cmdutil.RunEFunc {
 
 // Register registers the user when there aren't any records yet.
 func Register(db *bolt.DB, r io.Reader) error {
-	password, err := AskPassword("New master password", true)
+	password, err := terminal.ScanPassword("New master password", true)
 	if err != nil {
 		return err
 	}
@@ -139,12 +140,12 @@ func askArgon2Params(r io.Reader) (authDB.Argon2, error) {
 
 // askKeyfile asks the user if he wants to use a key file or not.
 func askKeyfile(r io.Reader) (bool, error) {
-	if !cmdutil.Confirm(r, "Would you like to use a key file?") {
+	if !terminal.Confirm(r, "Would you like to use a key file?") {
 		return false, nil
 	}
 
 	if config.GetString(keyfilePath) != "" {
-		if !cmdutil.Confirm(r, "Would you like to use the path specified in the configuration file?") {
+		if !terminal.Confirm(r, "Would you like to use the path specified in the configuration file?") {
 			config.Set(keyfilePath, "")
 		}
 	}
@@ -155,7 +156,7 @@ func askKeyfile(r io.Reader) (bool, error) {
 func combineKeys(r io.Reader, password *memguard.Enclave) (*memguard.Enclave, error) {
 	path := config.GetString(keyfilePath)
 	if path == "" {
-		path = cmdutil.Scanln(bufio.NewReader(r), "Enter key file path")
+		path = terminal.Scanln(bufio.NewReader(r), "Enter key file path")
 		path = strings.Trim(path, "\"")
 		if path == "" || path == "." {
 			return nil, errors.New("invalid key file path")
@@ -186,7 +187,7 @@ func combineKeys(r io.Reader, password *memguard.Enclave) (*memguard.Enclave, er
 }
 
 func scanParameter(r *bufio.Reader, field string, defaultValue uint32) (uint32, error) {
-	valueStr := cmdutil.Scanln(r, " "+field)
+	valueStr := terminal.Scanln(r, " "+field)
 	if valueStr == "" {
 		return defaultValue, nil
 	}

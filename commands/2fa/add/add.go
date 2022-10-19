@@ -12,6 +12,7 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/pb"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -85,7 +86,7 @@ func addWithKey(db *bolt.DB, r io.Reader, name string, digits int32) error {
 		return errors.Errorf("invalid digits number [%d], it must be either 6, 7 or 8", digits)
 	}
 
-	key := cmdutil.Scanln(bufio.NewReader(r), "Key")
+	key := terminal.Scanln(bufio.NewReader(r), "Key")
 	// Adjust key
 	key = strings.ReplaceAll(key, " ", "")
 	key += strings.Repeat("=", -len(key)&7)
@@ -100,7 +101,7 @@ func addWithKey(db *bolt.DB, r io.Reader, name string, digits int32) error {
 
 // addWithURL creates a new TOTP using the values passed in the url.
 func addWithURL(db *bolt.DB, r io.Reader) error {
-	uri := cmdutil.Scanln(bufio.NewReader(r), "URL")
+	uri := terminal.Scanln(bufio.NewReader(r), "URL")
 	URL, err := url.Parse(uri)
 	if err != nil {
 		return errors.Wrap(err, "parsing url")

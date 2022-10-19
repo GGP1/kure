@@ -14,6 +14,7 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -206,7 +207,7 @@ func addNote(db *bolt.DB, r io.Reader, name string) error {
 		return err
 	}
 
-	text := cmdutil.Scanlns(bufio.NewReader(r), "Text")
+	text := terminal.Scanlns(bufio.NewReader(r), "Text")
 
 	f := &pb.File{
 		Name:      name,

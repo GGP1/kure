@@ -8,6 +8,7 @@ import (
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/totp"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
@@ -35,7 +36,7 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 		name := strings.Join(args, " ")
 		name = cmdutil.NormalizeName(name)
 
-		if !cmdutil.Confirm(r, "Are you sure you want to proceed?") {
+		if !terminal.Confirm(r, "Are you sure you want to proceed?") {
 			return nil
 		}
 

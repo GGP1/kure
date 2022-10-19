@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/GGP1/atoll"
 
@@ -131,7 +132,7 @@ func runPhrase(opts *phraseOptions) cmdutil.RunEFunc {
 		defer phraseBuf.Destroy()
 
 		if opts.qr {
-			if err := cmdutil.DisplayQRCode(phraseBuf.String()); err != nil {
+			if err := terminal.DisplayQRCode(phraseBuf.String()); err != nil {
 				return err
 			}
 		}

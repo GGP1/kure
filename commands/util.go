@@ -1,11 +1,8 @@
 package cmdutil
 
 import (
-	"bufio"
-	"bytes"
 	"crypto/rand"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,11 +17,11 @@ import (
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/sig"
-
+	"github.com/GGP1/kure/terminal"
 	"github.com/atotto/clipboard"
+
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
-	"github.com/skip2/go-qrcode"
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
@@ -177,49 +174,6 @@ func BuildBox(name string, mp *orderedmap.Map) string {
 	return sb.String()
 }
 
-// Confirm requests the user for a yes/no response.
-func Confirm(r io.Reader, message string) bool {
-	fmt.Print(message, " [y/N] ")
-
-	for {
-		var res string
-		// Scanln returns an error when the input is an empty string,
-		// we do accept it here
-		if _, err := fmt.Fscanln(r, &res); err != nil && res != "" {
-			if err != io.EOF {
-				fmt.Fprintln(os.Stderr, "error:", err)
-			}
-			sig.Signal.Kill()
-		}
-
-		switch res {
-		case "Yes", "yes", "Y", "y":
-			return true
-
-		case "No", "no", "N", "n":
-			return false
-
-		default:
-			fmt.Print("Invalid response, retry. [y/N] ")
-		}
-	}
-}
-
-// DisplayQRCode creates a qr code with the password provided and writes it to the terminal.
-func DisplayQRCode(secret string) error {
-	if len([]rune(secret)) > 1273 {
-		return errors.New("secret too long to encode to QR code, maximum is 1273")
-	}
-
-	qr, err := qrcode.New(secret, qrcode.Highest)
-	if err != nil {
-		return errors.Wrap(err, "creating QR code")
-	}
-
-	fmt.Println(qr.ToSmallString(false))
-	return nil
-}
-
 // Erase overwrites the file content with random bytes and then deletes it.
 func Erase(filename string) error {
 	f, err := os.Stat(filename)
@@ -233,7 +187,7 @@ func Erase(filename string) error {
 	}
 
 	// WriteFile truncates the file and overwrites it
-	if err := os.WriteFile(filename, buf, 0600); err != nil {
+	if err := os.WriteFile(filename, buf, 0o600); err != nil {
 		return errors.Wrap(err, "overwriting file")
 	}
 
@@ -373,40 +327,6 @@ func NormalizeName(name string, allowDir ...bool) string {
 	return strings.ToLower(strings.TrimSpace(name))
 }
 
-// Scanln scans a single line and returns the input.
-func Scanln(r *bufio.Reader, field string) string {
-	fmt.Printf("%s: ", field)
-
-	text, _, err := r.ReadLine()
-	if err != nil {
-		if err != io.EOF {
-			fmt.Fprintln(os.Stderr, "error:", err)
-		}
-		sig.Signal.Kill()
-	}
-	text = bytes.ReplaceAll(text, []byte("\t"), []byte(""))
-
-	return strings.TrimSpace(string(text))
-}
-
-// Scanlns scans multiple lines and returns the input.
-func Scanlns(r *bufio.Reader, field string) string {
-	fmt.Print(field, " (type < to finish): ")
-
-	text, err := r.ReadString('<')
-	if err != nil {
-		if err != io.EOF {
-			fmt.Fprintln(os.Stderr, "error:", err)
-		}
-		sig.Signal.Kill()
-	}
-
-	text = strings.TrimSuffix(text, "<")
-	text = strings.ReplaceAll(text, "\r", "")
-	text = strings.ReplaceAll(text, "\t", "")
-	return strings.TrimSpace(text)
-}
-
 // SelectEditor returns the editor to use, if none is found it returns vim.
 func SelectEditor() string {
 	if def := config.GetString("editor"); def != "" {
@@ -426,7 +346,7 @@ func SelectEditor() string {
 // all its subtests are completed.
 func SetContext(t testing.TB, path string) *bolt.DB {
 	t.Helper()
-	db, err := bolt.Open(path, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		t.Fatalf("Failed connecting to the database: %v", err)
 	}
@@ -492,22 +412,30 @@ func WatchFile(filename string, done chan struct{}, errCh chan error) {
 // WriteClipboard writes the content to the clipboard and deletes it after
 // "t" if "t" is higher than 0 or if there is a default timeout set in the configuration.
 // Otherwise it does nothing.
-func WriteClipboard(cmd *cobra.Command, t time.Duration, field, content string) error {
+func WriteClipboard(cmd *cobra.Command, d time.Duration, field, content string) error {
 	if err := clipboard.WriteAll(content); err != nil {
 		return errors.Wrap(err, "writing to clipboard")
 	}
-	fmt.Println(field, "copied to clipboard")
 	memguard.WipeBytes([]byte(content))
 
 	// Use the config value if it's specified and the timeout flag wasn't used
 	configKey := "clipboard.timeout"
 	if config.IsSet(configKey) && !cmd.Flags().Changed("timeout") {
-		t = config.GetDuration(configKey)
+		d = config.GetDuration(configKey)
 	}
 
-	if t > 0 {
+	if d > 0 {
 		sig.Signal.AddCleanup(func() error { return clipboard.WriteAll("") })
-		<-time.After(t)
+		done := make(chan struct{})
+		start := time.Now()
+
+		go terminal.Ticker(done, true, func() {
+			timeLeft := d - time.Since(start)
+			fmt.Printf("(%v) %s copied to clipboard", timeLeft.Round(time.Second), field)
+		})
+
+		<-time.After(d)
+		done <- struct{}{}
 		clipboard.WriteAll("")
 	}
 

@@ -6,6 +6,7 @@ import (
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/commands/gen/phrase"
+	"github.com/GGP1/kure/terminal"
 
 	"github.com/GGP1/atoll"
 
@@ -116,7 +117,7 @@ func runGen(opts *genOptions) cmdutil.RunEFunc {
 		defer pwdBuf.Destroy()
 
 		if opts.qr {
-			if err := cmdutil.DisplayQRCode(pwdBuf.String()); err != nil {
+			if err := terminal.DisplayQRCode(pwdBuf.String()); err != nil {
 				return err
 			}
 		}
