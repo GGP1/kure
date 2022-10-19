@@ -1,9 +1,11 @@
 package copy
 
 import (
+	"strconv"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
 
@@ -11,65 +13,67 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func TestCopyPassword(t *testing.T) {
-	if clipboard.Unsupported {
-		t.Skip("No clipboard utilities available")
-	}
+func TestCopy(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
-	createEntry(t, db)
+	e := createEntry(t, db)
+
+	cases := []struct {
+		desc         string
+		value        string
+		timeout      string
+		copyUsername bool
+	}{
+		{
+			desc:  "Copy password",
+			value: e.Password,
+		},
+		{
+			desc:         "Copy username",
+			value:        e.Username,
+			copyUsername: true,
+		},
+		{
+			desc:    "Copy with timeout",
+			value:   "",
+			timeout: "1ms",
+		},
+	}
 
 	cmd := NewCmd(db)
-	cmd.SetArgs([]string{"test"})
+	f := cmd.Flags()
 
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Failed to copy password to clipboard: %v", err)
-	}
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			cmd.SetArgs([]string{e.Name})
+			f.Set("timeout", tc.timeout)
+			f.Set("username", strconv.FormatBool(tc.copyUsername))
 
-	got, err := clipboard.ReadAll()
-	if err != nil {
-		t.Fatalf("Failed reading from clipboard: %v", err)
-	}
+			if err := cmd.Execute(); err != nil {
+				t.Error(err)
+			}
 
-	if got != "Gopher" {
-		t.Errorf("Expected Gopher, got %s", got)
+			got, err := clipboard.ReadAll()
+			if err != nil {
+				t.Fatalf("Failed reading from clipboard: %v", err)
+			}
+
+			if got != tc.value {
+				t.Errorf("Expected %s, got %s", tc.value, got)
+			}
+		})
 	}
 }
 
-func TestCopyUsername(t *testing.T) {
+func TestCopyWithConfigTimeout(t *testing.T) {
 	if clipboard.Unsupported {
 		t.Skip("No clipboard utilities available")
 	}
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
-	createEntry(t, db)
+	e := createEntry(t, db)
 
+	config.Set("clipboard.timeout", "1ns")
 	cmd := NewCmd(db)
-	cmd.SetArgs([]string{"test"})
-	cmd.Flags().Set("username", "true")
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Failed to copy username to clipboard: %v", err)
-	}
-
-	got, err := clipboard.ReadAll()
-	if err != nil {
-		t.Fatalf("Failed reading from clipboard: %v", err)
-	}
-
-	if got != "Go" {
-		t.Errorf("Expected Go, got %s", got)
-	}
-}
-
-func TestCopyWithTimeout(t *testing.T) {
-	if clipboard.Unsupported {
-		t.Skip("No clipboard utilities available")
-	}
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
-	createEntry(t, db)
-
-	cmd := NewCmd(db)
-	cmd.SetArgs([]string{"test"})
-	cmd.Flags().Set("timeout", "1ms")
+	cmd.SetArgs([]string{e.Name})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Failed to copy password to clipboard: %v", err)
@@ -87,7 +91,6 @@ func TestCopyWithTimeout(t *testing.T) {
 
 func TestCopyErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
-	createEntry(t, db)
 
 	cases := []struct {
 		desc string
@@ -113,7 +116,7 @@ func TestPostRun(t *testing.T) {
 	NewCmd(nil).PostRun(nil, nil)
 }
 
-func createEntry(t *testing.T, db *bolt.DB) {
+func createEntry(t *testing.T, db *bolt.DB) *pb.Entry {
 	t.Helper()
 
 	e := &pb.Entry{
@@ -126,4 +129,6 @@ func createEntry(t *testing.T, db *bolt.DB) {
 	if err := entry.Create(db, e); err != nil {
 		t.Fatal(err)
 	}
+
+	return e
 }
