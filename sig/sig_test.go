@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -16,27 +17,20 @@ func TestAddCleanup(t *testing.T) {
 	for _, cf := range Signal.cleanups {
 		got := cf().Error()
 		expected := f().Error()
-
-		if got != expected {
-			t.Errorf("Expected %q, got %q", expected, got)
-		}
+		assert.Equal(t, expected, got)
 	}
 }
 
 func TestKeepAlive(t *testing.T) {
 	Signal.KeepAlive()
-	if Signal.keepAlive != 1 {
-		t.Error("Expected keepAlive variable to be false and got true")
-	}
+	assert.Equal(t, Signal.keepAlive, int32(1))
 	// Reset
 	atomic.StoreInt32(&Signal.keepAlive, 0)
 }
 
 func TestListenKeepAlive(t *testing.T) {
-	db, err := bolt.Open("../db/testdata/database", 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		t.Fatalf("Failed connecting to the database: %v", err)
-	}
+	db, err := bolt.Open("../db/testdata/database", 0o600, &bolt.Options{Timeout: 1 * time.Second})
+	assert.NoError(t, err, "Failed connecting to the database")
 	defer db.Close()
 
 	Signal.Listen(db)

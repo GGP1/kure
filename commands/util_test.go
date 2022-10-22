@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -12,9 +13,10 @@ import (
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/pb"
-	"github.com/atotto/clipboard"
 
+	"github.com/atotto/clipboard"
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -33,25 +35,19 @@ Sam`)
 	mp.Set("Wizard", "Harry")
 
 	got := BuildBox("test/box", mp)
-	if got != expected {
-		t.Errorf("Expected %s, got %s", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestErase(t *testing.T) {
 	f, err := os.CreateTemp("", "")
-	if err != nil {
-		t.Fatalf("Failed creating temporary file: %v", err)
-	}
+	assert.NoError(t, err, "Failed creating temporary file")
 	f.Close()
 
-	if err := Erase(f.Name()); err != nil {
-		t.Errorf("Failed erasing file: %v", err)
-	}
+	err = Erase(f.Name())
+	assert.NoError(t, err, "Failed erasing file")
 
-	if err := Erase(f.Name()); err == nil {
-		t.Error("Expected the file to be erased but it wasn't")
-	}
+	err = Erase(f.Name())
+	assert.Error(t, err, "Expected the file to be erased")
 }
 
 func TestExistsTrue(t *testing.T) {
@@ -84,17 +80,14 @@ func TestExistsTrue(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := Exists(db, name, tc.object); err == nil {
-				t.Error("Expected an error but got nil")
-			}
+			err := Exists(db, name, tc.object)
+			assert.Error(t, err)
 
-			if err := Exists(db, "naboo/tatooine/hoth", tc.object); err == nil {
-				t.Error("Expected an error but got nil")
-			}
+			err = Exists(db, "naboo/tatooine/hoth", tc.object)
+			assert.Error(t, err)
 
-			if err := Exists(db, "naboo", tc.object); err == nil {
-				t.Error("Expected an error but got nil")
-			}
+			err = Exists(db, "naboo", tc.object)
+			assert.Error(t, err)
 		})
 	}
 }
@@ -131,9 +124,8 @@ func TestExistsFalse(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := Exists(db, tc.name, tc.object); err != nil {
-				t.Errorf("Exists() failed: %v", err)
-			}
+			err := Exists(db, tc.name, tc.object)
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -164,20 +156,15 @@ func TestFmtExpires(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got, err := FmtExpires(tc.expires)
-			if err != nil {
-				t.Errorf("Failed formatting expires: %v", err)
-			}
+			assert.NoError(t, err, "Failed formatting expires")
 
-			if got != tc.expected {
-				t.Errorf("Expected %s, got %s", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 
 	t.Run("Invalid format", func(t *testing.T) {
-		if _, err := FmtExpires("invalid format"); err == nil {
-			t.Error("Expected an error and got nil")
-		}
+		_, err := FmtExpires("invalid format")
+		assert.Error(t, err)
 	})
 }
 
@@ -190,9 +177,8 @@ func TestMustExist(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		objects := []object{Card, Entry, File, TOTP}
 		for _, obj := range objects {
-			if err := MustExist(db, obj)(nil, []string{name}); err != nil {
-				t.Error(err)
-			}
+			err := MustExist(db, obj)(nil, []string{name})
+			assert.NoError(t, err)
 		}
 	})
 
@@ -217,30 +203,26 @@ func TestMustExist(t *testing.T) {
 
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
-				if err := MustExist(db, Card)(nil, []string{tc.name}); err == nil {
-					t.Error("Expected an error and got nil")
-				}
+				err := MustExist(db, Card)(nil, []string{tc.name})
+				assert.Error(t, err)
 			})
 		}
 	})
 
 	t.Run("Empty args", func(t *testing.T) {
-		if err := MustExist(db, Card)(nil, []string{}); err == nil {
-			t.Error("Expected an error and got nil")
-		}
+		err := MustExist(db, Card)(nil, []string{})
+		assert.Error(t, err)
 	})
 
 	t.Run("Directories", func(t *testing.T) {
 		t.Run("Exists", func(t *testing.T) {
-			if err := MustExist(db, Card, true)(nil, []string{"test/"}); err != nil {
-				t.Error(err)
-			}
+			err := MustExist(db, Card, true)(nil, []string{"test/"})
+			assert.NoError(t, err)
 		})
 
 		t.Run("Not exists", func(t *testing.T) {
-			if err := MustExist(db, Card, true)(nil, []string{"unexistent/"}); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := MustExist(db, Card, true)(nil, []string{"unexistent/"})
+			assert.Error(t, err)
 		})
 	})
 }
@@ -279,13 +261,10 @@ func TestMustExistLs(t *testing.T) {
 			t.Run(tc.desc, func(t *testing.T) {
 				for _, obj := range objects {
 					cmd.Args = MustExistLs(db, obj)
-					if tc.filter {
-						cmd.Flags().Set("filter", "true")
-					}
+					cmd.Flags().Set("filter", strconv.FormatBool(tc.filter))
 
-					if err := cmd.Args(cmd, []string{tc.name}); err != nil {
-						t.Error(err)
-					}
+					err := cmd.Args(cmd, []string{tc.name})
+					assert.NoError(t, err)
 				}
 			})
 		}
@@ -295,9 +274,8 @@ func TestMustExistLs(t *testing.T) {
 		cmd.Args = MustExistLs(db, Entry)
 		cmd.Flag("filter").Changed = false
 
-		if err := cmd.Args(cmd, []string{"non-existent"}); err == nil {
-			t.Error("Expected an error and got nil")
-		}
+		err := cmd.Args(cmd, []string{"non-existent"})
+		assert.Error(t, err)
 	})
 }
 
@@ -309,19 +287,17 @@ func TestMustNotExist(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		for _, obj := range objects {
 			cmd.Args = MustNotExist(db, obj)
-			if err := cmd.Args(cmd, []string{"test"}); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Args(cmd, []string{"test"})
+			assert.NoError(t, err)
 		}
 	})
 
 	t.Run("Fail", func(t *testing.T) {
-		if err := entry.Create(db, &pb.Entry{Name: "test"}); err != nil {
-			t.Fatal(err)
-		}
-		if err := entry.Create(db, &pb.Entry{Name: "dir/"}); err != nil {
-			t.Fatal(err)
-		}
+		err := entry.Create(db, &pb.Entry{Name: "test"})
+		assert.NoError(t, err)
+		err = entry.Create(db, &pb.Entry{Name: "dir/"})
+		assert.NoError(t, err)
+
 		cases := []struct {
 			desc     string
 			name     string
@@ -349,18 +325,16 @@ func TestMustNotExist(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
 				cmd.Args = MustNotExist(db, Entry, tc.allowDir...)
-				if err := cmd.Args(cmd, []string{tc.name}); err == nil {
-					t.Error("Expected an error and got nil")
-				}
+				err := cmd.Args(cmd, []string{tc.name})
+				assert.Error(t, err)
 			})
 		}
 	})
 
 	t.Run("No arguments", func(t *testing.T) {
 		cmd.Args = MustNotExist(db, Entry, false)
-		if err := cmd.Args(cmd, []string{}); err == nil {
-			t.Error("Expected an error and got nil")
-		}
+		err := cmd.Args(cmd, []string{})
+		assert.Error(t, err)
 	})
 }
 
@@ -392,10 +366,7 @@ func TestNormalizeName(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := NormalizeName(tc.name, tc.allowDir...)
-
-			if got != tc.expected {
-				t.Errorf("Expected %q, got %q", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -407,9 +378,7 @@ func TestSelectEditor(t *testing.T) {
 		defer config.Reset()
 
 		got := SelectEditor()
-		if got != expected {
-			t.Errorf("Expected %q, got %q", expected, got)
-		}
+		assert.Equal(t, expected, got)
 	})
 
 	t.Run("EDITOR", func(t *testing.T) {
@@ -418,9 +387,7 @@ func TestSelectEditor(t *testing.T) {
 		defer os.Unsetenv("EDITOR")
 
 		got := SelectEditor()
-		if got != expected {
-			t.Errorf("Expected %q, got %q", expected, got)
-		}
+		assert.Equal(t, expected, got)
 	})
 
 	t.Run("VISUAL", func(t *testing.T) {
@@ -429,16 +396,12 @@ func TestSelectEditor(t *testing.T) {
 		defer os.Unsetenv("VISUAL")
 
 		got := SelectEditor()
-		if got != expected {
-			t.Errorf("Expected %q, got %q", expected, got)
-		}
+		assert.Equal(t, expected, got)
 	})
 
 	t.Run("Default", func(t *testing.T) {
 		got := SelectEditor()
-		if got != "vim" {
-			t.Errorf("Expected vim, got %q", got)
-		}
+		assert.Equal(t, "vim", got)
 	})
 }
 
@@ -447,26 +410,19 @@ func TestSetContext(t *testing.T) {
 	db := SetContext(t, path)
 
 	gotPath := db.Path()
-	if gotPath != path {
-		t.Errorf("Expected path to be %q, got %q", path, gotPath)
-	}
+	assert.Equal(t, path, gotPath)
 
 	gotOpenTx := db.Stats().OpenTxN
-	if gotOpenTx != 0 {
-		t.Errorf("Expected to have 0 opened transactions and got %d", gotOpenTx)
-	}
+	assert.Zero(t, gotOpenTx, "Expected to have no opened transactions")
 }
 
 func TestWatchFile(t *testing.T) {
 	f, err := os.CreateTemp("", "*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer f.Close()
 
-	if _, err := f.Write([]byte("test")); err != nil {
-		t.Fatal(err)
-	}
+	_, err = f.Write([]byte("test"))
+	assert.NoError(t, err)
 
 	done := make(chan struct{}, 1)
 	errCh := make(chan error, 1)
@@ -474,9 +430,8 @@ func TestWatchFile(t *testing.T) {
 
 	// Sleep to write after the file is being watched
 	time.Sleep(50 * time.Millisecond)
-	if _, err := f.Write([]byte("test-watch-file")); err != nil {
-		t.Fatal(err)
-	}
+	_, err = f.Write([]byte("test-watch-file"))
+	assert.NoError(t, err)
 
 	select {
 	case <-done:
@@ -510,9 +465,8 @@ func TestWatchFileErrors(t *testing.T) {
 			errCh := make(chan error, 1)
 
 			if !tc.initial {
-				if err := os.WriteFile(tc.filename, []byte("test error"), 0o644); err != nil {
-					t.Fatalf("Failed creating file: %v", err)
-				}
+				err := os.WriteFile(tc.filename, []byte("test error"), 0o644)
+				assert.NoError(t, err, "Failed creating file")
 			}
 
 			go WatchFile(tc.filename, done, errCh)
@@ -520,9 +474,8 @@ func TestWatchFileErrors(t *testing.T) {
 			// Sleep to wait until the file is created and fail once inside the for loop
 			if !tc.initial {
 				time.Sleep(10 * time.Millisecond)
-				if err := os.Remove(tc.filename); err != nil {
-					t.Fatalf("Failed removing the file: %v", err)
-				}
+				err := os.Remove(tc.filename)
+				assert.NoError(t, err, "Failed removing the file")
 			}
 
 			select {
@@ -546,64 +499,45 @@ func TestWriteClipboard(t *testing.T) {
 		config.Set("clipboard.timeout", 10*time.Millisecond)
 		defer config.Reset()
 
-		if err := WriteClipboard(cmd, 0, "", "test"); err != nil {
-			t.Fatal(err)
-		}
+		err := WriteClipboard(cmd, 0, "", "test")
+		assert.NoError(t, err)
 
 		got, err := clipboard.ReadAll()
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
-		if got != "" {
-			t.Errorf("Expected the clipboard to be empty and got %q", got)
-		}
+		assert.Empty(t, got, "Expected the clipboard to be empty")
 	})
 
 	t.Run("t > 0", func(t *testing.T) {
-		if err := WriteClipboard(cmd, 10*time.Millisecond, "", "test"); err != nil {
-			t.Fatal(err)
-		}
+		err := WriteClipboard(cmd, 10*time.Millisecond, "", "test")
+		assert.NoError(t, err)
 
 		got, err := clipboard.ReadAll()
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
-		if got != "" {
-			t.Errorf("Expected the clipboard to be empty and got %q", got)
-		}
+		assert.Empty(t, got, "Expected the clipboard to be empty")
 	})
 
 	t.Run("t = 0", func(t *testing.T) {
 		clip := "test"
-		if err := WriteClipboard(cmd, 0, "", clip); err != nil {
-			t.Fatal(err)
-		}
+		err := WriteClipboard(cmd, 0, "", clip)
+		assert.NoError(t, err)
 
 		got, err := clipboard.ReadAll()
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
-		if got != clip {
-			t.Errorf("Expected %q, got %q", clip, got)
-		}
+		assert.Equal(t, clip, got)
 	})
 }
 
 func createObjects(t *testing.T, db *bolt.DB, name string) {
 	t.Helper()
-	if err := entry.Create(db, &pb.Entry{Name: name}); err != nil {
-		t.Fatal(err)
-	}
-	if err := card.Create(db, &pb.Card{Name: name}); err != nil {
-		t.Fatal(err)
-	}
-	if err := file.Create(db, &pb.File{Name: name}); err != nil {
-		t.Fatal(err)
-	}
-	if err := totp.Create(db, &pb.TOTP{Name: name}); err != nil {
-		t.Fatal(err)
-	}
+	err := entry.Create(db, &pb.Entry{Name: name})
+	assert.NoError(t, err)
+	err = card.Create(db, &pb.Card{Name: name})
+	assert.NoError(t, err)
+	err = file.Create(db, &pb.File{Name: name})
+	assert.NoError(t, err)
+	err = totp.Create(db, &pb.TOTP{Name: name})
+	assert.NoError(t, err)
 }

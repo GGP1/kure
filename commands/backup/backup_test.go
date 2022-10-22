@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBackupFile(t *testing.T) {
@@ -18,13 +20,11 @@ func TestBackupFile(t *testing.T) {
 	f := cmd.Flags()
 	f.Set("path", filename)
 
-	if err := cmd.Execute(); err != nil {
-		t.Errorf("Failed creating the backup file: %v", err)
-	}
+	err := cmd.Execute()
+	assert.NoError(t, err, "Failed creating the backup file")
 
-	if err := os.Remove(filename); err != nil {
-		t.Errorf("Failed removing the backup file: %v", err)
-	}
+	err = os.Remove(filename)
+	assert.NoError(t, err, "Failed removing the backup file")
 }
 
 func TestBackupServer(t *testing.T) {
@@ -32,23 +32,17 @@ func TestBackupServer(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "localhost:4000/", nil)
-	if err != nil {
-		t.Fatalf("Failed sending the request: %v", err)
-	}
+	assert.NoError(t, err, "Failed sending the request")
 
 	hf := httpBackup(db)
 	hf.ServeHTTP(rec, req)
 
 	res := rec.Result()
-	if res.StatusCode != http.StatusOK {
-		t.Errorf("Expected status OK, got %s", res.Status)
-	}
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 
 	gotCt := res.Header.Get("Content-Type")
 	expectedCt := "application/octet-stream"
-	if gotCt != expectedCt {
-		t.Errorf("Expected %q, got %q", expectedCt, gotCt)
-	}
+	assert.Equal(t, expectedCt, gotCt)
 }
 
 func TestBackupErrors(t *testing.T) {
@@ -84,9 +78,8 @@ func TestBackupErrors(t *testing.T) {
 			f.Set("http", tc.http)
 			f.Set("port", tc.port)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected and error but got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -95,13 +88,10 @@ func TestWriteTo(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 
 	var buf bytes.Buffer
-	if err := writeTo(db, &buf); err != nil {
-		t.Fatalf("Failed writing database: %v", err)
-	}
+	err := writeTo(db, &buf)
+	assert.NoError(t, err, "Failed writing database")
 
-	if buf.Len() == 0 {
-		t.Error("Expected buffer length not to be zero")
-	}
+	assert.NotEqual(t, buf.Len(), 0)
 }
 
 func TestPostRun(t *testing.T) {

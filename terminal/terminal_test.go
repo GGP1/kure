@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/GGP1/kure/terminal"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConfirm(t *testing.T) {
@@ -25,18 +27,15 @@ func TestConfirm(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
 
 			got := terminal.Confirm(buf, "Are you sure you want to proceed?")
-			if got != tc.expected {
-				t.Errorf("Expected %v, got %v", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
 
 func TestDisplayQRCode(t *testing.T) {
 	os.Stdout = os.NewFile(0, "") // Mute stdout
-	if err := terminal.DisplayQRCode("secret"); err != nil {
-		t.Errorf("Failed displaying QR code: %v", err)
-	}
+	err := terminal.DisplayQRCode("secret")
+	assert.NoError(t, err, "Failed displaying QR code")
 }
 
 func TestDisplayQRCodeErrors(t *testing.T) {
@@ -51,9 +50,8 @@ func TestDisplayQRCodeErrors(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			os.Stdout = os.NewFile(0, "") // Mute stdout
-			if err := terminal.DisplayQRCode(tc.secret); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := terminal.DisplayQRCode(tc.secret)
+			assert.Error(t, err)
 		})
 	}
 }
@@ -74,6 +72,7 @@ func TestScanln(t *testing.T) {
 			r := bufio.NewReader(buf)
 
 			got := terminal.Scanln(r, "test")
+			assert.Equal(t, tc.expected, got)
 			if got != tc.expected {
 				t.Errorf("Expected %s, got: %s", tc.expected, got)
 			}
@@ -97,13 +96,10 @@ func TestScanlns(t *testing.T) {
 			r := bufio.NewReader(buf)
 
 			got := terminal.Scanlns(r, "test")
-			if got != tc.expected {
-				t.Errorf("Expected %s, got: %s", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
-
 
 const longSecret = `hpidf9YBs?5j(]j5vg a#b4pzVk4es\QS G:}t&w~((u[mL\>bMP3Nbhhl.
 	WBnSq4?C/C%'gC%hNlK'1^uMp\%u${W'~0M6_iW$iDn8Tk%|V;bk} *Q+0|,r Ul"7:INCaeyJkpff~e+%nH.

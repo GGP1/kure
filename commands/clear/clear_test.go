@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/atotto/clipboard"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClearClipboard(t *testing.T) {
@@ -17,18 +18,14 @@ func TestClearClipboard(t *testing.T) {
 	}
 
 	cmd := NewCmd()
-	if err := cmd.Flags().Set("clipboard", "true"); err != nil {
-		t.Error(err)
-	}
+	err := cmd.Flags().Set("clipboard", "true")
+	assert.NoError(t, err)
 
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Failed: %v", err)
-	}
+	err = cmd.Execute()
+	assert.NoError(t, err)
 
 	got, _ := clipboard.ReadAll()
-	if got != "" {
-		t.Errorf("Expected clipboard to be empty but got: %s", got)
-	}
+	assert.Empty(t, got)
 }
 
 func TestClearTerminalScreen(t *testing.T) {
@@ -38,31 +35,24 @@ func TestClearTerminalScreen(t *testing.T) {
 
 	cmd := NewCmd()
 	cmd.SetOut(io.Discard)
-	if err := cmd.Flags().Set("terminal", "true"); err != nil {
-		t.Error(err)
-	}
+	err := cmd.Flags().Set("terminal", "true")
+	assert.NoError(t, err)
 
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Failed: %v", err)
-	}
+	err = cmd.Execute()
+	assert.NoError(t, err)
 }
 
 func TestClearTerminalHistory(t *testing.T) {
 	mockHistoryPath := "./testdata/.history"
 
 	originalContent, err := os.ReadFile(mockHistoryPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	if err := clearHistoryFile(mockHistoryPath); err != nil {
-		t.Error(err)
-	}
+	err = clearHistoryFile(mockHistoryPath)
+	assert.NoError(t, err)
 
 	f, err := os.Open(mockHistoryPath)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
@@ -72,14 +62,12 @@ func TestClearTerminalHistory(t *testing.T) {
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		t.Error(err)
-	}
+	err = scanner.Err()
+	assert.NoError(t, err)
 
 	// Restore file content
-	if err := os.WriteFile(mockHistoryPath, originalContent, 0600); err != nil {
-		t.Error(err)
-	}
+	err = os.WriteFile(mockHistoryPath, originalContent, 0o600)
+	assert.NoError(t, err)
 }
 
 func TestPostRun(t *testing.T) {

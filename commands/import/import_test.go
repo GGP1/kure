@@ -9,6 +9,7 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
 
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -91,18 +92,14 @@ func TestImport(t *testing.T) {
 			cmd.SetArgs([]string{tc.manager})
 			cmd.Flags().Set("path", tc.path)
 
-			if err := cmd.Execute(); err != nil {
-				t.Fatalf("Failed importing entries: %v", err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err, "Failed importing entries")
 
 			got, err := entry.Get(db, tc.expected.Name)
-			if err != nil {
-				t.Fatalf("Failed listing entry: %v", err)
-			}
+			assert.NoError(t, err, "Failed listing entry")
 
-			if !proto.Equal(tc.expected, got) {
-				t.Errorf("Expected %v, got %v", tc.expected, got)
-			}
+			equal := proto.Equal(tc.expected, got)
+			assert.True(t, equal)
 		})
 	}
 }
@@ -159,9 +156,8 @@ func TestInvalidImport(t *testing.T) {
 			cmd.Flags().Set("path", tc.path)
 			cmd.SetArgs([]string{tc.manager})
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error but got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -170,9 +166,7 @@ func TestImportAndErase(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 
 	tempFile, err := os.CreateTemp("", "*.csv")
-	if err != nil {
-		t.Errorf("Failed creating temporary file: %v", err)
-	}
+	assert.NoError(t, err, "Failed creating temporary file")
 	tempFile.WriteString("test")
 	tempFile.Close()
 
@@ -182,13 +176,11 @@ func TestImportAndErase(t *testing.T) {
 	f.Set("path", tempFile.Name())
 	f.Set("erase", "true")
 
-	if err := cmd.Execute(); err != nil {
-		t.Errorf("Failed importing entries: %v", err)
-	}
+	err = cmd.Execute()
+	assert.NoError(t, err, "Failed importing entries")
 
-	if _, err := os.Stat(tempFile.Name()); err == nil {
-		t.Error("The file wasn't erased correctly")
-	}
+	_, err = os.Stat(tempFile.Name())
+	assert.Error(t, err, "The file wasn't erased correctly")
 }
 
 func TestImportAndEraseError(t *testing.T) {
@@ -198,9 +190,7 @@ func TestImportAndEraseError(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 
 	tempFile, err := os.CreateTemp("", "*.csv")
-	if err != nil {
-		t.Errorf("Failed creating temporary file: %v", err)
-	}
+	assert.NoError(t, err, "Failed creating temporary file")
 	tempFile.WriteString("test")
 
 	cmd := NewCmd(db)
@@ -210,9 +200,8 @@ func TestImportAndEraseError(t *testing.T) {
 	f.Set("erase", "true")
 
 	// The file attempting to erase is currently being used by another process
-	if err := cmd.Execute(); err == nil {
-		t.Error("Expected an error and got nil")
-	}
+	err = cmd.Execute()
+	assert.Error(t, err)
 }
 
 func TestCreateTOTP(t *testing.T) {
@@ -236,9 +225,8 @@ func TestCreateTOTP(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := createTOTP(db, tc.name, tc.raw); err != nil {
-				t.Errorf("Failed creating TOTP: %v", err)
-			}
+			err := createTOTP(db, tc.name, tc.raw)
+			assert.NoError(t, err, "Failed creating TOTP")
 		})
 	}
 }
@@ -252,9 +240,8 @@ func TestArgs(t *testing.T) {
 
 		for _, m := range managers {
 			t.Run(m, func(t *testing.T) {
-				if err := cmd.Args(cmd, []string{m}); err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
+				err := cmd.Args(cmd, []string{m})
+				assert.NoError(t, err)
 			})
 		}
 	})
@@ -262,9 +249,8 @@ func TestArgs(t *testing.T) {
 	t.Run("Unsupported", func(t *testing.T) {
 		invalids := []string{"", "unsupported"}
 		for _, inv := range invalids {
-			if err := cmd.Args(cmd, []string{inv}); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Args(cmd, []string{inv})
+			assert.Error(t, err)
 		}
 	})
 }

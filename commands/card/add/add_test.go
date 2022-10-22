@@ -2,12 +2,13 @@ package add
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAdd(t *testing.T) {
@@ -31,15 +32,13 @@ func TestAdd(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			buf := bytes.NewBufferString("type\n123456789\n1234\n2021/06\nnotes<\n")
 			cmd := NewCmd(db, buf)
-
 			cmd.SetArgs([]string{tc.name})
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
 
-			if _, err := card.Get(db, tc.name); err != nil {
-				t.Errorf("Card wasn't created correctly: %v", err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
+
+			_, err = card.Get(db, tc.name)
+			assert.NoError(t, err, "Card wasn't created correctly")
 		})
 	}
 }
@@ -47,9 +46,8 @@ func TestAdd(t *testing.T) {
 func TestAddErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := card.Create(db, &pb.Card{Name: "test"}); err != nil {
-		t.Fatalf("Failed creating the card: %v", err)
-	}
+	err := card.Create(db, &pb.Card{Name: "test"})
+	assert.NoError(t, err)
 
 	cases := []struct {
 		desc string
@@ -71,9 +69,8 @@ func TestAddErrors(t *testing.T) {
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -93,11 +90,7 @@ func TestInput(t *testing.T) {
 	buf := bytes.NewBufferString("type\n123456789\n1234\n2021/06\nnotes<")
 
 	got, err := input(db, "test", buf)
-	if err != nil {
-		t.Fatalf("Failed creating the card: %v", err)
-	}
+	assert.NoError(t, err, "Failed creating the card")
 
-	if !reflect.DeepEqual(expected, got) {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }

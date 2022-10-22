@@ -11,6 +11,8 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -44,7 +46,7 @@ func TestExport(t *testing.T) {
 			path:    "test_1password.csv",
 			expected: [][]string{
 				{"Title", "Website", "Username", "Password", "Notes", "Member Number", "Recovery Codes"},
-				{"May the force be with you", "", "", "", "", "", "", ""},
+				{"May the force be with you", "", "", "", "", "", ""},
 			},
 		},
 		{
@@ -60,7 +62,7 @@ func TestExport(t *testing.T) {
 			path:    "test_bitwarden.csv",
 			expected: [][]string{
 				{"Folder", "Favorite", "Type", "Name", "Notes", "Fields", "Login_uri", "Login_username", "Login_password", "Login_totp"},
-				{"", "", "Login", "May the force be with you", "", "", "", "", "", "", ""},
+				{"", "", "login", "May the force be with you", "", "", "", "", "", ""},
 			},
 		},
 	}
@@ -71,33 +73,22 @@ func TestExport(t *testing.T) {
 			cmd.SetArgs([]string{tc.manager})
 			cmd.Flags().Set("path", tc.path)
 
-			if err := cmd.Execute(); err != nil {
-				t.Fatalf("Failed exporting entries: %v", err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err, "Failed exporting entries")
 
 			if filepath.Ext(tc.path) == "" {
 				tc.path += ".csv"
 			}
 
 			content, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Errorf("Failed opening csv file: %v", err)
-			}
+			assert.NoError(t, err, "Failed opening csv file")
 			defer os.Remove(tc.path)
 
 			r := csv.NewReader(bytes.NewReader(content))
 			got, err := r.ReadAll()
-			if err != nil {
-				t.Errorf("Failed reading records from the csv file: %v", err)
-			}
+			assert.NoError(t, err, "Failed reading records from the csv file")
 
-			for i := range got {
-				for j := range got {
-					if got[i][j] != tc.expected[i][j] {
-						t.Errorf("Expected %s, got %s", tc.expected[i][j], got[i][j])
-					}
-				}
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -121,9 +112,8 @@ func TestInvalidExport(t *testing.T) {
 			cmd.SetArgs([]string{tc.manager})
 			cmd.Flags().Set("path", tc.path)
 
-			if err := cmd.Execute(); err == nil {
-				t.Fatalf("Expected test to fail but got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -137,9 +127,8 @@ func TestArgs(t *testing.T) {
 
 		for _, m := range managers {
 			t.Run(m, func(t *testing.T) {
-				if err := cmd.Args(cmd, []string{m}); err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
+				err := cmd.Args(cmd, []string{m})
+				assert.NoError(t, err)
 			})
 		}
 	})
@@ -147,9 +136,8 @@ func TestArgs(t *testing.T) {
 	t.Run("Unsupported", func(t *testing.T) {
 		invalids := []string{"", "unsupported"}
 		for _, inv := range invalids {
-			if err := cmd.Args(cmd, []string{inv}); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Args(cmd, []string{inv})
+			assert.Error(t, err)
 		}
 	})
 }
@@ -162,9 +150,8 @@ func TestGetTOTP(t *testing.T) {
 		Raw:    "awtapr",
 		Digits: 6,
 	}
-	if err := totp.Create(db, tp); err != nil {
-		t.Fatalf("Failed creating totp: %v", err)
-	}
+	err := totp.Create(db, tp)
+	assert.NoError(t, err, "Failed creating TOTP")
 
 	cases := []struct {
 		desc     string
@@ -186,9 +173,7 @@ func TestGetTOTP(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := getTOTP(db, tc.name)
-			if got != tc.expected {
-				t.Errorf("Expected %q, got %q", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -218,13 +203,8 @@ func TestSplitName(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			gotFolder, gotName := splitName(tc.name)
 
-			if gotFolder != tc.expectedFolder {
-				t.Errorf("Expected %q, got %q", tc.expectedFolder, gotFolder)
-			}
-
-			if gotName != tc.expectedName {
-				t.Errorf("Expected %q, got %q", tc.expectedName, gotName)
-			}
+			assert.Equal(t, tc.expectedFolder, gotFolder)
+			assert.Equal(t, tc.expectedName, gotName)
 		})
 	}
 }
@@ -239,7 +219,6 @@ func createEntry(t *testing.T, db *bolt.DB) {
 		Name:    "May the force be with you",
 		Expires: "Never",
 	}
-	if err := entry.Create(db, e); err != nil {
-		t.Fatal(err)
-	}
+	err := entry.Create(db, e)
+	assert.NoError(t, err)
 }

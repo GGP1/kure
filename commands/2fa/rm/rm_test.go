@@ -7,14 +7,15 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRm(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := totp.Create(db, &pb.TOTP{Name: "test"}); err != nil {
-		t.Fatal(err)
-	}
+	err := totp.Create(db, &pb.TOTP{Name: "test"})
+	assert.NoError(t, err)
 
 	cases := []struct {
 		desc         string
@@ -39,10 +40,8 @@ func TestRm(t *testing.T) {
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err != nil {
-				t.Errorf("Failed removing the TOTP: %v", err)
-			}
-
+			err := cmd.Execute()
+			assert.NoError(t, err, "Failed removing the TOTP")
 		})
 	}
 }
@@ -72,9 +71,8 @@ func TestRmErrors(t *testing.T) {
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }

@@ -1,8 +1,6 @@
 package dbutil_test
 
 import (
-	"bytes"
-	"reflect"
 	"testing"
 
 	"github.com/GGP1/kure/config"
@@ -11,6 +9,7 @@ import (
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
@@ -31,18 +30,14 @@ func TestGet(t *testing.T) {
 		b := tx.Bucket(dbutil.GetBucketName(record))
 		return dbutil.Put(b, record)
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	got := &pb.Card{}
-	if err := dbutil.Get(db, record.Name, got); err != nil {
-		t.Error(err)
-	}
+	err = dbutil.Get(db, record.Name, got)
+	assert.NoError(t, err)
 
-	if !proto.Equal(record, got) {
-		t.Errorf("Expected %#v, got %#v", record, got)
-	}
+	equal := proto.Equal(record, got)
+	assert.True(t, equal)
 }
 
 func TestGetBucketName(t *testing.T) {
@@ -76,9 +71,7 @@ func TestGetBucketName(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := dbutil.GetBucketName(tc.record)
-			if !bytes.Equal(tc.expected, got) {
-				t.Errorf("Expected %q, got %q", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -94,18 +87,16 @@ func TestList(t *testing.T) {
 	expected := []*pb.Card{record, record2}
 
 	got, err := dbutil.List(db, &pb.Card{})
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	for _, e := range expected {
 		for _, g := range got {
-			if e.Name == g.Name && !proto.Equal(e, g) {
-				t.Errorf("Expected %#v, got %#v", e, g)
+			if e.Name == g.Name {
+				equal := proto.Equal(e, g)
+				assert.True(t, equal)
 			}
 		}
 	}
-
 }
 
 func TestListNames(t *testing.T) {
@@ -120,20 +111,14 @@ func TestListNames(t *testing.T) {
 		}
 		return b.Put([]byte(recordA), nil)
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	got, err := dbutil.ListNames(db, bucketName)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	// We expect them to be ordered
 	expected := []string{recordA, recordB}
-	if !reflect.DeepEqual(expected, got) {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestListNamesNil(t *testing.T) {
@@ -142,19 +127,15 @@ func TestListNamesNil(t *testing.T) {
 	err := db.Update(func(tx *bolt.Tx) error {
 		return tx.DeleteBucket(bucketName)
 	})
-	if err != nil {
-		t.Fatalf("Failed deleting the file bucket: %v", err)
-	}
+	assert.NoError(t, err, "Failed deleting the file bucket")
 
 	list, err := dbutil.ListNames(db, bucketName)
-	if err != nil || list != nil {
-		t.Errorf("Expected to receive a nil list and error, got: %v list, %v error", list, err)
-	}
+	assert.NoError(t, err)
+	assert.Nil(t, list)
 }
 
 func TestPut(t *testing.T) {
 	db := dbutil.SetContext(t, "./testdata/database", bucketName)
-
 	createRecord(t, db, record)
 }
 
@@ -166,29 +147,21 @@ func TestRemove(t *testing.T) {
 		b := tx.Bucket(bucketName)
 		return b.Put([]byte(recordA), nil)
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	if err := dbutil.Remove(db, bucketName, recordA); err != nil {
-		t.Fatal(err)
-	}
+	err = dbutil.Remove(db, bucketName, recordA)
+	assert.NoError(t, err)
 
 	expected := make([]string, 0)
 	got, err := dbutil.ListNames(db, bucketName)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	if !reflect.DeepEqual(expected, got) {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestRemoveNone(t *testing.T) {
-	if err := dbutil.Remove(nil, nil); err != nil {
-		t.Error(err)
-	}
+	err := dbutil.Remove(nil, nil)
+	assert.NoError(t, err)
 }
 
 func TestCryptErrors(t *testing.T) {
@@ -202,32 +175,25 @@ func TestCryptErrors(t *testing.T) {
 	// Try to get the entry with other password
 	config.Set("auth.password", memguard.NewEnclave([]byte("invalid")))
 
-	if err := dbutil.Get(db, name, &pb.Entry{}); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
+	err := dbutil.Get(db, name, &pb.Entry{})
+	assert.Error(t, err)
 	// For some reason it does not fail if a card struct is used
-	if _, err := dbutil.List(db, &pb.Entry{}); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
+	_, err = dbutil.List(db, &pb.Entry{})
+	assert.Error(t, err)
 }
 
 func TestGetErrors(t *testing.T) {
 	db := dbutil.SetContext(t, "./testdata/database", bucketName)
 
-	if err := dbutil.Get(db, "non-existent", &pb.Entry{}); err == nil {
-		t.Error("Expected an error, got nil")
-	}
+	err := dbutil.Get(db, "non-existent", &pb.Entry{})
+	assert.Error(t, err)
 }
 
 func TestKeyError(t *testing.T) {
 	db := dbutil.SetContext(t, "./testdata/database", bucketName)
-
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
-		if err := dbutil.Put(b, &pb.Entry{Name: ""}); err == nil {
-			t.Error("Put() didn't fail")
-		}
-		return nil
+		return dbutil.Put(b, &pb.Entry{Name: ""})
 	})
 }
 
@@ -241,16 +207,12 @@ func TestProtoErrors(t *testing.T) {
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte(name), encBuf)
 	})
-	if err != nil {
-		t.Fatalf("Failed writing invalid type: %v", err)
-	}
+	assert.NoError(t, err, "Failed writing invalid type")
 
-	if err := dbutil.Get(db, name, &pb.Entry{}); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := dbutil.List(db, &pb.Entry{}); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
+	err = dbutil.Get(db, name, &pb.Entry{})
+	assert.Error(t, err)
+	_, err = dbutil.List(db, &pb.Entry{})
+	assert.Error(t, err)
 }
 
 func TestPutErrors(t *testing.T) {
@@ -274,9 +236,8 @@ func TestPutErrors(t *testing.T) {
 		b := tx.Bucket(bucketName)
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
-				if err := dbutil.Put(b, &pb.Entry{Name: tc.name}); err == nil {
-					t.Error("Expected an error and got nil")
-				}
+				err := dbutil.Put(b, &pb.Entry{Name: tc.name})
+				assert.Error(t, err)
 			})
 		}
 		return nil
@@ -288,7 +249,5 @@ func createRecord(t *testing.T, db *bolt.DB, record dbutil.Record) {
 		b := tx.Bucket(dbutil.GetBucketName(record))
 		return dbutil.Put(b, record)
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }

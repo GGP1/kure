@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSessionCommand(t *testing.T) {
@@ -32,10 +34,8 @@ func TestSessionCommand(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cont := runSessionCommand(tc.args, &timeout{})
-			if cont != tc.cont {
-				t.Errorf("Expected %v, got %v", tc.cont, cont)
-			}
+			ran := runSessionCommand(tc.args, &timeout{})
+			assert.Equal(t, tc.cont, ran)
 		})
 	}
 }
@@ -124,9 +124,7 @@ func TestCommands(t *testing.T) {
 			in.WriteString(tc.input)
 
 			cmd, ok := commands[tc.args[0]]
-			if !ok {
-				t.Error("Command not found")
-			}
+			assert.True(t, ok, "Command not found")
 
 			params := params{
 				in:      in,
@@ -140,15 +138,11 @@ func TestCommands(t *testing.T) {
 
 			if tc.expectedErr != "" {
 				gotErr := outErr.String()
-				if gotErr != tc.expectedErr {
-					t.Errorf("Expected %q, got %q", tc.expectedErr, gotErr)
-				}
+				assert.Equal(t, tc.expectedErr, gotErr)
 			}
 			if tc.expectedOut != "" {
 				gotOut := out.String()
-				if gotOut != tc.expectedOut {
-					t.Errorf("Expected %q, got %q", tc.expectedOut, gotOut)
-				}
+				assert.Equal(t, tc.expectedOut, gotOut)
 			}
 		})
 	}

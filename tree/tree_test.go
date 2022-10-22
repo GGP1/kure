@@ -3,6 +3,8 @@ package tree
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPrint(t *testing.T) {
@@ -44,21 +46,15 @@ func TestTreeStructure(t *testing.T) {
 	}
 
 	expected := len(folders)
-	if len(root.children) != expected {
-		t.Errorf("Expected %d branches, got %d", expected, len(root.children))
-	}
+	assert.Equal(t, expected, len(root.children))
 
 	for i, r := range root.children {
 		name, _, _ := strings.Cut(paths[i], "/")
 
-		if r.name != name {
-			t.Errorf("Expected branch name to be %q, got %q", name, r.name)
-		}
+		assert.Equal(t, name, r.name)
 
 		if i == len(root.children)-1 {
-			if len(r.children) == 0 {
-				t.Errorf("Expected %q branch to have a child named %q", r.name, r.children[0].name)
-			}
+			assert.NotEmpty(t, r.children)
 		}
 	}
 }

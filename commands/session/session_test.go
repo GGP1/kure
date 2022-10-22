@@ -6,6 +6,8 @@ import (
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExecute(t *testing.T) {
@@ -43,9 +45,8 @@ func TestExecute(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := execute(root, tc.args, &timeout{}); err != nil {
-				t.Errorf("Failed executing command: %v", err)
-			}
+			err := execute(root, tc.args, &timeout{})
+			assert.NoError(t, err, "Failed executing command")
 		})
 	}
 }

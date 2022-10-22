@@ -10,6 +10,7 @@ import (
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
 
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -23,13 +24,11 @@ func TestMv(t *testing.T) {
 	cmd := NewCmd(db)
 	cmd.SetArgs([]string{oldName, newName})
 
-	if err := cmd.Execute(); err != nil {
-		t.Error(err)
-	}
+	err := cmd.Execute()
+	assert.NoError(t, err)
 
-	if _, err := file.GetCheap(db, newName+".txt"); err != nil {
-		t.Errorf("Failed getting the renamed file: %v", err)
-	}
+	_, err = file.GetCheap(db, newName+".txt")
+	assert.NoError(t, err, "Failed getting the renamed file")
 }
 
 func TestMvDir(t *testing.T) {
@@ -44,14 +43,11 @@ func TestMvDir(t *testing.T) {
 	cmd := NewCmd(db)
 	cmd.SetArgs([]string{oldDir, newDir})
 
-	if err := cmd.Execute(); err != nil {
-		t.Error(err)
-	}
+	err := cmd.Execute()
+	assert.NoError(t, err)
 
 	names, err := file.ListNames(db)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	for _, name := range names {
 		if !strings.HasPrefix(name, newDir) {
@@ -102,9 +98,8 @@ func TestMvErrors(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			cmd.SetArgs([]string{tc.oldName, tc.newName})
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -114,13 +109,11 @@ func TestMissingArguments(t *testing.T) {
 
 	cmd := NewCmd(db)
 	cmd.SetArgs([]string{"oldName"})
-	if err := cmd.Execute(); err == nil {
-		t.Error("Expected an error and got nil")
-	}
+	err := cmd.Execute()
+	assert.Error(t, err)
 }
 
 func createFile(t *testing.T, db *bolt.DB, name string) {
-	if err := file.Create(db, &pb.File{Name: name}); err != nil {
-		t.Fatalf("Failed creating the file: %v", err)
-	}
+	err := file.Create(db, &pb.File{Name: name})
+	assert.NoError(t, err, "Failed creating file")
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cast"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGet(t *testing.T) {
@@ -14,9 +15,9 @@ func TestGet(t *testing.T) {
 	Set("test", "test")
 
 	cases := []struct {
+		expected interface{}
 		desc     string
 		key      string
-		expected interface{}
 	}{
 		{
 			desc:     "Non nil",
@@ -33,51 +34,38 @@ func TestGet(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := Get(tc.key)
-			if got != tc.expected {
-				t.Errorf("Expected %v, got %v", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
 
 func TestLoad(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		if err := Load("./testdata/mock_config.yaml"); err != nil {
-			t.Errorf("Failed loading file to config: %v", err)
-		}
+		err := Load("./testdata/mock_config.yaml")
+		assert.NoError(t, err, "Failed loading file to config")
 
 		str := Get("test.string")
-		expStr := "test"
-		if str != expStr {
-			t.Errorf("Expected %q, got %q", expStr, str)
-		}
+		assert.Equal(t, "test", str)
 
 		num := Get("test.number")
-		expNum := 1
-		if num != expNum {
-			t.Errorf("Expected %d, got %d", expNum, num)
-		}
+		assert.Equal(t, 1, num)
 
 		bl := Get("test.bool")
-		expBool := true
-		if bl != expBool {
-			t.Errorf("Expected %v, got %v", expBool, bl)
-		}
+		assert.True(t, bl.(bool))
 	})
 
 	t.Run("Invalid filename", func(t *testing.T) {
-		if err := Load(""); err == nil {
-			t.Error("Expected an error and got nil")
-		}
+		err := Load("")
+		assert.Error(t, err)
 	})
 }
 
 func TestSet(t *testing.T) {
 	cases := []struct {
-		desc     string
-		key      string
 		value    interface{}
 		expected interface{}
+		desc     string
+		key      string
 	}{
 		{
 			desc:     "Empty key",
@@ -110,9 +98,7 @@ func TestSet(t *testing.T) {
 			Set(tc.key, tc.value)
 
 			got := Get(tc.key)
-			if got != tc.expected {
-				t.Errorf("Expected %v, got %v", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -125,24 +111,18 @@ func TestWrite(t *testing.T) {
 		key: value,
 	}
 
-	if err := config.Write(filename, os.O_CREATE|os.O_RDWR); err != nil {
-		t.Errorf("Failed creating file: %v", err)
-	}
+	err := config.Write(filename, os.O_CREATE|os.O_RDWR)
+	assert.NoError(t, err, "Failed creating file")
 	defer os.Remove(filename)
 
 	content, err := os.ReadFile(filename)
-	if err != nil {
-		t.Errorf("Failed reading file: %v", err)
-	}
+	assert.NoError(t, err, "Failed reading file")
 
-	if err := config.populateMap(content, filepath.Ext(filename)); err != nil {
-		t.Errorf("Failed populating config map: %v", err)
-	}
+	err = config.populateMap(content, filepath.Ext(filename))
+	assert.NoError(t, err, "Failed populating config map")
 
 	got := cast.ToInt(config.mp[key])
-	if got != value {
-		t.Errorf("Expected %d, got %d", value, got)
-	}
+	assert.Equal(t, value, got)
 }
 
 func TestWriteErrors(t *testing.T) {
@@ -169,9 +149,8 @@ func TestWriteErrors(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := config.Write(tc.filename, tc.flags); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := config.Write(tc.filename, tc.flags)
+			assert.Error(t, err)
 		})
 	}
 }
@@ -207,13 +186,9 @@ func TestMarshaler(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got, err := config.marshal(filepath.Ext(tc.path))
-			if err != nil {
-				t.Fatalf("Failed marshaling data: %v", err)
-			}
+			assert.NoError(t, err, "Failed marshaling data")
 
-			if string(got) != tc.expected {
-				t.Errorf("Expected \n%s, got \n%s", tc.expected, string(got))
-			}
+			assert.Equal(t, tc.expected, string(got))
 		})
 	}
 }
@@ -235,9 +210,8 @@ func TestMarshalerErrors(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if _, err := config.marshal(filepath.Ext(tc.path)); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			_, err := config.marshal(filepath.Ext(tc.path))
+			assert.Error(t, err)
 		})
 	}
 }
@@ -259,34 +233,28 @@ func TestPopulateMap(t *testing.T) {
 			insert(c.mp, []string{"test"}, value)
 
 			data, err := c.marshal(ext)
-			if err != nil {
-				t.Errorf("Failed marshaling config map: %v", err)
-			}
+			assert.NoError(t, err, "Failed marshaling config map")
 
-			if err := c.populateMap(data, ext); err != nil {
-				t.Errorf("Failed populating map: %v", err)
-			}
+			err = c.populateMap(data, ext)
+			assert.NoError(t, err, "Failed populating map")
 
 			got := cast.ToInt(c.mp["test"])
-			if got != value {
-				t.Errorf("Expected %d, got %d", value, got)
-			}
+			assert.Equal(t, value, got)
 		})
 	}
 
 	t.Run("Invalid type", func(t *testing.T) {
 		c := New()
-		if err := c.populateMap([]byte("invalid"), ".env"); err == nil {
-			t.Error("Expected file type error and got nil")
-		}
+		err := c.populateMap([]byte("invalid"), ".env")
+		assert.Error(t, err)
 	})
 }
 
 func TestInsertAndSearch(t *testing.T) {
 	cases := []struct {
+		value interface{}
 		desc  string
 		key   string
-		value interface{}
 	}{
 		{
 			desc:  "No value",
@@ -312,9 +280,7 @@ func TestInsertAndSearch(t *testing.T) {
 			insert(mp, path, tc.value)
 
 			got := search(mp, path)
-			if got != tc.value {
-				t.Errorf("Expected %v, got %v", tc.value, got)
-			}
+			assert.Equal(t, tc.value, got)
 		})
 	}
 
@@ -322,8 +288,6 @@ func TestInsertAndSearch(t *testing.T) {
 		mp := make(map[string]interface{})
 		insert(mp, nil, nil)
 		got := search(mp, nil)
-		if got != nil {
-			t.Errorf("Expected nil and got %v", got)
-		}
+		assert.Nil(t, got)
 	})
 }

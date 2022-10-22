@@ -2,12 +2,13 @@ package phrase
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPhrase(t *testing.T) {
@@ -53,9 +54,8 @@ func TestPhrase(t *testing.T) {
 			f.Set("length", tc.length)
 			f.Set("list", tc.list)
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -63,9 +63,8 @@ func TestPhrase(t *testing.T) {
 func TestPhraseErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := entry.Create(db, &pb.Entry{Name: "test"}); err != nil {
-		t.Fatal(err)
-	}
+	err := entry.Create(db, &pb.Entry{Name: "test"})
+	assert.NoError(t, err)
 
 	cases := []struct {
 		desc    string
@@ -119,9 +118,8 @@ func TestPhraseErrors(t *testing.T) {
 			f.Set("exclude", tc.exclude)
 			f.Set("list", tc.list)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -136,25 +134,18 @@ func TestEntryInput(t *testing.T) {
 	}
 
 	buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes<")
-
 	got, err := entryInput(buf, "test")
-	if err != nil {
-		t.Fatalf("Failed creating entry: %v", err)
-	}
+	assert.NoError(t, err, "Failed creating entry")
 
 	// As it's randomly generated, use the same one
 	expected.Password = got.Password
-	if !reflect.DeepEqual(expected, got) {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestInvalidExpirationTime(t *testing.T) {
 	buf := bytes.NewBufferString("username\nurl\nnotes\ninvalid<\n")
-
-	if _, err := entryInput(buf, "test"); err == nil {
-		t.Error("Expected an error and got nil")
-	}
+	_, err := entryInput(buf, "test")
+	assert.Error(t, err)
 }
 
 func TestPostRun(t *testing.T) {

@@ -8,6 +8,9 @@ import (
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestLogs(t *testing.T) {
@@ -19,33 +22,25 @@ func TestLogs(t *testing.T) {
 		Password: "Pb*9' fxd%,IS:Zo_1JVw",
 		Expires:  "Never",
 	}
-	if err := entry.Create(db, expected); err != nil {
-		t.Fatal(err)
-	}
+	err := entry.Create(db, expected)
+	assert.NoError(t, err)
 
 	l, err := newLog(dbutil.EntryBucket)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer l.Close()
 
 	logs := []*log{l}
-	if err := writeLogs(db, logs); err != nil {
-		t.Errorf("Failed writing logs: %v", err)
-	}
+	err = writeLogs(db, logs)
+	assert.NoError(t, err, "Failed writing logs")
 
-	if err := readLogs(db, logs); err != nil {
-		t.Errorf("Failed reading logs: %v", err)
-	}
+	err = readLogs(db, logs)
+	assert.NoError(t, err, "Failed reading logs")
 
 	got, err := entry.Get(db, expected.Name)
-	if err != nil {
-		t.Errorf("Failed fetching entry: %v", err)
-	}
+	assert.NoError(t, err, "Failed fetching entry")
 
-	if expected.Username != got.Username || expected.Password != got.Password {
-		t.Errorf("Invalid entry, expected %v, got %v", expected, got)
-	}
+	equal := proto.Equal(expected, got)
+	assert.True(t, equal)
 }
 
 func TestReadLogs(t *testing.T) {
@@ -56,41 +51,31 @@ func TestReadLogs(t *testing.T) {
 		Number:       "47964212",
 		SecurityCode: "442",
 	}
-	if err := card.Create(db, expected); err != nil {
-		t.Fatal(err)
-	}
+	err := card.Create(db, expected)
+	assert.NoError(t, err)
 
 	l, err := newLog(dbutil.CardBucket)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer l.Close()
 
 	logs := []*log{l}
-	if err := readLogs(db, logs); err != nil {
-		t.Errorf("Failed reading logs: %v", err)
-	}
+	err = readLogs(db, logs)
+	assert.NoError(t, err, "Failed reading logs")
 
 	got, err := card.Get(db, expected.Name)
-	if err != nil {
-		t.Errorf("Failed fetching card: %v", err)
-	}
+	assert.NoError(t, err, "Failed fetching card")
 
-	if expected.Number != got.Number || expected.SecurityCode != got.SecurityCode {
-		t.Errorf("Invalid card, expected %v, got %v", expected, got)
-	}
+	equal := proto.Equal(expected, got)
+	assert.True(t, equal)
 }
 
 func TestWriteLogs(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 
 	l, err := newLog(dbutil.EntryBucket)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer l.Close()
 
-	if err := writeLogs(db, []*log{l}); err != nil {
-		t.Errorf("Failed writing logs: %v", err)
-	}
+	err = writeLogs(db, []*log{l})
+	assert.NoError(t, err, "Failed writing logs")
 }

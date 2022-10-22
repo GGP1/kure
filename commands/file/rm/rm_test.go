@@ -7,6 +7,8 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRm(t *testing.T) {
@@ -14,9 +16,8 @@ func TestRm(t *testing.T) {
 
 	names := []string{"test.txt", "directory/test.txt"}
 	for _, name := range names {
-		if err := file.Create(db, &pb.File{Name: name}); err != nil {
-			t.Fatalf("Failed creating %q: %v", name, err)
-		}
+		err := file.Create(db, &pb.File{Name: name})
+		assert.NoErrorf(t, err, "Failed creating %q", name)
 	}
 
 	cases := []struct {
@@ -47,9 +48,8 @@ func TestRm(t *testing.T) {
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -79,9 +79,8 @@ func TestRmErrors(t *testing.T) {
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }

@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/GGP1/kure/commands/root"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExecute(t *testing.T) {
-	if err := root.Execute(nil); err != nil {
-		t.Error(err)
-	}
+	err := root.Execute(nil)
+	assert.NoError(t, err)
 }
 
 func TestHasDescription(t *testing.T) {
