@@ -7,6 +7,8 @@ import (
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/totp"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAdd(t *testing.T) {
@@ -55,9 +57,8 @@ func TestAdd(t *testing.T) {
 			f.Set("digits", tc.digits)
 			f.Set("url", tc.url)
 
-			if err := cmd.Execute(); err != nil {
-				t.Errorf("Failed adding TOTP: %v", err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err, "Failed adding TOTP")
 		})
 	}
 }
@@ -66,9 +67,8 @@ func TestAddErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
 	name := "test"
-	if err := createTOTP(db, name, "", 0); err != nil {
-		t.Fatal(err)
-	}
+	err := createTOTP(db, name, "", 0)
+	assert.NoError(t, err)
 
 	cases := []struct {
 		desc   string
@@ -123,9 +123,8 @@ func TestAddErrors(t *testing.T) {
 			f.Set("digits", tc.digits)
 			f.Set("url", tc.url)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -135,19 +134,16 @@ func TestCreateTOTP(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		name := "test"
-		if err := createTOTP(db, name, "secret", 6); err != nil {
-			t.Fatalf("Failed creating TOTP: %v", err)
-		}
+		err := createTOTP(db, name, "secret", 6)
+		assert.NoError(t, err, "Failed creating TOTP")
 
-		if _, err := totp.Get(db, name); err != nil {
-			t.Errorf("%q TOTP not found: %v", name, err)
-		}
+		_, err = totp.Get(db, name)
+		assert.NoErrorf(t, err, "%q TOTP not found", name)
 	})
 
 	t.Run("Fail", func(t *testing.T) {
-		if err := createTOTP(db, "", "", 0); err == nil {
-			t.Error("Expected an error and got nil")
-		}
+		err := createTOTP(db, "", "", 0)
+		assert.Error(t, err)
 	})
 }
 
@@ -156,9 +152,7 @@ func TestGetName(t *testing.T) {
 	path := "/Test:mail@enterprise.com"
 	got := getName(path)
 
-	if got != expected {
-		t.Errorf("Expected %s, got %s", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestStringDigits(t *testing.T) {
@@ -192,10 +186,7 @@ func TestStringDigits(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := stringDigits(tc.digits)
-
-			if got != tc.expected {
-				t.Errorf("Expected %d, got %d", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -209,9 +200,8 @@ func TestValidateURL(t *testing.T) {
 		query := u.Query()
 		query.Add("algorithm", "SHA1")
 		query.Add("period", "30")
-		if err := validateURL(u, query); err != nil {
-			t.Errorf("Expected a valid URL but got an error: %v", err)
-		}
+		err := validateURL(u, query)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Invalid", func(t *testing.T) {
@@ -254,9 +244,8 @@ func TestValidateURL(t *testing.T) {
 				query := u.Query()
 				query.Add("algorithm", tc.algorithm)
 				query.Add("period", tc.period)
-				if err := validateURL(u, query); err == nil {
-					t.Error("Expected an error and got nil")
-				}
+				err := validateURL(u, query)
+				assert.Error(t, err)
 			})
 		}
 	})

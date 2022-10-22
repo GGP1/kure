@@ -3,7 +3,7 @@ package edit
 import (
 	"encoding/json"
 	"os"
-	"reflect"
+	"strconv"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
@@ -11,6 +11,7 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
 
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -19,20 +20,19 @@ func TestEditErrors(t *testing.T) {
 	createEntry(t, db, "test")
 
 	cases := []struct {
+		set  func()
 		desc string
 		name string
-		it   string
-		set  func()
+		it   bool
 	}{
 		{
 			desc: "Invalid name",
 			name: "",
-			set:  func() {},
 		},
 		{
 			desc: "Executable not found",
 			name: "test",
-			it:   "true",
+			it:   true,
 			set: func() {
 				config.Set("editor", "non-existent")
 			},
@@ -41,15 +41,16 @@ func TestEditErrors(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			tc.set()
+			if tc.set != nil {
+				tc.set()
+			}
 			cmd := NewCmd(db)
 			cmd.SetArgs([]string{tc.name})
 			f := cmd.Flags()
-			f.Set("it", tc.it)
+			f.Set("it", strconv.FormatBool(tc.it))
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -61,31 +62,23 @@ func TestCreateTempFile(t *testing.T) {
 	}
 
 	filename, err := createTempFile(e)
-	if err != nil {
-		t.Fatalf("Failed creating the file: %v", err)
-	}
+	assert.NoError(t, err, "Failed creating the file")
 	defer os.Remove(filename)
 
 	content, err := os.ReadFile(filename)
-	if err != nil {
-		t.Errorf("Failed reading the file: %v", err)
-	}
+	assert.NoError(t, err, "Failed reading the file")
 
 	var got pb.Entry
-	if err := json.Unmarshal(content, &got); err != nil {
-		t.Errorf("Failed decoding the file: %v", err)
-	}
+	err = json.Unmarshal(content, &got)
+	assert.NoError(t, err, "Failed reading the file")
 
-	if !reflect.DeepEqual(e, &got) {
-		t.Error("Expected entries to be deep equal")
-	}
+	assert.Equal(t, e, &got)
 }
 
 func TestReadTmpFile(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
-		if _, err := readTmpFile("testdata/test_read.json"); err != nil {
-			t.Error(err)
-		}
+		_, err := readTmpFile("testdata/test_read.json")
+		assert.NoError(t, err)
 	})
 
 	t.Run("Errors", func(t *testing.T) {
@@ -110,9 +103,8 @@ func TestReadTmpFile(t *testing.T) {
 
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
-				if _, err := readTmpFile(tc.filename); err == nil {
-					t.Error("Expected an error and got nil")
-				}
+				_, err := readTmpFile(tc.filename)
+				assert.Error(t, err)
 			})
 		}
 	})
@@ -133,24 +125,18 @@ func TestUpdateEntry(t *testing.T) {
 		Notes:    "",
 	}
 
-	if err := updateEntry(db, name, newEntry); err != nil {
-		t.Error(err)
-	}
+	err := updateEntry(db, name, newEntry)
+	assert.NoError(t, err)
 
 	e, err := entry.Get(db, newName)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
-	if reflect.DeepEqual(e, newEntry) {
-		t.Errorf("Expected %v, got %v", newEntry, e)
-	}
+	assert.NotEqual(t, newEntry, e)
 
 	t.Run("Invalid name", func(t *testing.T) {
 		newEntry.Name = ""
-		if err := updateEntry(db, "fail", newEntry); err == nil {
-			t.Error("Expected an error and got nil")
-		}
+		err := updateEntry(db, "fail", newEntry)
+		assert.Error(t, err)
 	})
 }
 
@@ -165,7 +151,6 @@ func createEntry(t *testing.T, db *bolt.DB, name string) {
 		Expires: "Never",
 	}
 
-	if err := entry.Create(db, e); err != nil {
-		t.Fatalf("Failed creating the entry: %v", err)
-	}
+	err := entry.Create(db, e)
+	assert.NoError(t, err)
 }

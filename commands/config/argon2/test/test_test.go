@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTest(t *testing.T) {
@@ -42,9 +44,8 @@ func TestTest(t *testing.T) {
 			f.Set("memory", fmt.Sprintf("%d", tc.memory))
 			f.Set("threads", fmt.Sprintf("%d", tc.threads))
 
-			if err := cmd.Execute(); err != nil {
-				t.Fatalf("Test sub command failed: %v", err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -84,9 +85,8 @@ func TestTestInvalid(t *testing.T) {
 			f.Set("memory", tc.memory)
 			f.Set("threads", tc.threads)
 
-			if err := cmd.RunE(nil, nil); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.RunE(nil, nil)
+			assert.Error(t, err)
 		})
 	}
 }

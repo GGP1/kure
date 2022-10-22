@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/atotto/clipboard"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGenPhrase(t *testing.T) {
@@ -18,8 +19,8 @@ func TestGenPhrase(t *testing.T) {
 		length    string
 		separator string
 		list      string
-		copy      string
-		qr        string
+		copy      bool
+		qr        bool
 	}{
 		{
 			desc:      "No list",
@@ -30,7 +31,7 @@ func TestGenPhrase(t *testing.T) {
 		{
 			desc:   "Word list",
 			length: "5",
-			copy:   "true",
+			copy:   true,
 			list:   "wordlist",
 		},
 		{
@@ -42,7 +43,7 @@ func TestGenPhrase(t *testing.T) {
 		{
 			desc:   "QR code",
 			length: "7",
-			qr:     "true",
+			qr:     true,
 		},
 	}
 
@@ -56,12 +57,11 @@ func TestGenPhrase(t *testing.T) {
 			f.Set("length", tc.length)
 			f.Set("separator", tc.separator)
 			f.Set("list", tc.list)
-			f.Set("copy", tc.copy)
-			f.Set("qr", tc.qr)
+			f.Set("copy", strconv.FormatBool(tc.copy))
+			f.Set("qr", strconv.FormatBool(tc.qr))
 
-			if err := cmd.Execute(); err != nil {
-				t.Errorf("Failed generating a passphrase: %v", err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err, "Failed generating a passphrase")
 		})
 	}
 }
@@ -73,13 +73,13 @@ func TestGenPhraseErrors(t *testing.T) {
 		include string
 		exclude string
 		list    string
-		qr      string
+		qr      bool
 	}{
 		{
 			desc:   "QR code content too long",
 			length: "600",
 			list:   "wordlist",
-			qr:     "true",
+			qr:     true,
 		},
 		{
 			desc:   "Invalid length",
@@ -111,11 +111,10 @@ func TestGenPhraseErrors(t *testing.T) {
 			f.Set("include", tc.include)
 			f.Set("exclude", tc.exclude)
 			f.Set("list", tc.list)
-			f.Set("qr", tc.qr)
+			f.Set("qr", strconv.FormatBool(tc.qr))
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -123,10 +122,10 @@ func TestGenPhraseErrors(t *testing.T) {
 func TestFormatSecurity(t *testing.T) {
 	cases := []struct {
 		desc             string
-		keyspace         float64
-		timeToCrack      float64
 		expectedKeyspace string
 		expectedTime     string
+		keyspace         float64
+		timeToCrack      float64
 	}{
 		{
 			desc:             "Inf",
@@ -197,13 +196,8 @@ func TestFormatSecurity(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			gotKeyspace, gotTime := FormatSecretSecurity(tc.keyspace, tc.timeToCrack)
 
-			if gotKeyspace != tc.expectedKeyspace {
-				t.Errorf("Expected %q, got %q", tc.expectedKeyspace, gotKeyspace)
-			}
-
-			if gotTime != tc.expectedTime {
-				t.Errorf("Expected %q, got %q", tc.expectedTime, gotTime)
-			}
+			assert.Equal(t, tc.expectedKeyspace, gotKeyspace)
+			assert.Equal(t, tc.expectedTime, gotTime)
 		})
 	}
 }
@@ -234,9 +228,7 @@ func TestBeautify(t *testing.T) {
 	for i, tc := range cases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			got := prettify(tc.actual)
-			if got != tc.expected {
-				t.Errorf("Expected %q, got %q", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }

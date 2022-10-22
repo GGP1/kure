@@ -2,9 +2,11 @@ package gen
 
 import (
 	"bytes"
+	"strconv"
 	"testing"
 
 	"github.com/atotto/clipboard"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGen(t *testing.T) {
@@ -15,23 +17,22 @@ func TestGen(t *testing.T) {
 		desc   string
 		length string
 		levels string
-		repeat string
-		copy   string
-		qr     string
+		repeat bool
+		copy   bool
+		qr     bool
 	}{
 		{
 			desc:   "Generate",
 			length: "16",
 			levels: "1,2,3",
-			repeat: "true",
-			copy:   "true",
+			repeat: true,
+			copy:   true,
 		},
 		{
 			desc:   "QR code",
 			length: "4",
 			levels: "1,2,3,4,5",
-			copy:   "false",
-			qr:     "true",
+			qr:     true,
 		},
 	}
 
@@ -42,18 +43,15 @@ func TestGen(t *testing.T) {
 			f := cmd.Flags()
 			f.Set("length", tc.length)
 			f.Set("levels", tc.levels)
-			f.Set("repeat", tc.repeat)
-			f.Set("copy", tc.copy)
-			f.Set("qr", tc.qr)
+			f.Set("repeat", strconv.FormatBool(tc.repeat))
+			f.Set("copy", strconv.FormatBool(tc.copy))
+			f.Set("qr", strconv.FormatBool(tc.qr))
 			f.Set("mute", "true")
 			var buf bytes.Buffer
 			cmd.SetOut(&buf)
 
-			if err := cmd.Execute(); err != nil {
-				t.Errorf("Failed generating a password: %v", err)
-			}
-
-			t.Log(buf.String())
+			err := cmd.Execute()
+			assert.NoError(t, err, "Failed generating a password")
 		})
 	}
 }
@@ -108,9 +106,8 @@ func TestGenErrors(t *testing.T) {
 			f.Set("exclude", tc.exclude)
 			f.Set("qr", tc.qr)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }

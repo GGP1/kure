@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCleanup(t *testing.T) {
@@ -16,9 +17,7 @@ func TestCleanup(t *testing.T) {
 	cleanup(cmd)
 
 	changed := cmd.Flag("testing").Changed
-	if changed {
-		t.Errorf("Expected false and got %t", changed)
-	}
+	assert.False(t, changed)
 }
 
 func TestFillScript(t *testing.T) {
@@ -51,9 +50,7 @@ func TestFillScript(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := fillScript(tc.args, tc.script)
-			if got != tc.expected {
-				t.Errorf("Expected %s, got %s", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -84,14 +81,7 @@ func TestParseCommands(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := parseCommands(tc.args)
-
-			for i := 0; i < len(tc.expected); i++ {
-				for j := 0; j < len(tc.expected[i]); j++ {
-					if got[i][j] != tc.expected[i][j] {
-						t.Errorf("Expected %#v, got %#v", tc.expected[i], got[i])
-					}
-				}
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -126,11 +116,7 @@ func TestParseDoubleQuotes(t *testing.T) {
 	for i, tc := range cases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			got := parseDoubleQuotes(tc.args)
-			for i := 0; i < len(tc.expected); i++ {
-				if got[i] != tc.expected[i] {
-					t.Errorf("Expected %#v, got %#v", tc.expected, got)
-				}
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -148,15 +134,7 @@ func TestScanInput(t *testing.T) {
 	}
 
 	got, err := scanInput(reader, timeout, map[string]string{})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	for i := range got {
-		for j := range got[i] {
-			if got[i][j] != expected[i][j] {
-				t.Errorf("Expected %v, got %v", expected[i][j], got[i][j])
-			}
-		}
-	}
+	assert.Equal(t, expected, got)
 }

@@ -5,6 +5,8 @@ import (
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEditErrors(t *testing.T) {
@@ -26,9 +28,8 @@ func TestEditErrors(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			config.SetFilename(tc.path)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }

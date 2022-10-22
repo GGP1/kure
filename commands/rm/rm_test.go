@@ -8,6 +8,7 @@ import (
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
 
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -20,14 +21,12 @@ func TestRm(t *testing.T) {
 	cmd := NewCmd(db, buf)
 	cmd.SetArgs([]string{name})
 
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Failed removing the entry: %v", err)
-	}
+	err := cmd.Execute()
+	assert.NoError(t, err, "Failed removing the entry")
 
 	// Check if the entry was removed successfully
-	if _, err := entry.Get(db, name); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
+	_, err = entry.Get(db, name)
+	assert.Error(t, err)
 }
 
 func TestRmDir(t *testing.T) {
@@ -40,16 +39,13 @@ func TestRmDir(t *testing.T) {
 	cmd := NewCmd(db, buf)
 	cmd.SetArgs([]string{"test/"})
 
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Failed removing the entry: %v", err)
-	}
+	err := cmd.Execute()
+	assert.NoError(t, err, "Failed removing the entry")
 
 	// Check if the entries were removed successfully
-	if _, err := entry.Get(db, names[0]); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := entry.Get(db, names[1]); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
+	for _, name := range names {
+		_, err = entry.Get(db, name)
+		assert.Error(t, err)
 	}
 }
 
@@ -62,9 +58,8 @@ func TestRmAbort(t *testing.T) {
 	cmd := NewCmd(db, buf)
 	cmd.SetArgs([]string{name})
 
-	if err := cmd.Execute(); err != nil {
-		t.Errorf("Rm() failed: %v", err)
-	}
+	err := cmd.Execute()
+	assert.NoError(t, err)
 }
 
 func TestRmErrors(t *testing.T) {
@@ -93,9 +88,8 @@ func TestRmErrors(t *testing.T) {
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err == nil {
-				t.Fatal("Expected Rm() to fail but it didn't")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -104,8 +98,7 @@ func createEntries(t *testing.T, db *bolt.DB, names ...string) {
 	t.Helper()
 
 	for _, n := range names {
-		if err := entry.Create(db, &pb.Entry{Name: n}); err != nil {
-			t.Fatal(err)
-		}
+		err := entry.Create(db, &pb.Entry{Name: n})
+		assert.NoError(t, err)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/GGP1/kure/pb"
 
 	"github.com/atotto/clipboard"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -48,18 +49,13 @@ func TestCopy(t *testing.T) {
 			f.Set("timeout", tc.timeout)
 			f.Set("username", strconv.FormatBool(tc.copyUsername))
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 
 			got, err := clipboard.ReadAll()
-			if err != nil {
-				t.Fatalf("Failed reading from clipboard: %v", err)
-			}
+			assert.NoError(t, err, "Failed reading from clipboard")
 
-			if got != tc.value {
-				t.Errorf("Expected %s, got %s", tc.value, got)
-			}
+			assert.Equal(t, tc.value, got)
 		})
 	}
 }
@@ -75,18 +71,13 @@ func TestCopyWithConfigTimeout(t *testing.T) {
 	cmd := NewCmd(db)
 	cmd.SetArgs([]string{e.Name})
 
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Failed to copy password to clipboard: %v", err)
-	}
+	err := cmd.Execute()
+	assert.NoError(t, err, "Failed to copy password to clipboard")
 
 	got, err := clipboard.ReadAll()
-	if err != nil {
-		t.Fatalf("Failed reading from clipboard: %v", err)
-	}
+	assert.NoError(t, err, "Failed reading from clipboard")
 
-	if got != "" {
-		t.Errorf("Expected clipboard to be empty and got %s", got)
-	}
+	assert.Empty(t, got)
 }
 
 func TestCopyErrors(t *testing.T) {
@@ -105,9 +96,8 @@ func TestCopyErrors(t *testing.T) {
 			cmd := NewCmd(db)
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected to return an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -126,9 +116,8 @@ func createEntry(t *testing.T, db *bolt.DB) *pb.Entry {
 		Expires:  "Never",
 	}
 
-	if err := entry.Create(db, e); err != nil {
-		t.Fatal(err)
-	}
+	err := entry.Create(db, e)
+	assert.NoError(t, err)
 
 	return e
 }

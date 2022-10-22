@@ -8,6 +8,8 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAdd(t *testing.T) {
@@ -60,13 +62,10 @@ func TestAdd(t *testing.T) {
 			var stderr bytes.Buffer
 			cmd.SetErr(&stderr)
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 
-			if stderr.Len() > 0 {
-				t.Errorf("Expected nothing on stderr, got %q", stderr.String())
-			}
+			assert.LessOrEqual(t, stderr.Len(), 0, "Expected nothing on stderr")
 		})
 	}
 
@@ -79,27 +78,21 @@ func TestAdd(t *testing.T) {
 		cmd.SetArgs([]string{name})
 		cmd.Flags().Set("note", "true")
 
-		if err := cmd.Execute(); err != nil {
-			t.Fatalf("Failed creating the note: %v", err)
-		}
+		err := cmd.Execute()
+		assert.NoError(t, err, "Failed creating the note")
 
 		file, err := file.Get(db, fmt.Sprintf("notes/%s.txt", name))
-		if err != nil {
-			t.Fatalf("Couldn't find the note: %v", err)
-		}
+		assert.NoError(t, err, "Couldn't find the note")
 
-		if !bytes.Equal(file.Content, expectedContent) {
-			t.Errorf("Expected %q, got %q", string(expectedContent), string(file.Content))
-		}
+		assert.Equal(t, file.Content, expectedContent)
 	})
 }
 
 func TestAddErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := file.Create(db, &pb.File{Name: "already exists.txt"}); err != nil {
-		t.Fatalf("Failed creating the file: %v", err)
-	}
+	err := file.Create(db, &pb.File{Name: "already exists.txt"})
+	assert.NoError(t, err, "Failed creating the file")
 
 	cases := []struct {
 		desc      string
@@ -146,9 +139,8 @@ func TestAddErrors(t *testing.T) {
 			f.Set("path", tc.path)
 			f.Set("semaphore", tc.semaphore)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }

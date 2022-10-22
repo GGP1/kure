@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStats(t *testing.T) {
@@ -11,16 +13,13 @@ func TestStats(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		cmd := NewCmd(db)
-		if err := cmd.Execute(); err != nil {
-			t.Errorf("Stats() failed %v", err)
-		}
+		err := cmd.Execute()
+		assert.NoError(t, err)
 	})
 
 	t.Run("Database connection closed", func(t *testing.T) {
 		db.Close()
-
-		if err := NewCmd(db).Execute(); err == nil {
-			t.Error("Expected an error and got nil")
-		}
+		err := NewCmd(db).Execute()
+		assert.Error(t, err)
 	})
 }

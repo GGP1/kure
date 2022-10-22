@@ -11,6 +11,7 @@ import (
 
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
@@ -173,10 +174,8 @@ func Remove(db *bolt.DB, bucketName []byte, names ...string) error {
 
 // SetContext creates a bucket and its context to test the database operations.
 func SetContext(t testing.TB, path string, bucketName []byte) *bolt.DB {
-	db, err := bolt.Open(path, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		t.Fatalf("Failed connecting to the database: %v", err)
-	}
+	db, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: 1 * time.Second})
+	assert.NoError(t, err, "Failed connecting to the database")
 
 	config.Reset()
 	// Reduce argon2 parameters to speed up tests
@@ -195,14 +194,11 @@ func SetContext(t testing.TB, path string, bucketName []byte) *bolt.DB {
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("Failed closing the database: %v", err)
-		}
+		err := db.Close()
+		assert.NoError(t, err, "Failed closing the database")
 	})
 
 	return db

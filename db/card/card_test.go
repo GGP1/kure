@@ -6,10 +6,10 @@ import (
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
 	dbutil "github.com/GGP1/kure/db"
-	dbutils "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
@@ -36,18 +36,15 @@ func TestCard(t *testing.T) {
 
 func create(db *bolt.DB, c *pb.Card) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Create(db, c); err != nil {
-			t.Error(err)
-		}
+		err := Create(db, c)
+		assert.NoError(t, err)
 	}
 }
 
 func get(db *bolt.DB, expected *pb.Card) func(*testing.T) {
 	return func(t *testing.T) {
 		got, err := Get(db, expected.Name)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
 		if !proto.Equal(expected, got) {
 			t.Errorf("Expected %v, got %v", expected, got)
@@ -58,13 +55,9 @@ func get(db *bolt.DB, expected *pb.Card) func(*testing.T) {
 func list(db *bolt.DB, expected *pb.Card) func(*testing.T) {
 	return func(t *testing.T) {
 		cards, err := List(db)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
-		if len(cards) == 0 {
-			t.Error("Expected one or more cards, got 0")
-		}
+		assert.NotZero(t, len(cards), "Expected one or more cards")
 
 		got := cards[0]
 		if !proto.Equal(expected, got) {
@@ -76,9 +69,7 @@ func list(db *bolt.DB, expected *pb.Card) func(*testing.T) {
 func listNames(db *bolt.DB, expected *pb.Card) func(*testing.T) {
 	return func(t *testing.T) {
 		cards, err := ListNames(db)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
 		if len(cards) == 0 {
 			t.Fatal("Expected one or more cards, got 0")
@@ -93,27 +84,23 @@ func listNames(db *bolt.DB, expected *pb.Card) func(*testing.T) {
 
 func remove(db *bolt.DB, name string) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Remove(db, name); err != nil {
-			t.Error(err)
-		}
+		err := Remove(db, name)
+		assert.NoError(t, err)
 	}
 }
 
 func update(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
 		oldCard := &pb.Card{Name: "old"}
-		if err := Create(db, oldCard); err != nil {
-			t.Fatal(err)
-		}
+		err := Create(db, oldCard)
+		assert.NoError(t, err)
 
 		newCard := &pb.Card{Name: "new"}
-		if err := Update(db, oldCard.Name, newCard); err != nil {
-			t.Fatal(err)
-		}
+		err = Update(db, oldCard.Name, newCard)
+		assert.NoError(t, err)
 
-		if _, err := Get(db, newCard.Name); err != nil {
-			t.Error(err)
-		}
+		_, err = Get(db, newCard.Name)
+		assert.NoError(t, err)
 	}
 }
 
@@ -136,9 +123,8 @@ func TestCreateErrors(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := Create(db, &pb.Card{Name: tc.name}); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := Create(db, &pb.Card{Name: tc.name})
+			assert.Error(t, err)
 		})
 	}
 }
@@ -146,28 +132,24 @@ func TestCreateErrors(t *testing.T) {
 func TestGetError(t *testing.T) {
 	db := setContext(t)
 
-	if _, err := Get(db, "non-existent"); err == nil {
-		t.Error("Expected 'does not exist' error, got nil")
-	}
+	_, err := Get(db, "non-existent")
+	assert.Error(t, err)
 }
 
 func TestCryptErrors(t *testing.T) {
 	db := setContext(t)
 
 	name := "crypt-errors"
-	if err := Create(db, &pb.Card{Name: name}); err != nil {
-		t.Fatal(err)
-	}
+	err := Create(db, &pb.Card{Name: name})
+	assert.NoError(t, err)
 
 	// Try to get the card with another password
 	config.Set("auth.password", memguard.NewEnclave([]byte("invalid")))
 
-	if _, err := Get(db, name); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := List(db); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
+	_, err = Get(db, name)
+	assert.Error(t, err)
+	_, err = List(db)
+	assert.Error(t, err)
 }
 
 func TestProtoErrors(t *testing.T) {
@@ -180,26 +162,21 @@ func TestProtoErrors(t *testing.T) {
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte(name), encBuf)
 	})
-	if err != nil {
-		t.Fatalf("Failed writing invalid type: %v", err)
-	}
+	assert.NoError(t, err, "Failed writing invalid type")
 
-	if _, err := Get(db, name); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := List(db); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
+	_, err = Get(db, name)
+	assert.Error(t, err)
+	_, err = List(db)
+	assert.Error(t, err)
 }
 
 func TestKeyError(t *testing.T) {
 	db := setContext(t)
 
-	if err := Create(db, &pb.Card{Name: ""}); err == nil {
-		t.Error("Create() didn't fail")
-	}
+	err := Create(db, &pb.Card{Name: ""})
+	assert.Error(t, err)
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutils.SetContext(t, "../testdata/database", dbutil.CardBucket)
+	return dbutil.SetContext(t, "../testdata/database", dbutil.CardBucket)
 }

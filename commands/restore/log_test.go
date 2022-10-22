@@ -1,12 +1,12 @@
 package restore
 
 import (
-	"bytes"
 	"os"
 	"testing"
 
 	"github.com/GGP1/kure/pb"
 
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -21,79 +21,59 @@ func TestLog(t *testing.T) {
 	bucketName := []byte("test")
 
 	log, err := newLog(bucketName)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer log.Close()
 
 	for _, e := range expected {
-		if err := log.Write(e); err != nil {
-			t.Fatal(err)
-		}
+		err := log.Write(e)
+		assert.NoError(t, err)
 	}
 
-	if err := log.Sync(); err != nil {
-		t.Fatal(err)
-	}
+	err = log.Sync()
+	assert.NoError(t, err)
 
 	got, err := log.Read()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	for i, g := range got {
 		e := expected[i]
-		if !bytes.Equal(g, e) {
-			t.Errorf("Record [%v] is corrupted, expected: %s, got %s", i, e, g)
-		}
+		assert.Equal(t, e, g)
 	}
 
 	bName := log.BucketName()
-	if !bytes.Equal(bName, bucketName) {
-		t.Errorf("Invalid bucket name, expected: %s, got %s", bucketName, bName)
-	}
+	assert.Equal(t, bucketName, bName)
 
-	if err := log.Close(); err != nil {
-		t.Fatal(err)
-	}
+	err = log.Close()
+	assert.NoError(t, err)
 
-	if _, err := os.Stat(log.file.Name()); err == nil {
-		t.Fatal("The file wasn't erased correctly")
-	}
+	_, err = os.Stat(log.file.Name())
+	assert.Error(t, err, "The file wasn't erased correctly")
 }
 
 func TestErrClosed(t *testing.T) {
 	log, err := newLog([]byte("test"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	if err := log.Close(); err != nil {
-		t.Errorf("Failed closing file: %v", err)
-	}
+	err = log.Close()
+	assert.NoError(t, err, "Failed closing file")
 
-	if _, err := log.Read(); err == nil {
-		t.Error("Expected an error when reading and got nil")
-	}
+	_, err = log.Read()
+	assert.Error(t, err)
 
-	if err := log.Write([]byte("data")); err == nil {
-		t.Error("Expected an error when writing and got nil")
-	}
+	err = log.Write([]byte("data"))
+	assert.Error(t, err)
 }
 
 func BenchmarkRead(b *testing.B) {
 	l, err := newLog([]byte("benchmark"))
-	if err != nil {
-		b.Fatal(err)
-	}
+	assert.NoError(b, err)
 	b.Cleanup(func() {
 		l.Close()
 	})
 
 	encEntry := createEncodedEntry(b)
-	if err := l.Write(encEntry); err != nil {
-		b.Fatal(err)
-	}
+	err = l.Write(encEntry)
+	assert.NoError(b, err)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -103,9 +83,7 @@ func BenchmarkRead(b *testing.B) {
 
 func BenchmarkWrite(b *testing.B) {
 	l, err := newLog([]byte("benchmark"))
-	if err != nil {
-		b.Fatal(err)
-	}
+	assert.NoError(b, err)
 	b.Cleanup(func() {
 		l.Close()
 	})
@@ -130,9 +108,7 @@ func createEncodedEntry(b *testing.B) []byte {
 	}
 
 	encEntry, err := proto.Marshal(entry)
-	if err != nil {
-		b.Fatal(err)
-	}
+	assert.NoError(b, err)
 
 	return encEntry
 }

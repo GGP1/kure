@@ -11,6 +11,7 @@ import (
 	"github.com/GGP1/kure/pb"
 
 	"github.com/atotto/clipboard"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -65,9 +66,8 @@ func Test2FA(t *testing.T) {
 			f.Set("info", tc.info)
 			f.Set("timeout", tc.timeout)
 
-			if err := cmd.Execute(); err != nil {
-				t.Errorf("Failed generating TOTP code: %v", err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err, "Failed generating TOTP code")
 		})
 	}
 }
@@ -91,9 +91,8 @@ func Test2FAErrors(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -101,8 +100,8 @@ func Test2FAErrors(t *testing.T) {
 func TestGenerateTOTP(t *testing.T) {
 	cases := []struct {
 		desc     string
-		digits   int
 		expected string
+		digits   int
 	}{
 		{
 			desc:     "6 digits",
@@ -126,9 +125,7 @@ func TestGenerateTOTP(t *testing.T) {
 			unixTime := time.Unix(10, 0)
 
 			got := GenerateTOTP("IFGEWRKSIFJUMR2R", unixTime, tc.digits)
-			if got != tc.expected {
-				t.Errorf("Expected %v, got %v", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
@@ -139,10 +136,9 @@ func TestPostRun(t *testing.T) {
 
 func createElements(t *testing.T, db *bolt.DB) {
 	t.Helper()
-	if err := entry.Create(db, &pb.Entry{Name: "test"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := totp.Create(db, &pb.TOTP{Name: "test", Raw: "AG5H1H2"}); err != nil {
-		t.Fatal(err)
-	}
+	err := entry.Create(db, &pb.Entry{Name: "test"})
+	assert.NoError(t, err)
+
+	err = totp.Create(db, &pb.TOTP{Name: "test", Raw: "AG5H1H2"})
+	assert.NoError(t, err)
 }

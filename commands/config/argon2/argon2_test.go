@@ -6,6 +6,7 @@ import (
 
 	cmdutil "github.com/GGP1/kure/commands"
 
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -29,13 +30,10 @@ func TestArgon2(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	if err := NewCmd(db).Execute(); err != nil {
-		t.Errorf("Failed printing argon2 parameters: %v", err)
-	}
+	err = NewCmd(db).Execute()
+	assert.NoError(t, err, "Failed printing argon2 parameters")
 	// Output:
 	// Iterations: 1
 	// Memory: 1

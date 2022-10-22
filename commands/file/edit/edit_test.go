@@ -1,7 +1,6 @@
 package edit
 
 import (
-	"bytes"
 	"os"
 	"testing"
 	"time"
@@ -9,14 +8,15 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEditErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := file.Create(db, &pb.File{Name: "test"}); err != nil {
-		t.Fatalf("Failed creating file: %v", err)
-	}
+	err := file.Create(db, &pb.File{Name: "test"})
+	assert.NoError(t, err, "Failed creating file")
 
 	cases := []struct {
 		desc   string
@@ -46,9 +46,8 @@ func TestEditErrors(t *testing.T) {
 			cmd.SetArgs([]string{tc.name})
 			cmd.Flags().Set("editor", tc.editor)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -57,61 +56,47 @@ func TestCreateTempFile(t *testing.T) {
 	expected := []byte("content")
 
 	filename, err := createTempFile(".txt", expected)
-	if err != nil {
-		t.Fatalf("Failed creating the file: %v", err)
-	}
+	assert.NoError(t, err, "Failed creating the file")
 
 	got, err := os.ReadFile(filename)
-	if err != nil {
-		t.Fatalf("Failed reading temporary file: %v", err)
-	}
+	assert.NoError(t, err, "Failed reading temporary file")
 
-	if !bytes.Equal(got, expected) {
-		t.Errorf("Expected %q, got %s", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestWatchFile(t *testing.T) {
 	f, err := os.CreateTemp("", "*")
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	defer f.Close()
 
 	go func(f *os.File) {
 		// Sleep to wait for the file to be watched
 		time.Sleep(50 * time.Millisecond)
-		if _, err := f.Write([]byte("anything")); err != nil {
-			t.Error(err)
-		}
+		_, err := f.Write([]byte("anything"))
+		assert.NoError(t, err)
 	}(f)
 
-	if err := watchFile(f.Name()); err != nil {
-		t.Error(err)
-	}
+	err = watchFile(f.Name())
+	assert.NoError(t, err)
 }
 
 func TestUpdate(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
+	expectedContent := []byte("test")
 	name := "test_read_and_update.txt"
 	f := &pb.File{
 		Name:    name,
-		Content: []byte("test"),
+		Content: expectedContent,
 	}
 
-	if err := update(db, f, "../testdata/test_read&update.txt"); err != nil {
-		t.Errorf("updating record: %v", err)
-	}
+	err := update(db, f, "../testdata/test_read&update.txt")
+	assert.NoError(t, err, "Updating record")
 
 	got, err := file.Get(db, name)
-	if err != nil {
-		t.Fatalf("The file wasn't created: %v", err)
-	}
+	assert.NoError(t, err, "The file wasn't created")
 
-	if !bytes.Equal([]byte("test"), got.Content) {
-		t.Error("Failed editing file, corrupted content")
-	}
+	assert.Equal(t, expectedContent, got.Content)
 }
 
 func TestPostRun(t *testing.T) {

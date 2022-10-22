@@ -13,6 +13,7 @@ import (
 
 	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -28,9 +29,7 @@ func TestLogin(t *testing.T) {
 	}
 
 	cmd := mock(db)
-	if err := cmd.PreRunE(cmd, nil); err != nil {
-		t.Errorf("Login() failed: %v", err)
-	}
+	assert.NoError(t, cmd.PreRunE(cmd, nil))
 }
 
 func TestAskArgon2Params(t *testing.T) {
@@ -62,21 +61,11 @@ func TestAskArgon2Params(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
 
 			argon2, err := askArgon2Params(buf)
-			if err != nil {
-				t.Fatalf("Failed taking argon2 parameters: %v", err)
-			}
+			assert.NoError(t, err, "Failed taking argon2 parameters")
 
-			if argon2.Iterations != tc.expectedIters {
-				t.Errorf("Expected %d, got %d", tc.expectedIters, argon2.Iterations)
-			}
-
-			if argon2.Memory != tc.expectedMem {
-				t.Errorf("Expected %d, got %d", tc.expectedMem, argon2.Memory)
-			}
-
-			if argon2.Threads != tc.expectedThreads {
-				t.Errorf("Expected %d, got %d", tc.expectedThreads, argon2.Threads)
-			}
+			assert.Equal(t, tc.expectedIters, argon2.Iterations)
+			assert.Equal(t, tc.expectedMem, argon2.Memory)
+			assert.Equal(t, tc.expectedThreads, argon2.Threads)
 		})
 	}
 }
@@ -104,9 +93,8 @@ func TestArgon2ParamsErrors(t *testing.T) {
 		t.Run("Invalid"+tc.desc, func(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
 
-			if _, err := askArgon2Params(buf); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			_, err := askArgon2Params(buf)
+			assert.Error(t, err)
 		})
 	}
 }
@@ -114,9 +102,9 @@ func TestArgon2ParamsErrors(t *testing.T) {
 func TestAskKeyfile(t *testing.T) {
 	cases := []struct {
 		desc            string
-		expected        bool
 		input           string
 		expectedCfgPath string
+		expected        bool
 	}{
 		{
 			desc:            "Do not use key file",
@@ -147,18 +135,12 @@ func TestAskKeyfile(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
 
 			got, err := askKeyfile(buf)
-			if err != nil {
-				t.Fatalf("Failed requesting key file: %v", err)
-			}
+			assert.NoError(t, err, "Failed requesting key file")
 
-			if got != tc.expected {
-				t.Errorf("Expected %v, got %v", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 
 			cfgPath := config.Get(keyfilePath)
-			if cfgPath != tc.expectedCfgPath {
-				t.Errorf("Expected %q, got %q", tc.expectedCfgPath, cfgPath)
-			}
+			assert.Equal(t, tc.expectedCfgPath, cfgPath)
 		})
 	}
 }
@@ -186,32 +168,23 @@ func TestCombineKeys(t *testing.T) {
 			config.Set(keyfilePath, tc.path)
 
 			enclave, err := combineKeys(nil, memguard.NewEnclave([]byte("test")))
-			if err != nil {
-				t.Fatalf("Failed combining keys: %v", err)
-			}
+			assert.NoError(t, err, "Failed combining keys")
 
 			pwdBuf, err := enclave.Open()
-			if err != nil {
-				t.Errorf("Failed opening enclave: %v", err)
-			}
+			assert.NoError(t, err, "Failed opening enclave")
 			defer pwdBuf.Destroy()
 
 			key, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Errorf("Failed reading key file: %v", err)
-			}
+			assert.NoError(t, err, "Failed reading key file")
 
 			if tc.hash {
 				h := sha256.New()
 				h.Write(key)
 				key = h.Sum(nil)
 			}
-
 			key = append(key, []byte("test")...)
 
-			if !bytes.Equal(pwdBuf.Bytes(), key) {
-				t.Errorf("Expected %q, got %q", string(key), pwdBuf.String())
-			}
+			assert.Equal(t, key, pwdBuf.Bytes())
 		})
 	}
 }
@@ -222,40 +195,29 @@ func TestCombineKeysRequestPath(t *testing.T) {
 	buf := bytes.NewBufferString(path)
 
 	enclave, err := combineKeys(buf, memguard.NewEnclave([]byte("test")))
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	pwdBuf, err := enclave.Open()
-	if err != nil {
-		t.Fatalf("Failed opening enclave: %v", err)
-	}
+	assert.NoError(t, err, "Failed opening enclave")
 	defer pwdBuf.Destroy()
 
 	key, err := os.ReadFile(path)
-	if err != nil {
-		t.Errorf("Failed reading key file: %v", err)
-	}
+	assert.NoError(t, err, "Failed reading key file")
 
 	key = append(key, []byte("test")...)
-
-	if !bytes.Equal(pwdBuf.Bytes(), key) {
-		t.Errorf("Expected %q, got %q", string(key), pwdBuf.String())
-	}
+	assert.Equal(t, key, pwdBuf.Bytes())
 }
 
 func TestCombineKeysErrors(t *testing.T) {
 	config.Set("keyfile.path", "non-existent")
 
-	if _, err := combineKeys(nil, memguard.NewEnclave([]byte("test"))); err == nil {
-		t.Error("Expected an error and got nil")
-	}
+	_, err := combineKeys(nil, memguard.NewEnclave([]byte("test")))
+	assert.Error(t, err)
 
 	t.Run("Invalid path", func(t *testing.T) {
 		config.Reset()
-		if _, err := combineKeys(bytes.NewBufferString("\n"), nil); err == nil {
-			t.Errorf("Expected an error and got nil")
-		}
+		_, err := combineKeys(bytes.NewBufferString("\n"), nil)
+		assert.Error(t, err)
 	})
 }
 
@@ -286,16 +248,8 @@ func TestSetAuthToConfig(t *testing.T) {
 	gotIter := got["iterations"].(uint32)
 	gotTh := got["threads"].(uint32)
 
-	if gotPassword != expPassword {
-		t.Errorf("Expected %#v, got %#v", expPassword, gotPassword)
-	}
-	if gotMem != expMem {
-		t.Errorf("Expected %d, got %d", expMem, gotMem)
-	}
-	if gotIter != expIter {
-		t.Errorf("Expected %d, got %d", expIter, gotIter)
-	}
-	if gotTh != expTh {
-		t.Errorf("Expected %d, got %d", expTh, gotTh)
-	}
+	assert.Equal(t, expPassword, gotPassword)
+	assert.Equal(t, expMem, gotMem)
+	assert.Equal(t, expIter, gotIter)
+	assert.Equal(t, expTh, gotTh)
 }

@@ -1,8 +1,12 @@
 package orderedmap
 
-import "testing"
+import (
+	"testing"
 
-func Test(t *testing.T) {
+	"github.com/stretchr/testify/assert"
+)
+
+func TestOrderedMap(t *testing.T) {
 	cases := []struct {
 		desc  string
 		key   string
@@ -34,10 +38,7 @@ func Test(t *testing.T) {
 
 			expected := tc.value
 			got := m.Get(tc.key)
-
-			if got != expected {
-				t.Errorf("Expected %v, got %v", expected, got)
-			}
+			assert.Equal(t, expected, got)
 		})
 	}
 
@@ -55,8 +56,6 @@ func Test(t *testing.T) {
 			expected = "Orcs"
 		}
 
-		if got != expected {
-			t.Errorf("Expected %v, got %v", expected, got)
-		}
+		assert.Equal(t, expected, got)
 	}
 }

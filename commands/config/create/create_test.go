@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/GGP1/kure/config"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateErrors(t *testing.T) {
@@ -34,16 +36,14 @@ func TestCreateErrors(t *testing.T) {
 			f := cmd.Flags()
 			f.Set("path", tc.path)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 
 	// Cleanup
-	if err := os.Remove(".test.yaml"); err != nil {
-		t.Errorf("Failed removing file")
-	}
+	err := os.Remove(".test.yaml")
+	assert.NoError(t, err, "Failed removing file")
 }
 
 func TestPostRun(t *testing.T) {

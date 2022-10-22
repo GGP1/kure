@@ -9,6 +9,7 @@ import (
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
@@ -39,18 +40,15 @@ func TestEntry(t *testing.T) {
 
 func create(db *bolt.DB, entries ...*pb.Entry) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Create(db, entries...); err != nil {
-			t.Error(err)
-		}
+		err := Create(db, entries...)
+		assert.NoError(t, err)
 	}
 }
 
 func get(db *bolt.DB, expected *pb.Entry) func(*testing.T) {
 	return func(t *testing.T) {
 		got, err := Get(db, expected.Name)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
 		if !proto.Equal(expected, got) {
 			t.Errorf("Expected %v, got %v", expected, got)
@@ -61,14 +59,13 @@ func get(db *bolt.DB, expected *pb.Entry) func(*testing.T) {
 func list(db *bolt.DB, expected ...*pb.Entry) func(*testing.T) {
 	return func(t *testing.T) {
 		entries, err := List(db)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
 		for _, got := range entries {
 			for _, exp := range expected {
-				if got.Name == exp.Name && !proto.Equal(exp, got) {
-					t.Errorf("Expected %v, got %v", exp, got)
+				if got.Name == exp.Name {
+					equal := proto.Equal(exp, got)
+					assert.True(t, equal)
 				}
 			}
 		}
@@ -78,58 +75,46 @@ func list(db *bolt.DB, expected ...*pb.Entry) func(*testing.T) {
 func listNames(db *bolt.DB, names map[string]struct{}) func(*testing.T) {
 	return func(t *testing.T) {
 		entryNames, err := ListNames(db)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
 		for _, name := range entryNames {
-			if _, ok := names[name]; !ok {
-				t.Errorf("Expected %q to be in the list but it isn't", name)
-			}
+			_, ok := names[name]
+			assert.Truef(t, ok, "Expected %q to be in the list but it isn't", name)
 		}
 	}
 }
 
 func remove(db *bolt.DB, names ...string) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Remove(db, names...); err != nil {
-			t.Error(err)
-		}
+		err := Remove(db, names...)
+		assert.NoError(t, err)
 	}
 }
 
 func update(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
 		oldEntry := &pb.Entry{Name: "old"}
-		if err := Create(db, oldEntry); err != nil {
-			t.Fatal(err)
-		}
+		err := Create(db, oldEntry)
+		assert.NoError(t, err)
 
 		newEntry := &pb.Entry{Name: "new"}
-		if err := Update(db, oldEntry.Name, newEntry); err != nil {
-			t.Fatal(err)
-		}
+		err = Update(db, oldEntry.Name, newEntry)
+		assert.NoError(t, err)
 
-		if _, err := Get(db, newEntry.Name); err != nil {
-			t.Error(err)
-		}
+		_, err = Get(db, newEntry.Name)
+		assert.NoError(t, err)
 	}
 }
 
 func TestCreateNone(t *testing.T) {
 	db := setContext(t)
-	if err := Create(db); err != nil {
-		t.Error(err)
-	}
+	err := Create(db)
+	assert.NoError(t, err)
 
 	names, err := ListNames(db)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
-	if len(names) != 0 {
-		t.Errorf("Expected no entries and got %d", len(names))
-	}
+	assert.Zero(t, len(names), "Expected no entries")
 }
 
 func TestCreateErrors(t *testing.T) {
@@ -151,9 +136,8 @@ func TestCreateErrors(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := Create(db, &pb.Entry{Name: tc.name}); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := Create(db, &pb.Entry{Name: tc.name})
+			assert.Error(t, err)
 		})
 	}
 }
@@ -161,9 +145,8 @@ func TestCreateErrors(t *testing.T) {
 func TestGetErrors(t *testing.T) {
 	db := setContext(t)
 
-	if _, err := Get(db, "non-existent"); err == nil {
-		t.Error("Expected an error, got nil")
-	}
+	_, err := Get(db, "non-existent")
+	assert.Error(t, err)
 }
 
 func TestCryptErrors(t *testing.T) {
@@ -172,19 +155,16 @@ func TestCryptErrors(t *testing.T) {
 	name := "test decrypt error"
 
 	e := &pb.Entry{Name: name, Expires: "Never"}
-	if err := Create(db, e); err != nil {
-		t.Fatal(err)
-	}
+	err := Create(db, e)
+	assert.NoError(t, err)
 
 	// Try to get the entry with other password
 	config.Set("auth.password", memguard.NewEnclave([]byte("invalid")))
 
-	if _, err := Get(db, name); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := List(db); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
+	_, err = Get(db, name)
+	assert.Error(t, err)
+	_, err = List(db)
+	assert.Error(t, err)
 }
 
 func TestProtoErrors(t *testing.T) {
@@ -197,24 +177,19 @@ func TestProtoErrors(t *testing.T) {
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte(name), encBuf)
 	})
-	if err != nil {
-		t.Fatalf("Failed writing invalid type: %v", err)
-	}
+	assert.NoError(t, err, "Failed writing invalid type")
 
-	if _, err := Get(db, name); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := List(db); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
+	_, err = Get(db, name)
+	assert.Error(t, err)
+	_, err = List(db)
+	assert.Error(t, err)
 }
 
 func TestKeyError(t *testing.T) {
 	db := setContext(t)
 
-	if err := Create(db, &pb.Entry{Name: ""}); err == nil {
-		t.Error("Create() didn't fail")
-	}
+	err := Create(db, &pb.Entry{Name: ""})
+	assert.Error(t, err)
 }
 
 func setContext(t testing.TB) *bolt.DB {
