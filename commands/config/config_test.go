@@ -5,6 +5,8 @@ import (
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRead(t *testing.T) {
@@ -12,9 +14,8 @@ func TestRead(t *testing.T) {
 	config.SetFilename("./testdata/mock_config.yaml")
 
 	cmd := NewCmd(db, nil)
-	if err := cmd.Execute(); err != nil {
-		t.Errorf("Failed reading config: %v", err)
-	}
+	err := cmd.Execute()
+	assert.NoError(t, err, "Failed reading config")
 }
 
 func TestReadError(t *testing.T) {
@@ -22,7 +23,6 @@ func TestReadError(t *testing.T) {
 	config.SetFilename("")
 
 	cmd := NewCmd(db, nil)
-	if err := cmd.Execute(); err == nil {
-		t.Error("Expected an error and got nil")
-	}
+	err := cmd.Execute()
+	assert.Error(t, err)
 }

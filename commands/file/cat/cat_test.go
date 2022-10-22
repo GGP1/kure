@@ -9,6 +9,7 @@ import (
 	"github.com/GGP1/kure/pb"
 
 	"github.com/atotto/clipboard"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -21,9 +22,9 @@ func TestCat(t *testing.T) {
 
 	cases := []struct {
 		desc     string
-		args     []string
-		expected string // Hardcoded to avoid listing files before being created
+		expected string
 		copy     string
+		args     []string
 	}{
 		{
 			desc:     "Read files",
@@ -50,26 +51,19 @@ func TestCat(t *testing.T) {
 				t.Skip("No clipboard utilities available")
 			}
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 
 			// Compare output
 			got := buf.String()
-			if got != tc.expected {
-				t.Errorf("Expected %q, got %q", tc.expected, got)
-			}
+			assert.Equal(t, tc.expected, got)
 
 			// Compare clipboard
 			if tc.copy == "true" {
 				gotClip, err := clipboard.ReadAll()
-				if err != nil {
-					t.Errorf("Failed reading from clipboard")
-				}
+				assert.NoError(t, err, "Failed reading form the clipboard")
 
-				if tc.expected != gotClip {
-					t.Errorf("Expected %q, got %q", tc.expected, gotClip)
-				}
+				assert.Equal(t, tc.expected, gotClip)
 			}
 		})
 	}
@@ -97,9 +91,8 @@ func TestCatErrors(t *testing.T) {
 			cmd := NewCmd(db, nil)
 			cmd.SetArgs(tc.args)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -113,14 +106,12 @@ func createFiles(t *testing.T, db *bolt.DB, name1, name2 string) {
 		Name:    name1,
 		Content: []byte("test"),
 	}
-	if err := file.Create(db, f1); err != nil {
-		t.Fatalf("Failed creating the first file: %v", err)
-	}
+	err := file.Create(db, f1)
+	assert.NoError(t, err, "Failed creating first file")
 	f2 := &pb.File{
 		Name:    name2,
 		Content: []byte("testing file"),
 	}
-	if err := file.Create(db, f2); err != nil {
-		t.Fatalf("Failed creating the second file: %v", err)
-	}
+	err = file.Create(db, f2)
+	assert.NoError(t, err, "Failed creating second file")
 }

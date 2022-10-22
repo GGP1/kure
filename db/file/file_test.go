@@ -11,6 +11,7 @@ import (
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -20,13 +21,11 @@ func TestFile(t *testing.T) {
 	var buf bytes.Buffer
 	gw := gzip.NewWriter(&buf)
 
-	if _, err := gw.Write([]byte("content")); err != nil {
-		t.Fatalf("Failed compressing content")
-	}
+	_, err := gw.Write([]byte("content"))
+	assert.NoError(t, err, "Failed compressing content")
 
-	if err := gw.Close(); err != nil {
-		t.Fatalf("Failed closing gzip writer")
-	}
+	err = gw.Close()
+	assert.NoError(t, err, "Failed closing gzip writer")
 
 	f := &pb.File{
 		Name:      "test",
@@ -47,152 +46,124 @@ func TestFile(t *testing.T) {
 
 func create(db *bolt.DB, f *pb.File) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Create(db, f); err != nil {
-			t.Error(err)
-		}
+		err := Create(db, f)
+		assert.NoError(t, err)
 	}
 }
 
 func get(db *bolt.DB, expected *pb.File) func(*testing.T) {
 	return func(t *testing.T) {
 		got, err := Get(db, expected.Name)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
 		// Using proto.Equal fails because of differing content buffers
-		if got.Name != expected.Name {
-			t.Errorf("Expected %s, got %s", expected.Name, got.Name)
-		}
+		assert.Equal(t, expected.Name, got.Name)
 	}
 }
 
 func rename(db *bolt.DB, name, updatedName string) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Rename(db, name, updatedName); err != nil {
-			t.Error(err)
-		}
+		err := Rename(db, name, updatedName)
+		assert.NoError(t, err)
 
-		if _, err := GetCheap(db, name); err == nil {
-			t.Error("Expected an error and got nil")
-		}
+		_, err = GetCheap(db, name)
+		assert.Error(t, err)
 	}
 }
 
 func getCheap(db *bolt.DB, expectedName string) func(*testing.T) {
 	return func(t *testing.T) {
 		gotName, err := GetCheap(db, expectedName)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
-		if gotName.Name != expectedName {
-			t.Errorf("Expected %s, got %s", expectedName, gotName.Name)
-		}
+		assert.Equal(t, expectedName, gotName.Name)
 	}
 }
 
 func list(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
 		files, err := List(db)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
-		if len(files) == 0 {
-			t.Error("Expected one or more files, got 0")
-		}
+		assert.NotZero(t, len(files), "Expected one or more files")
 	}
 }
 
 func listNames(db *bolt.DB, expectedName string) func(*testing.T) {
 	return func(t *testing.T) {
 		files, err := ListNames(db)
-		if err != nil {
-			t.Error(err)
-		}
-		if len(files) == 0 {
-			t.Error("Expected one or more files, got 0")
-		}
+		assert.NoError(t, err)
+
+		assert.NotZero(t, len(files), "Expected one or more files")
 
 		gotName := files[0]
-		if gotName != expectedName {
-			t.Errorf("Expected %s, got %s", expectedName, gotName)
-		}
+		assert.Equal(t, expectedName, gotName)
 	}
 }
 
 func remove(db *bolt.DB, name string) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Remove(db, name); err != nil {
-			t.Error(err)
-		}
+		err := Remove(db, name)
+		assert.NoError(t, err)
 	}
 }
 
 func TestRemoveNone(t *testing.T) {
 	db := dbutil.SetContext(t, "../testdata/database", bucketName)
 
-	if err := Remove(db); err != nil {
-		t.Error(err)
-	}
+	err := Remove(db)
+	assert.NoError(t, err)
 }
 
 func TestCreateErrors(t *testing.T) {
 	db := dbutil.SetContext(t, "../testdata/database", bucketName)
 
-	if err := Create(db, &pb.File{}); err == nil {
-		t.Error("Expected 'save file' error, got nil")
-	}
+	err := Create(db, &pb.File{})
+	assert.Error(t, err)
 }
 
 func TestGetError(t *testing.T) {
 	db := setContext(t)
 
-	if _, err := Get(db, "non-existent"); err == nil {
-		t.Error("Expected 'does not exist' error, got nil")
-	}
+	_, err := Get(db, "non-existent")
+	assert.Error(t, err)
 }
 
 func TestGetCheapError(t *testing.T) {
 	db := setContext(t)
 
-	if _, err := GetCheap(db, "non-existent"); err == nil {
-		t.Error("Expected 'does not exist' error, got nil")
-	}
+	_, err := GetCheap(db, "non-existent")
+	assert.Error(t, err)
 }
 
 func TestRenameError(t *testing.T) {
 	db := setContext(t)
 
-	if err := Rename(db, "non-existent", ""); err == nil {
-		t.Error("Expected 'does not exist' error, got nil")
-	}
+	err := Rename(db, "non-existent", "")
+	assert.Error(t, err)
 }
 
 func TestCryptErrors(t *testing.T) {
 	db := setContext(t)
 
 	name := "crypt-errors"
-	if err := Create(db, &pb.File{Name: name}); err != nil {
-		t.Fatal(err)
-	}
+	err := Create(db, &pb.File{Name: name})
+	assert.NoError(t, err)
 
 	// Try to get the file with other password
 	config.Set("auth.password", memguard.NewEnclave([]byte("invalid")))
 
-	if _, err := Get(db, name); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := GetCheap(db, name); err == nil {
-		t.Error("Expected GetCheap() to fail but it didn't")
-	}
-	if _, err := List(db); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
-	if err := Rename(db, name, "fail"); err == nil {
-		t.Error("Expected Rename() to fail but it didn't")
-	}
+	_, err = Get(db, name)
+	assert.Error(t, err)
+
+	_, err = GetCheap(db, name)
+	assert.Error(t, err)
+
+	_, err = List(db)
+	assert.Error(t, err)
+
+	err = Rename(db, name, "fail")
+	assert.Error(t, err)
 }
 
 func TestProtoErrors(t *testing.T) {
@@ -205,33 +176,29 @@ func TestProtoErrors(t *testing.T) {
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte(name), encBuf)
 	})
-	if err != nil {
-		t.Fatalf("Failed writing invalid type: %v", err)
-	}
+	assert.NoError(t, err, "Failed writing invalid type")
 
-	if _, err := Get(db, name); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := GetCheap(db, name); err == nil {
-		t.Error("Expected GetCheap() to fail but it didn't")
-	}
-	if _, err := List(db); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
-	if err := Rename(db, name, "fail"); err == nil {
-		t.Error("Expected Rename() to fail but it didn't")
-	}
+	_, err = Get(db, name)
+	assert.Error(t, err)
+
+	_, err = GetCheap(db, name)
+	assert.Error(t, err)
+
+	_, err = List(db)
+	assert.Error(t, err)
+
+	err = Rename(db, name, "fail")
+	assert.Error(t, err)
 }
 
 func TestKeyError(t *testing.T) {
 	db := setContext(t)
 
-	if err := Create(db, &pb.File{}); err == nil {
-		t.Error("Expected Create() to fail but it didn't")
-	}
-	if err := Rename(db, "", ""); err == nil {
-		t.Error("Expected Rename() to fail but it didn't")
-	}
+	err := Create(db, &pb.File{})
+	assert.Error(t, err)
+
+	err = Rename(db, "", "")
+	assert.Error(t, err)
 }
 
 func setContext(t testing.TB) *bolt.DB {

@@ -2,12 +2,13 @@ package add
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAdd(t *testing.T) {
@@ -37,9 +38,8 @@ func TestAdd(t *testing.T) {
 			f.Set("length", tc.length)
 			f.Set("format", tc.format)
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -47,9 +47,8 @@ func TestAdd(t *testing.T) {
 func TestAddErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 
-	if err := entry.Create(db, &pb.Entry{Name: "test"}); err != nil {
-		t.Fatal(err)
-	}
+	err := entry.Create(db, &pb.Entry{Name: "test"})
+	assert.NoError(t, err)
 
 	cases := []struct {
 		desc   string
@@ -88,17 +87,16 @@ func TestAddErrors(t *testing.T) {
 			f.Set("length", tc.length)
 			f.Set("levels", tc.levels)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
 
 func TestGenPassword(t *testing.T) {
 	cases := []struct {
-		desc string
 		opts *addOptions
+		desc string
 	}{
 		{
 			desc: "Generate password",
@@ -112,17 +110,16 @@ func TestGenPassword(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if _, err := genPassword(tc.opts); err != nil {
-				t.Errorf("Failed generating password: %v", err)
-			}
+			_, err := genPassword(tc.opts)
+			assert.NoError(t, err, "Failed generating password")
 		})
 	}
 }
 
 func TestGenPasswordErrors(t *testing.T) {
 	cases := []struct {
-		desc string
 		opts *addOptions
+		desc string
 	}{
 		{
 			desc: "Invalid length",
@@ -143,9 +140,8 @@ func TestGenPasswordErrors(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if _, err := genPassword(tc.opts); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			_, err := genPassword(tc.opts)
+			assert.Error(t, err)
 		})
 	}
 }
@@ -160,25 +156,19 @@ func TestEntryInput(t *testing.T) {
 	}
 
 	buf := bytes.NewBufferString("username\nurl\n03/05/2024\nnotes<")
-
 	got, err := entryInput(buf, "test", false)
-	if err != nil {
-		t.Fatalf("Failed creating entry: %v", err)
-	}
+	assert.NoError(t, err, "Failed creating entry")
 
 	// As it's randomly generated, use the same one
 	expected.Password = got.Password
-	if !reflect.DeepEqual(expected, got) {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestInvalidExpirationTime(t *testing.T) {
 	buf := bytes.NewBufferString("username\nurl\nnotes\ninvalid<\n")
 
-	if _, err := entryInput(buf, "test", false); err == nil {
-		t.Error("Expected an error and got nil")
-	}
+	_, err := entryInput(buf, "test", false)
+	assert.Error(t, err)
 }
 
 func TestPostRun(t *testing.T) {

@@ -18,11 +18,12 @@ import (
 	"github.com/GGP1/kure/orderedmap"
 	"github.com/GGP1/kure/sig"
 	"github.com/GGP1/kure/terminal"
-	"github.com/atotto/clipboard"
 
+	"github.com/atotto/clipboard"
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -347,9 +348,7 @@ func SelectEditor() string {
 func SetContext(t testing.TB, path string) *bolt.DB {
 	t.Helper()
 	db, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		t.Fatalf("Failed connecting to the database: %v", err)
-	}
+	assert.NoError(t, err, "Failed connecting to the database")
 
 	config.Reset()
 	// Reduce argon2 parameters to speed up tests
@@ -374,9 +373,7 @@ func SetContext(t testing.TB, path string) *bolt.DB {
 	os.Stdout = os.NewFile(0, "") // Mute stdout
 	os.Stderr = os.NewFile(0, "") // Mute stderr
 	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("Failed closing database: %v", err)
-		}
+		assert.NoError(t, db.Close(), "Failed connecting to the database")
 	})
 
 	return db

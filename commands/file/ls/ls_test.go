@@ -7,14 +7,15 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLs(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := file.Create(db, &pb.File{Name: "test.txt"}); err != nil {
-		t.Fatalf("Failed creating the first file: %v", err)
-	}
+	err := file.Create(db, &pb.File{Name: "test.txt"})
+	assert.NoError(t, err, "Failed creating file")
 
 	cases := []struct {
 		desc   string
@@ -44,9 +45,8 @@ func TestLs(t *testing.T) {
 			cmd.SetArgs([]string{tc.name})
 			f.Set("filter", tc.filter)
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -54,9 +54,8 @@ func TestLs(t *testing.T) {
 func TestLsErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := file.Create(db, &pb.File{Name: "test.txt"}); err != nil {
-		t.Fatalf("Failed creating the first file: %v", err)
-	}
+	err := file.Create(db, &pb.File{Name: "test.txt"})
+	assert.NoError(t, err, "Failed creating file")
 
 	cases := []struct {
 		desc   string
@@ -87,9 +86,8 @@ func TestLsErrors(t *testing.T) {
 			cmd.SetArgs([]string{tc.name})
 			f.Set("filter", tc.filter)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }

@@ -1,15 +1,14 @@
 package config
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"testing"
 	"time"
 
 	"github.com/awnumar/memguard"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInit(t *testing.T) {
@@ -29,24 +28,15 @@ func TestInit(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			os.Setenv("KURE_CONFIG", tc.path)
 
-			if err := Init(); err != nil {
-				t.Fatalf("Init() failed: %v", err)
-			}
+			err := Init()
+			assert.NoError(t, err)
 
 			gotStr := config.Get("test.string")
-			if gotStr != expectedStr {
-				t.Errorf("Expected %s, got %s", expectedStr, gotStr)
-			}
-
+			assert.Equal(t, expectedStr, gotStr)
 			gotNum := config.Get("test.number")
-			if gotNum != expectedNum {
-				t.Errorf("Expected %d, got %d", expectedNum, gotNum)
-			}
-
+			assert.Equal(t, expectedNum, gotNum)
 			gotBool := config.Get("test.bool")
-			if gotBool != expectedBool {
-				t.Errorf("Expected %t, got %t", expectedBool, gotBool)
-			}
+			assert.Equal(t, expectedBool, gotBool)
 		})
 	}
 
@@ -55,34 +45,34 @@ func TestInit(t *testing.T) {
 
 func TestInitErrors(t *testing.T) {
 	cases := []struct {
+		set  func()
 		desc string
 		path string
-		set  func()
 	}{
 		{
 			desc: "Invalid path",
 			path: "invalid_file.yaml",
-			set:  func() {},
 		},
 		{
 			desc: "Invalid extension",
 			path: "testdata/mock_config",
-			set:  func() {},
 		},
 		{
 			desc: "Home path error",
 			path: "",
-			set:  func() {},
 		},
 		{
 			desc: "Auth key presence",
 			path: "testdata/mock_config.yaml",
-			set:  func() { Set("auth", 200) }},
+			set:  func() { Set("auth", 200) },
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			tc.set()
+			if tc.set != nil {
+				tc.set()
+			}
 			if tc.path == "" {
 				env := "HOME"
 				switch runtime.GOOS {
@@ -96,9 +86,8 @@ func TestInitErrors(t *testing.T) {
 
 			os.Setenv("KURE_CONFIG", tc.path)
 
-			if err := Init(); err == nil {
-				t.Error("Expected Init() to fail but got nil")
-			}
+			err := Init()
+			assert.Error(t, err)
 		})
 	}
 }
@@ -108,9 +97,7 @@ func TestFilename(t *testing.T) {
 	config.filename = expected
 
 	got := Filename()
-	if got != expected {
-		t.Errorf("Expected %q, got %q", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestGetEnclave(t *testing.T) {
@@ -121,16 +108,12 @@ func TestGetEnclave(t *testing.T) {
 	}
 
 	got := GetEnclave(key)
-	if got != expected {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 
 	t.Run("Nil", func(t *testing.T) {
 		config.mp = map[string]interface{}{}
 		got := GetEnclave(key)
-		if got != nil {
-			t.Errorf("Expected nil and got %v", got)
-		}
+		assert.Nil(t, got)
 	})
 }
 
@@ -142,9 +125,7 @@ func TestGetDuration(t *testing.T) {
 	}
 
 	got := GetDuration(key)
-	if got != expected {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestGetString(t *testing.T) {
@@ -155,9 +136,7 @@ func TestGetString(t *testing.T) {
 	}
 
 	got := GetString(key)
-	if got != expected {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestStringMapString(t *testing.T) {
@@ -169,9 +148,7 @@ func TestStringMapString(t *testing.T) {
 	}
 
 	got := GetStringMapString("scripts")
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestGetUint32(t *testing.T) {
@@ -182,9 +159,7 @@ func TestGetUint32(t *testing.T) {
 	}
 
 	got := GetUint32(key)
-	if got != expected {
-		t.Errorf("Expected %v, got %v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestSetDefaults(t *testing.T) {
@@ -201,19 +176,14 @@ func TestSetDefaults(t *testing.T) {
 
 	for k, v := range defaults {
 		got := Get(k)
-		if got != v {
-			t.Errorf("Expected %q, got %q", v, got)
-		}
+		assert.Equal(t, v, got)
 	}
 }
 
 func TestSetFilename(t *testing.T) {
 	expected := "test"
 	SetFilename(expected)
-
-	if config.filename != expected {
-		t.Errorf("Expected %q, got %q", expected, config.filename)
-	}
+	assert.Equal(t, expected, config.filename)
 }
 
 func TestWriteStruct(t *testing.T) {
@@ -240,29 +210,21 @@ func TestWriteStruct(t *testing.T) {
 	expected, _ := config.marshal(filepath.Ext(filename))
 	config.mp = temp
 
-	if err := WriteStruct(filename); err != nil {
-		t.Fatalf("Failed writing config struct: %v", err)
-	}
+	err := WriteStruct(filename)
+	assert.NoError(t, err, "Failed writing config struct")
 
 	got, err := os.ReadFile(filename)
-	if err != nil {
-		t.Fatalf("Failed reading file: %v", err)
-	}
+	assert.NoError(t, err, "Failed reading file")
 	os.Remove(filename)
 
-	if !bytes.Equal(got, expected) {
-		t.Errorf("Expected %s,\n got %s", string(expected), string(got))
-	}
+	assert.Equal(t, expected, got)
 }
 
 // Remove config file created on user home directory.
 func cleanup(t *testing.T) {
 	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	if os.RemoveAll(filepath.Join(home, ".kure")); err != nil {
-		t.Fatal(err)
-	}
+	os.RemoveAll(filepath.Join(home, ".kure"))
+	assert.NoError(t, err)
 }

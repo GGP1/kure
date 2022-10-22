@@ -2,11 +2,11 @@ package auth
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	dbutil "github.com/GGP1/kure/db"
 
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -23,20 +23,15 @@ func TestParameters(t *testing.T) {
 		UseKeyfile: true,
 	}
 
-	if err := Register(db, expected); err != nil {
-		t.Fatalf("Registration failed: %v", err)
-	}
+	err := Register(db, expected)
+	assert.NoError(t, err, "Registration failed")
 
 	got, err := GetParams(db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	// Force auth key to be test as it's randomly generated and it won't match
 	got.AuthKey = []byte("test")
-
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("Expected %#v, got %#v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestEmptyParameters(t *testing.T) {
@@ -47,13 +42,9 @@ func TestEmptyParameters(t *testing.T) {
 
 	expected := Params{}
 	got, err := GetParams(db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("Expected %#v, got %#v", expected, got)
-	}
+	assert.Equal(t, expected, got)
 }
 
 func TestSetParametersInvalidKeys(t *testing.T) {
@@ -100,13 +91,10 @@ func TestSetParametersInvalidKeys(t *testing.T) {
 			*tc.key = nil
 
 			tx, err := db.Begin(true)
-			if err != nil {
-				t.Fatalf("Failed opening transaction: %v", err)
-			}
+			assert.NoError(t, err, "Failed opening transaction")
 
-			if err := storeParams(tx, params); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err = storeParams(tx, params)
+			assert.Error(t, err)
 			tx.Commit()
 
 			// Fill the variable so we can test the others

@@ -9,6 +9,7 @@ import (
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
 
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -17,9 +18,7 @@ func TestTouch(t *testing.T) {
 	createTestFiles(t, db)
 
 	rootDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	cases := []struct {
 		desc  string
@@ -57,22 +56,18 @@ func TestTouch(t *testing.T) {
 			f := cmd.Flags()
 			f.Set("path", "../"+tc.path)
 
-			if err := cmd.Execute(); err != nil {
-				t.Errorf("Failed running touch: %v", err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 
-			if stderr.Len() > 0 {
-				t.Errorf("Expected nothing on stderr, got %q", stderr.String())
-			}
+			assert.LessOrEqual(t, stderr.Len(), 0, "Expected nothing on stderr")
 
 			// Go back to the directory where the test was executed
 			os.Chdir(rootDir)
 		})
 	}
 
-	if err := os.RemoveAll("../testdata/create"); err != nil {
-		t.Fatalf("Failed removing the folder containing created files: %v", err)
-	}
+	err = os.RemoveAll("../testdata/create")
+	assert.NoError(t, err, "Failed removing the folder containing created files")
 }
 
 func TestPostRun(t *testing.T) {
@@ -84,8 +79,7 @@ func createTestFiles(t *testing.T, db *bolt.DB) {
 
 	names := []string{"test.txt", "testAll/file.csv", "testAll/file.pdf", "testdata/subfolder/file.txt"}
 	for _, name := range names {
-		if err := file.Create(db, &pb.File{Name: cmdutil.NormalizeName(name)}); err != nil {
-			t.Errorf("Failed creating %q: %v", name, err)
-		}
+		err := file.Create(db, &pb.File{Name: cmdutil.NormalizeName(name)})
+		assert.NoErrorf(t, err, "Failed creating %q", name)
 	}
 }

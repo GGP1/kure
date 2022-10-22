@@ -9,6 +9,7 @@ import (
 	"github.com/GGP1/kure/pb"
 
 	"github.com/atotto/clipboard"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCopy(t *testing.T) {
@@ -22,9 +23,8 @@ func TestCopy(t *testing.T) {
 		Number:       "1826352187",
 		SecurityCode: "213",
 	}
-	if err := card.Create(db, c); err != nil {
-		t.Fatalf("Failed creating the card: %v", err)
-	}
+	err := card.Create(db, c)
+	assert.NoError(t, err, "Failed creating the card")
 
 	cases := []struct {
 		desc    string
@@ -57,18 +57,13 @@ func TestCopy(t *testing.T) {
 			f.Set("timeout", tc.timeout)
 			f.Set("cvc", strconv.FormatBool(tc.copyCVC))
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 
 			got, err := clipboard.ReadAll()
-			if err != nil {
-				t.Fatalf("Failed reading from clipboard: %v", err)
-			}
+			assert.NoError(t, err, "Failed reading from clipboard")
 
-			if got != tc.value {
-				t.Errorf("Expected %s, got %s", tc.value, got)
-			}
+			assert.Equal(t, tc.value, got)
 		})
 	}
 }
@@ -96,9 +91,8 @@ func TestCopyErrors(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }

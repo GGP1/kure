@@ -7,6 +7,8 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRm(t *testing.T) {
@@ -14,9 +16,8 @@ func TestRm(t *testing.T) {
 
 	names := []string{"test", "directory/test"}
 	for _, name := range names {
-		if err := card.Create(db, &pb.Card{Name: name}); err != nil {
-			t.Fatalf("Failed creating %q: %v", name, err)
-		}
+		err := card.Create(db, &pb.Card{Name: name})
+		assert.NoErrorf(t, err, "Failed creating %q card", name)
 	}
 
 	cases := []struct {
@@ -48,9 +49,8 @@ func TestRm(t *testing.T) {
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -81,9 +81,8 @@ func TestRmErrors(t *testing.T) {
 			cmd := NewCmd(db, buf)
 			cmd.SetArgs([]string{tc.name})
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }

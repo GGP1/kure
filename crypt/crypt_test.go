@@ -8,6 +8,7 @@ import (
 	"github.com/GGP1/kure/config"
 
 	"github.com/awnumar/memguard"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCrypt(t *testing.T) {
@@ -25,33 +26,23 @@ func TestCrypt(t *testing.T) {
 		config.Set("auth.password", memguard.NewEnclave([]byte(tc.password)))
 
 		ciphertext, err := Encrypt([]byte(tc.data))
-		if err != nil {
-			t.Fatalf("Encrypt() failed: %v", err)
-		}
+		assert.NoError(t, err)
 
-		if tc.data == string(ciphertext) {
-			t.Error("Data hasn't been encrypted")
-		}
+		assert.NotEqual(t, string(ciphertext), tc.data, "Data hasn't been encrypted")
 
 		plaintext, err := Decrypt(ciphertext)
-		if err != nil {
-			t.Fatalf("Decrypt() failed: %v", err)
-		}
+		assert.NoError(t, err)
 
-		if tc.data != string(plaintext) {
-			t.Errorf("Expected: %q, got: %q", tc.data, string(plaintext))
-		}
+		assert.Equal(t, string(plaintext), tc.data)
 	}
 }
 
 func TestInvalidData(t *testing.T) {
-	if _, err := Encrypt(nil); err == nil {
-		t.Error("Expected Encrypt() to fail but it didn't")
-	}
+	_, err := Encrypt(nil)
+	assert.Error(t, err)
 
-	if _, err := Decrypt(nil); err == nil {
-		t.Error("Expected Decrypt() to fail but it didn't")
-	}
+	_, err = Decrypt(nil)
+	assert.Error(t, err)
 }
 
 func TestDecryptPanics(t *testing.T) {
@@ -75,9 +66,8 @@ func TestDecryptPanics(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			defer func() {
-				if r := recover(); r == nil {
-					t.Error("Expected Decrypt() to panic but it didn't")
-				}
+				r := recover()
+				assert.NotNil(t, r, "Expected Decrypt() to panic")
 			}()
 
 			config.Set("auth.password", tc.key)
@@ -93,26 +83,24 @@ func TestDecryptError(t *testing.T) {
 	// Data must be between 32 and 45 bytes long to fail
 	data := []byte("t8aNDgbSxlnPn ehxsYFnuDwzU4eqgydh2k")
 
-	if _, err := Decrypt(data); err == nil {
-		t.Error("Expected Decrypt() to fail and got nil")
-	}
+	_, err := Decrypt(data)
+	assert.Error(t, err)
 }
 
 func TestDeriveKey(t *testing.T) {
 	reduceArgon2Params(t)
 
 	salt := make([]byte, 32)
-	if _, err := rand.Read(salt); err != nil {
-		t.Fatalf("Failed generating salt: %v", err)
-	}
+	_, err := rand.Read(salt)
+	assert.NoError(t, err, "Failed generating salt")
 
 	key := memguard.NewEnclave([]byte("test"))
 	config.Set("auth.password", key)
 
 	cases := []struct {
+		setDefaults func()
 		desc        string
 		salt        []byte
-		setDefaults func()
 	}{
 		{
 			desc: "Predefined random salt",
@@ -140,27 +128,17 @@ func TestDeriveKey(t *testing.T) {
 			}
 
 			pwd, salt, err := deriveKey(tc.salt)
-			if err != nil {
-				t.Fatal(err)
-			}
+			assert.NoError(t, err)
 			password := pwd.Bytes()
 
-			if len(password) != 32 {
-				t.Errorf("Expected a 32 byte long password, got %d bytes", len(password))
-			}
-
-			if len(salt) != saltSize {
-				t.Errorf("Expected a 32 byte long salt, got %d bytes", len(salt))
-			}
+			assert.Equal(t, 32, len(password))
+			assert.Equal(t, saltSize, len(salt))
 
 			keyBuf, err := key.Open()
-			if err != nil {
-				t.Errorf("Failed opening key enclave: %v", err)
-			}
+			assert.NoError(t, err, "Failed opening key enclave")
 
-			if subtle.ConstantTimeCompare(password, keyBuf.Bytes()) == 1 {
-				t.Error("KDF failed, expected a different password and got the same one")
-			}
+			comparison := subtle.ConstantTimeCompare(password, keyBuf.Bytes())
+			assert.Equal(t, 0, comparison, "KDF failed, expected a different password and got the same one")
 		})
 	}
 }

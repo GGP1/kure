@@ -10,6 +10,7 @@ import (
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
@@ -33,66 +34,50 @@ func TestTOTP(t *testing.T) {
 
 func create(db *bolt.DB, totp *pb.TOTP) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Create(db, totp); err != nil {
-			t.Fatalf("Create() failed: %v", err)
-		}
+		err := Create(db, totp)
+		assert.NoError(t, err)
 	}
 }
 
 func get(db *bolt.DB, expected *pb.TOTP) func(*testing.T) {
 	return func(t *testing.T) {
 		got, err := Get(db, expected.Name)
-		if err != nil {
-			t.Fatalf("Get() failed: %v", err)
-		}
+		assert.NoError(t, err)
 
-		if !proto.Equal(expected, got) {
-			t.Errorf("Expected %v, got %v", expected, got)
-		}
+		equal := proto.Equal(expected, got)
+		assert.True(t, equal)
 	}
 }
 
 func list(db *bolt.DB, expected *pb.TOTP) func(*testing.T) {
 	return func(t *testing.T) {
 		totps, err := List(db)
-		if err != nil {
-			t.Fatalf("List() failed: %v", err)
-		}
+		assert.NoError(t, err)
 
-		if len(totps) == 0 {
-			t.Error("Expected one or more totps, got 0")
-		}
+		assert.NotZero(t, len(totps), "Expected one or more totps")
 
 		got := totps[0]
-		if !proto.Equal(expected, got) {
-			t.Errorf("Expected %v, got %v", expected, got)
-		}
+		equal := proto.Equal(expected, got)
+		assert.True(t, equal)
 	}
 }
 
 func listNames(db *bolt.DB, expected *pb.TOTP) func(*testing.T) {
 	return func(t *testing.T) {
 		totps, err := ListNames(db)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
-		if len(totps) == 0 {
-			t.Error("Expected one or more totps, got 0")
-		}
+		assert.NotZero(t, len(totps), "Expected one or more totps")
 
 		got := totps[0]
-		if got != expected.Name {
-			t.Errorf("Expected %s, got %s", expected.Name, got)
-		}
+		assert.Equal(t, expected.Name, got)
 	}
 }
 
 func remove(db *bolt.DB, name string) func(*testing.T) {
 	return func(t *testing.T) {
-		if err := Remove(db, name); err != nil {
-			t.Fatalf("Remove() failed: %v", err)
-		}
+		err := Remove(db, name)
+		assert.NoError(t, err)
 	}
 }
 
@@ -115,9 +100,8 @@ func TestCreateErrors(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			if err := Create(db, &pb.TOTP{Name: tc.name}); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := Create(db, &pb.TOTP{Name: tc.name})
+			assert.Error(t, err)
 		})
 	}
 }
@@ -125,9 +109,8 @@ func TestCreateErrors(t *testing.T) {
 func TestGetError(t *testing.T) {
 	db := setContext(t)
 
-	if _, err := Get(db, "non-existent"); err == nil {
-		t.Error("Expected 'does not exist' error, got nil")
-	}
+	_, err := Get(db, "non-existent")
+	assert.Error(t, err)
 }
 
 func TestCryptErrors(t *testing.T) {
@@ -135,19 +118,16 @@ func TestCryptErrors(t *testing.T) {
 
 	// Create the one used by Get and List
 	name := "test"
-	if err := Create(db, &pb.TOTP{Name: name}); err != nil {
-		t.Fatal(err)
-	}
+	err := Create(db, &pb.TOTP{Name: name})
+	assert.NoError(t, err)
 
 	// Try to get the TOTP with another password
 	config.Set("auth.password", memguard.NewEnclave([]byte("invalid")))
 
-	if _, err := Get(db, name); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := List(db); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
+	_, err = Get(db, name)
+	assert.Error(t, err)
+	_, err = List(db)
+	assert.Error(t, err)
 }
 
 func TestProtoErrors(t *testing.T) {
@@ -160,24 +140,20 @@ func TestProtoErrors(t *testing.T) {
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte("unformatted"), encBuf)
 	})
-	if err != nil {
-		t.Fatalf("Failed writing invalid type: %v", err)
-	}
+	assert.NoError(t, err, "Failed writing invalid type")
 
-	if _, err := Get(db, "unformatted"); err == nil {
-		t.Error("Expected Get() to fail but it didn't")
-	}
-	if _, err := List(db); err == nil {
-		t.Error("Expected List() to fail but it didn't")
-	}
+	_, err = Get(db, "unformatted")
+	assert.Error(t, err)
+
+	_, err = List(db)
+	assert.Error(t, err)
 }
 
 func TestKeyError(t *testing.T) {
 	db := setContext(t)
 
-	if err := Create(db, &pb.TOTP{Name: ""}); err == nil {
-		t.Error("Expected Create() to fail but it didn't")
-	}
+	err := Create(db, &pb.TOTP{Name: ""})
+	assert.Error(t, err)
 }
 
 func setContext(t testing.TB) *bolt.DB {

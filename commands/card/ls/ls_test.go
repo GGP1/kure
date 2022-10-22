@@ -6,17 +6,18 @@ import (
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLs(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := card.Create(db, &pb.Card{
+	err := card.Create(db, &pb.Card{
 		Name:   "test",
 		Number: "1500135",
-	}); err != nil {
-		t.Fatalf("Failed creating the card: %v", err)
-	}
+	})
+	assert.NoError(t, err, "Failed creating the card")
 
 	cases := []struct {
 		desc   string
@@ -60,9 +61,8 @@ func TestLs(t *testing.T) {
 			f.Set("hide", tc.hide)
 			f.Set("qr", tc.qr)
 
-			if err := cmd.Execute(); err != nil {
-				t.Error(err)
-			}
+			err := cmd.Execute()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -70,9 +70,8 @@ func TestLs(t *testing.T) {
 func TestLsErrors(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../../db/testdata/database")
 
-	if err := card.Create(db, &pb.Card{Name: "test"}); err != nil {
-		t.Fatalf("Failed creating the card: %v", err)
-	}
+	err := card.Create(db, &pb.Card{Name: "test"})
+	assert.NoError(t, err, "Failed creating the card")
 
 	cases := []struct {
 		desc   string
@@ -111,9 +110,8 @@ func TestLsErrors(t *testing.T) {
 			f.Set("filter", tc.filter)
 			f.Set("qr", tc.qr)
 
-			if err := cmd.Execute(); err == nil {
-				t.Error("Expected an error and got nil")
-			}
+			err := cmd.Execute()
+			assert.Error(t, err)
 		})
 	}
 }
