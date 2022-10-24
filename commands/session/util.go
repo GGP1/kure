@@ -42,20 +42,10 @@ func fillScript(args []string, script string) string {
 
 // idleTimer executes a timer after x time has passed without receiving an input from the user.
 func idleTimer(done chan struct{}, timeout *timeout) {
-	if timeout.duration < (5 * time.Minute) {
-		// Listen for the event before exiting so it doesn't block
-		<-done
-		return
-	}
-
-	var d float64
-	if timeout.duration == 0 {
-		d = 5
-	} else {
-		// round(log(x^3))
-		d = math.Round(math.Log10(math.Pow(float64(timeout.duration), 3)))
-	}
+	// round(log(x^3))
+	d := math.Round(math.Log10(math.Pow(float64(timeout.duration), 3)))
 	timer := time.NewTimer(time.Duration(d) * time.Minute)
+
 	select {
 	case <-done:
 		return
@@ -136,8 +126,11 @@ func parseDoubleQuotes(args []string) []string {
 // scanInput takes the user input and parses double quotes and scripts
 // to return a slice with the command arguments.
 func scanInput(reader *bufio.Reader, timeout *timeout, scripts map[string]string) ([][]string, error) {
-	done := make(chan struct{})
-	go idleTimer(done, timeout)
+	var done chan struct{}
+	if timeout.duration >= (5 * time.Minute) {
+		done = make(chan struct{})
+		go idleTimer(done, timeout)
+	}
 
 	text, _, err := reader.ReadLine()
 	if err != nil {
@@ -146,9 +139,12 @@ func scanInput(reader *bufio.Reader, timeout *timeout, scripts map[string]string
 		}
 		return nil, err
 	}
-	done <- struct{}{}
-	textStr := string(text)
 
+	if done != nil {
+		done <- struct{}{}
+	}
+
+	textStr := string(text)
 	args := strings.Split(textStr, " ")
 	if strings.Contains(textStr, quote) {
 		args = parseDoubleQuotes(args)
