@@ -150,11 +150,22 @@ func scanInput(reader *bufio.Reader, timeout *timeout, scripts map[string]string
 		args = parseDoubleQuotes(args)
 	}
 
-	script, ok := scripts[args[0]]
-	if ok {
-		script = fillScript(args[1:], script)
-		args = strings.Split(script, " ")
+	// Parse user input commands
+	cmds := parseCommands(args)
+	parsedCmds := make([][]string, 0, len(cmds))
+
+	for _, cmd := range cmds {
+		script, ok := scripts[cmd[0]]
+		if ok {
+			script = fillScript(cmd[1:], script)
+			cmd = strings.Split(script, " ")
+			// Parse script commands
+			parsedCmds = append(parsedCmds, parseCommands(cmd)...)
+			continue
+		}
+
+		parsedCmds = append(parsedCmds, cmd)
 	}
 
-	return parseCommands(args), nil
+	return parsedCmds, nil
 }
