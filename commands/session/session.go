@@ -38,7 +38,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "session",
 		Short: "Run a session",
-		Long: `Sessions let you do multiple operations by providing the master password once. 
+		Long: `Sessions let you do multiple operations by providing the master password once.
 		
 They support running scripts using the logical AND (&&) operator and executing pre-defined ones from the configuration file by using their aliases.
 
