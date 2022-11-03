@@ -6,7 +6,7 @@
 
 Sessions are used for doing multiple operations by providing the master password once, it's encrypted and stored inside a locked buffer, decrypted when needed and destroyed right after it.
 
-Scripts can be created in the configuration file and executed inside sessions by using their aliases and, optionally, passing arguments.
+Scripts can be created in the configuration file and executed inside sessions by using their aliases and, optionally, passing arguments. They can be composed of *kure* and *session* commands but not other scripts.
 
 > Adding scripts inside a session will require to restart it to take effect as they are loaded on the command initialization and not before every command.
 
