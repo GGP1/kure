@@ -421,20 +421,23 @@ func WriteClipboard(cmd *cobra.Command, d time.Duration, field, content string) 
 		d = config.GetDuration(configKey)
 	}
 
-	if d > 0 {
-		sig.Signal.AddCleanup(func() error { return clipboard.WriteAll("") })
-		done := make(chan struct{})
-		start := time.Now()
-
-		go terminal.Ticker(done, true, func() {
-			timeLeft := d - time.Since(start)
-			fmt.Printf("(%v) %s copied to clipboard", timeLeft.Round(time.Second), field)
-		})
-
-		<-time.After(d)
-		done <- struct{}{}
-		clipboard.WriteAll("")
+	if d <= 0 {
+		fmt.Println(field, "copied to clipboard")
+		return nil
 	}
+
+	sig.Signal.AddCleanup(func() error { return clipboard.WriteAll("") })
+	done := make(chan struct{})
+	start := time.Now()
+
+	go terminal.Ticker(done, true, func() {
+		timeLeft := d - time.Since(start)
+		fmt.Printf("(%v) %s copied to clipboard", timeLeft.Round(time.Second), field)
+	})
+
+	<-time.After(d)
+	done <- struct{}{}
+	clipboard.WriteAll("")
 
 	return nil
 }
