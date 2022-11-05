@@ -48,7 +48,7 @@ func main() {
 //
 // Usage: main --cmd ls.
 func cmdDocs(args []string) error {
-	root := root.DevCmd()
+	root := root.NewCmd(nil)
 
 	cmd, _, err := root.Find(args[2:])
 	if err != nil {
@@ -147,7 +147,7 @@ func summary(args []string) error {
 		return buf.String()
 	}
 
-	root := root.DevCmd()
+	root := root.NewCmd(nil)
 	funcs := template.FuncMap{
 		"cmdAndFlags": func(cmd *cobra.Command) string {
 			return cmdAndFlags(cmd)
