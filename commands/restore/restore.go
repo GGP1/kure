@@ -15,8 +15,6 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var buckets = [][]byte{dbutil.CardBucket, dbutil.EntryBucket, dbutil.FileBucket, dbutil.TOTPBucket}
-
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	cmd := &cobra.Command{
@@ -36,7 +34,14 @@ Warning: this command is computationally expensive, it may cause memory (OOM) an
 
 func runRestore(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
+		buckets := [][]byte{
+			dbutil.CardBucket,
+			dbutil.EntryBucket,
+			dbutil.FileBucket,
+			dbutil.TOTPBucket,
+		}
 		logs := make([]*log, 0, len(buckets))
+
 		for _, bucket := range buckets {
 			log, err := newLog(bucket)
 			if err != nil {
