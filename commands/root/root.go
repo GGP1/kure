@@ -33,7 +33,7 @@ type rootOptions struct {
 	version bool
 }
 
-// NewCmd creates a root command.
+// NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := rootOptions{}
 

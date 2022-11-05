@@ -33,7 +33,7 @@ type addOptions struct {
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
-	var opts addOptions
+	opts := addOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "add <name>",
