@@ -157,6 +157,8 @@ func ScanPassword(message string, verify bool) (*memguard.Enclave, error) {
 // Ticker clears the terminal and executes the log function every second.
 func Ticker(done chan struct{}, hiddenCursor bool, log func()) {
 	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
 	fmt.Print(saveCursorPos)
 	if hiddenCursor {
 		fmt.Print(hideCursor)

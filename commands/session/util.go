@@ -45,6 +45,7 @@ func idleTimer(done chan struct{}, timeout *timeout) {
 	// round(log(x^3))
 	d := math.Round(math.Log10(math.Pow(float64(timeout.duration), 3)))
 	timer := time.NewTimer(time.Duration(d) * time.Minute)
+	defer timer.Stop()
 
 	select {
 	case <-done:
