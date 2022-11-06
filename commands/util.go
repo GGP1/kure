@@ -62,9 +62,9 @@ type object int
 
 // BuildBox constructs a responsive box used to display records information.
 //
-// ┌──── Sample ────┐
-// │ Key  │ Value   │
-// └────────────────┘
+//	┌──── Sample ────┐
+//	│ Key  │ Value   │
+//	└────────────────┘
 func BuildBox(name string, mp *orderedmap.Map) string {
 	var sb strings.Builder
 
