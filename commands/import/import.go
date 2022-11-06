@@ -33,7 +33,6 @@ type importOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := importOptions{}
-
 	cmd := &cobra.Command{
 		Use:   "import <manager-name>",
 		Short: "Import entries",
@@ -53,7 +52,7 @@ Supported:
 		PreRunE: auth.Login(db),
 		RunE:    runImport(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset flag (session)
+			// Reset variables (session)
 			opts = importOptions{}
 		},
 	}

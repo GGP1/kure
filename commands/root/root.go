@@ -36,7 +36,6 @@ type rootOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := rootOptions{}
-
 	cmd := &cobra.Command{
 		Use:           "kure",
 		Short:         "Kure ~ CLI password manager",

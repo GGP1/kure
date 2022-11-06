@@ -40,7 +40,6 @@ type backupOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := backupOptions{}
-
 	cmd := &cobra.Command{
 		Use:     "backup",
 		Short:   "Create database backup",

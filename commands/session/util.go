@@ -15,6 +15,11 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const (
+	quote = `"`
+	space = " "
+)
+
 // cleanup resets signal cleanups and sets all flags as unchanged to keep using default values.
 //
 // It also sets the help flag internal variable to false in case it's used.
@@ -112,7 +117,7 @@ func parseDoubleQuotes(args []string) []string {
 				if strings.HasSuffix(args[j], quote) {
 					// Join enclosed words, store the sequence where the first one was
 					// and remove the others from the slice
-					words := strings.Join(args[i:j+1], " ")
+					words := strings.Join(args[i:j+1], space)
 					args[i] = strings.Trim(words, quote)
 					args = append(args[:i+1], args[j+1:]...)
 					i = j - 1
@@ -146,7 +151,7 @@ func scanInput(reader *bufio.Reader, timeout *timeout, scripts map[string]string
 	}
 
 	textStr := string(text)
-	args := strings.Split(textStr, " ")
+	args := strings.Split(textStr, space)
 	if strings.Contains(textStr, quote) {
 		args = parseDoubleQuotes(args)
 	}
@@ -159,7 +164,7 @@ func scanInput(reader *bufio.Reader, timeout *timeout, scripts map[string]string
 		script, ok := scripts[cmd[0]]
 		if ok {
 			script = fillScript(cmd[1:], script)
-			cmd = strings.Split(script, " ")
+			cmd = strings.Split(script, space)
 			// Parse script commands
 			parsedCmds = append(parsedCmds, parseCommands(cmd)...)
 			continue

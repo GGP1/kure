@@ -34,7 +34,6 @@ type touchOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := touchOptions{}
-
 	cmd := &cobra.Command{
 		Use:   "touch <name>",
 		Short: "Create stored files",

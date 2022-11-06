@@ -17,15 +17,13 @@ kure stats`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:     "stats",
 		Short:   "Show database statistics",
 		Example: example,
 		PreRunE: auth.Login(db),
 		RunE:    runStats(db),
 	}
-
-	return cmd
 }
 
 func runStats(db *bolt.DB) cmdutil.RunEFunc {

@@ -25,7 +25,7 @@ kure sample`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "it <command|flags|name>",
 		Short: "Execute commands through an interactive prompt",
 		Long: `Interactive prompt.
@@ -40,8 +40,6 @@ name 				command and flags`,
 		PreRunE:            auth.Login(db),
 		RunE:               runIt(db),
 	}
-
-	return cmd
 }
 
 func runIt(db *bolt.DB) cmdutil.RunEFunc {
