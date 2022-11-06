@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
-	dbutil "github.com/GGP1/kure/db"
+	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
@@ -25,7 +25,7 @@ func TestLogs(t *testing.T) {
 	err := entry.Create(db, expected)
 	assert.NoError(t, err)
 
-	l, err := newLog(dbutil.EntryBucket)
+	l, err := newLog(bucket.Entry.GetName())
 	assert.NoError(t, err)
 	defer l.Close()
 
@@ -54,7 +54,7 @@ func TestReadLogs(t *testing.T) {
 	err := card.Create(db, expected)
 	assert.NoError(t, err)
 
-	l, err := newLog(dbutil.CardBucket)
+	l, err := newLog(bucket.Card.GetName())
 	assert.NoError(t, err)
 	defer l.Close()
 
@@ -72,7 +72,7 @@ func TestReadLogs(t *testing.T) {
 func TestWriteLogs(t *testing.T) {
 	db := cmdutil.SetContext(t, "../../db/testdata/database")
 
-	l, err := newLog(dbutil.EntryBucket)
+	l, err := newLog(bucket.Entry.GetName())
 	assert.NoError(t, err)
 	defer l.Close()
 

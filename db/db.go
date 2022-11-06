@@ -7,6 +7,7 @@ import (
 
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
+	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
@@ -17,14 +18,6 @@ import (
 )
 
 const nullChar = string('\x00')
-
-// Database bucket
-var (
-	CardBucket  = []byte("kure_card")
-	EntryBucket = []byte("kure_entry")
-	FileBucket  = []byte("kure_file")
-	TOTPBucket  = []byte("kure_totp")
-)
 
 // Record is an interface that all Kure objects implement.
 type Record interface {
@@ -59,13 +52,13 @@ func Get(db *bolt.DB, name string, record Record) error {
 func GetBucketName(r Record) []byte {
 	switch r.(type) {
 	case *pb.Card:
-		return CardBucket
+		return bucket.Card.GetName()
 	case *pb.Entry:
-		return EntryBucket
+		return bucket.Entry.GetName()
 	case *pb.File, *pb.FileCheap:
-		return FileBucket
+		return bucket.File.GetName()
 	case *pb.TOTP:
-		return TOTPBucket
+		return bucket.TOTP.GetName()
 	default:
 		memguard.SafePanic("invalid object: " + r.GetName())
 		return nil

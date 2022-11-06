@@ -2,6 +2,7 @@ package totp
 
 import (
 	dbutil "github.com/GGP1/kure/db"
+	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/pb"
 
 	bolt "go.etcd.io/bbolt"
@@ -10,7 +11,7 @@ import (
 // Create a new TOTP.
 func Create(db *bolt.DB, totp *pb.TOTP) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(dbutil.TOTPBucket)
+		b := tx.Bucket(bucket.TOTP.GetName())
 		return dbutil.Put(b, totp)
 	})
 }
@@ -32,10 +33,10 @@ func List(db *bolt.DB) ([]*pb.TOTP, error) {
 
 // ListNames returns a slice with all the totps names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutil.ListNames(db, dbutil.TOTPBucket)
+	return dbutil.ListNames(db, bucket.TOTP.GetName())
 }
 
 // Remove removes one or more totps from the database.
 func Remove(db *bolt.DB, names ...string) error {
-	return dbutil.Remove(db, dbutil.TOTPBucket, names...)
+	return dbutil.Remove(db, bucket.TOTP.GetName(), names...)
 }
