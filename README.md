@@ -76,7 +76,9 @@ mv kure $PATH
 	<summary>Compile from source</summary>
 
 ```bash
-git clone https://github.com/GGP1/kure && cd kure && make install
+git clone https://github.com/GGP1/kure
+cd kure
+make install
 ```
 </details>
 
