@@ -146,6 +146,5 @@ func printFile(f *pb.FileCheap) {
 		mp.Set("Updated at", updatedAt.String())
 	}
 
-	box := cmdutil.BuildBox(f.Name, mp)
-	fmt.Println("\n" + box)
+	fmt.Println(cmdutil.BuildBox(f.Name, mp))
 }

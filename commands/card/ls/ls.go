@@ -129,6 +129,5 @@ func printCard(name string, c *pb.Card, show bool) {
 	mp.Set("Expire date", c.ExpireDate)
 	mp.Set("Notes", c.Notes)
 
-	box := cmdutil.BuildBox(name, mp)
-	fmt.Println("\n" + box)
+	fmt.Println(cmdutil.BuildBox(name, mp))
 }

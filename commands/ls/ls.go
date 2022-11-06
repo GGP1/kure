@@ -140,8 +140,7 @@ func printEntry(name string, e *pb.Entry, show bool) {
 	mp.Set("Expires", e.Expires)
 	mp.Set("Notes", e.Notes)
 
-	box := cmdutil.BuildBox(name, mp)
-	fmt.Println("\n" + box)
+	fmt.Println(cmdutil.BuildBox(name, mp))
 }
 
 // expired returns if the entry is expired or not.
