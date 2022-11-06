@@ -23,7 +23,7 @@ kure file mv oldDir/ newDir/`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "mv <src> <dst>",
 		Short: "Move a file or directory",
 		Long: `Move a file or directory.
@@ -44,8 +44,6 @@ In case any of the paths contains spaces within it, it must be enclosed by doubl
 		PreRunE: auth.Login(db),
 		RunE:    runMv(db),
 	}
-
-	return cmd
 }
 
 func runMv(db *bolt.DB) cmdutil.RunEFunc {

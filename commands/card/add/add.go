@@ -22,7 +22,7 @@ kure card add Sample`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:     "add <name>",
 		Short:   "Add a card",
 		Aliases: []string{"create", "new"},
@@ -31,8 +31,6 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 		PreRunE: auth.Login(db),
 		RunE:    runAdd(db, r),
 	}
-
-	return cmd
 }
 
 func runAdd(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {

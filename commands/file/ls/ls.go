@@ -47,7 +47,6 @@ type lsOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := lsOptions{}
-
 	cmd := &cobra.Command{
 		Use:     "ls <name>",
 		Short:   "List files",

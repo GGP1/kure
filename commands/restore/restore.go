@@ -17,7 +17,7 @@ import (
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "restore",
 		Short: "Restore the database using new credentials",
 		Long: `Restore the database using new credentials.
@@ -28,8 +28,6 @@ Warning: this command is computationally expensive, it may cause memory (OOM) an
 		PreRunE: auth.Login(db),
 		RunE:    runRestore(db),
 	}
-
-	return cmd
 }
 
 func runRestore(db *bolt.DB) cmdutil.RunEFunc {

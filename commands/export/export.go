@@ -27,7 +27,6 @@ type exportOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := exportOptions{}
-
 	cmd := &cobra.Command{
 		Use:   "export <manager-name>",
 		Short: "Export entries",
@@ -84,7 +83,7 @@ func runExport(db *bolt.DB, opts *exportOptions) cmdutil.RunEFunc {
 }
 
 func createCSV(headers []string, records [][]string, path string) error {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
 	if err != nil {
 		return errors.Wrap(err, "creating the file")
 	}

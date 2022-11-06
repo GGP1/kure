@@ -35,7 +35,6 @@ type clearOptions struct {
 // NewCmd returns a new command.
 func NewCmd() *cobra.Command {
 	opts := clearOptions{}
-
 	cmd := &cobra.Command{
 		Use:   "clear",
 		Short: "Clear clipboard, terminal screen or history",
@@ -156,7 +155,7 @@ func clearHistoryFile(path string) error {
 		return errors.Wrap(err, "scanning file")
 	}
 
-	if err := os.WriteFile(path, buf.Bytes(), 0600); err != nil {
+	if err := os.WriteFile(path, buf.Bytes(), 0o600); err != nil {
 		return errors.Wrap(err, "writing file")
 	}
 

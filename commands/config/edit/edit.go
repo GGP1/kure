@@ -18,22 +18,20 @@ kure config edit`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:     "edit",
 		Short:   "Edit the current configuration file",
 		Example: example,
 		PreRunE: auth.Login(db),
 		RunE:    runEdit(),
 	}
-
-	return cmd
 }
 
 func runEdit() cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		path := config.Filename()
 
-		f, err := os.OpenFile(path, os.O_RDWR, 0600)
+		f, err := os.OpenFile(path, os.O_RDWR, 0o600)
 		if err != nil {
 			return errors.Wrap(err, "opening configuration file")
 		}
