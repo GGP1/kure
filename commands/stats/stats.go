@@ -5,7 +5,7 @@ import (
 
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
-	dbutil "github.com/GGP1/kure/db"
+	"github.com/GGP1/kure/db/bucket"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -36,10 +36,10 @@ func runStats(db *bolt.DB) cmdutil.RunEFunc {
 		}
 		defer tx.Rollback()
 
-		nCards := tx.Bucket(dbutil.CardBucket).Stats().KeyN
-		nEntries := tx.Bucket(dbutil.EntryBucket).Stats().KeyN
-		nFiles := tx.Bucket(dbutil.FileBucket).Stats().KeyN
-		nTOTPs := tx.Bucket(dbutil.TOTPBucket).Stats().KeyN
+		nCards := tx.Bucket(bucket.Card.GetName()).Stats().KeyN
+		nEntries := tx.Bucket(bucket.Entry.GetName()).Stats().KeyN
+		nFiles := tx.Bucket(bucket.File.GetName()).Stats().KeyN
+		nTOTPs := tx.Bucket(bucket.TOTP.GetName()).Stats().KeyN
 		total := nCards + nEntries + nFiles + nTOTPs
 
 		fmt.Printf(`

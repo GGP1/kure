@@ -7,7 +7,7 @@ import (
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/crypt"
-	dbutil "github.com/GGP1/kure/db"
+	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/sig"
 
 	"github.com/pkg/errors"
@@ -34,12 +34,7 @@ Warning: this command is computationally expensive, it may cause memory (OOM) an
 
 func runRestore(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		buckets := [][]byte{
-			dbutil.CardBucket,
-			dbutil.EntryBucket,
-			dbutil.FileBucket,
-			dbutil.TOTPBucket,
-		}
+		buckets := bucket.GetNames()
 		logs := make([]*log, 0, len(buckets))
 
 		for _, bucket := range buckets {
