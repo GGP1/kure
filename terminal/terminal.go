@@ -159,6 +159,10 @@ func Ticker(done chan struct{}, hiddenCursor bool, log func()) {
 	fmt.Print(saveCursorPos)
 	if hiddenCursor {
 		fmt.Print(hideCursor)
+		sig.Signal.AddCleanup(func() error {
+			fmt.Print(showCursor)
+			return nil
+		})
 	}
 	log()
 
