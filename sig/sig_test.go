@@ -2,6 +2,7 @@ package sig
 
 import (
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -12,13 +13,34 @@ import (
 
 func TestAddCleanup(t *testing.T) {
 	f := func() error { return errors.New("test") }
-	Signal.AddCleanup(f)
 
-	for _, cf := range Signal.cleanups {
-		got := cf().Error()
-		expected := f().Error()
-		assert.Equal(t, expected, got)
-	}
+	t.Run("Sequentially", func(t *testing.T) {
+		Signal.ResetCleanups()
+		Signal.AddCleanup(f)
+
+		for _, cf := range Signal.cleanups {
+			got := cf().Error()
+			expected := f().Error()
+			assert.Equal(t, expected, got)
+		}
+	})
+
+	t.Run("Concurrently", func(t *testing.T) {
+		Signal.ResetCleanups()
+		count := 5
+
+		var wg sync.WaitGroup
+		wg.Add(count)
+		for i := 0; i < count; i++ {
+			go func(i int) {
+				Signal.AddCleanup(f)
+				wg.Done()
+			}(i)
+		}
+		wg.Wait()
+
+		assert.Equal(t, count, len(Signal.cleanups))
+	})
 }
 
 func TestKeepAlive(t *testing.T) {
