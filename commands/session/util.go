@@ -25,7 +25,11 @@ const (
 // It also sets the help flag internal variable to false in case it's used.
 func cleanup(cmd *cobra.Command) {
 	sig.Signal.ResetCleanups()
-	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Changed {
+			f.Changed = false
+		}
+	})
 	cmd.Flags().Set("help", "false")
 }
 
