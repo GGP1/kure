@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"sync/atomic"
 	"syscall"
 
@@ -16,6 +17,7 @@ import (
 var Signal = sig{}
 
 type sig struct {
+	mu sync.RWMutex
 	// channel listening to signals
 	interrupt chan os.Signal
 	// list of functions to be executed after a signal
@@ -32,7 +34,9 @@ type sig struct {
 // AddCleanup adds a function to be executed on a signal.
 // First added, first called order.
 func (s *sig) AddCleanup(f func() error) {
+	s.mu.Lock()
 	s.cleanups = append(s.cleanups, f)
+	s.mu.Unlock()
 }
 
 // Interrupt stops the process but keeps it alive, to force exit use Kill().
@@ -72,11 +76,13 @@ func (s *sig) Listen(db *bolt.DB) {
 	go func() {
 		<-s.interrupt
 
+		s.mu.RLock()
 		for _, f := range s.cleanups {
 			if err := f(); err != nil {
 				fmt.Fprintln(os.Stderr, "error:", err)
 			}
 		}
+		s.mu.RUnlock()
 
 		if atomic.LoadInt32(&s.keepAlive) == 1 {
 			// Reset keep alive state
@@ -93,5 +99,7 @@ func (s *sig) Listen(db *bolt.DB) {
 
 // ResetCleanups empties cleanup functions.
 func (s *sig) ResetCleanups() {
+	s.mu.Lock()
 	s.cleanups = nil
+	s.mu.Unlock()
 }
