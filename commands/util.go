@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/GGP1/kure/config"
-	"github.com/GGP1/kure/db/bucket"
+	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/file"
@@ -62,9 +62,9 @@ type object int
 
 // BuildBox constructs a responsive box used to display records information.
 //
-//	┌──── Sample ────┐
-//	│ Key  │ Value   │
-//	└────────────────┘
+// ┌──── Sample ────┐
+// │ Key  │ Value   │
+// └────────────────┘
 func BuildBox(name string, mp *orderedmap.Map) string {
 	var sb strings.Builder
 
@@ -361,7 +361,7 @@ func SetContext(t testing.TB, path string) *bolt.DB {
 	config.Set("auth", auth)
 
 	db.Update(func(tx *bolt.Tx) error {
-		buckets := bucket.GetNames()
+		buckets := [][]byte{dbutil.CardBucket, dbutil.EntryBucket, dbutil.FileBucket, dbutil.TOTPBucket}
 		for _, bucket := range buckets {
 			// Ignore errors on purpose
 			tx.DeleteBucket(bucket)
@@ -421,23 +421,20 @@ func WriteClipboard(cmd *cobra.Command, d time.Duration, field, content string) 
 		d = config.GetDuration(configKey)
 	}
 
-	if d <= 0 {
-		fmt.Println(field, "copied to clipboard")
-		return nil
+	if d > 0 {
+		sig.Signal.AddCleanup(func() error { return clipboard.WriteAll("") })
+		done := make(chan struct{})
+		start := time.Now()
+
+		go terminal.Ticker(done, true, func() {
+			timeLeft := d - time.Since(start)
+			fmt.Printf("(%v) %s copied to clipboard", timeLeft.Round(time.Second), field)
+		})
+
+		<-time.After(d)
+		done <- struct{}{}
+		clipboard.WriteAll("")
 	}
-
-	sig.Signal.AddCleanup(func() error { return clipboard.WriteAll("") })
-	done := make(chan struct{})
-	start := time.Now()
-
-	go terminal.Ticker(done, true, func() {
-		timeLeft := d - time.Since(start)
-		fmt.Printf("(%v) %s copied to clipboard", timeLeft.Round(time.Second), field)
-	})
-
-	<-time.After(d)
-	done <- struct{}{}
-	clipboard.WriteAll("")
 
 	return nil
 }

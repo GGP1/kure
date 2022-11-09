@@ -56,6 +56,7 @@ type phraseOptions struct {
 // NewCmd returns a new command.
 func NewCmd() *cobra.Command {
 	opts := phraseOptions{}
+
 	cmd := &cobra.Command{
 		Use:   "phrase",
 		Short: "Generate a random passphrase",

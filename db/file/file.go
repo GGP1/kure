@@ -7,13 +7,14 @@ import (
 
 	"github.com/GGP1/kure/crypt"
 	dbutil "github.com/GGP1/kure/db"
-	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 	"google.golang.org/protobuf/proto"
 )
+
+var bucketName = []byte("kure_file")
 
 // Create a new file with its content compressed.
 func Create(db *bolt.DB, file *pb.File) error {
@@ -24,7 +25,7 @@ func Create(db *bolt.DB, file *pb.File) error {
 	file.Content = compressedContent
 
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.File.GetName())
+		b := tx.Bucket(bucketName)
 		return dbutil.Put(b, file)
 	})
 }
@@ -63,7 +64,7 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 	}
 	defer tx.Rollback()
 
-	b := tx.Bucket(bucket.File.GetName())
+	b := tx.Bucket(bucketName)
 	files := make([]*pb.File, 0, b.Stats().KeyN)
 
 	err = b.ForEach(func(k, v []byte) error {
@@ -95,18 +96,18 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 
 // ListNames returns a slice with all the files names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutil.ListNames(db, bucket.File.GetName())
+	return dbutil.ListNames(db, bucketName)
 }
 
 // Remove removes one or more files from the database.
 func Remove(db *bolt.DB, names ...string) error {
-	return dbutil.Remove(db, bucket.File.GetName(), names...)
+	return dbutil.Remove(db, bucketName, names...)
 }
 
 // Rename recreates a file with a new key and deletes the old one.
 func Rename(db *bolt.DB, oldName, newName string) error {
 	return db.Batch(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.File.GetName())
+		b := tx.Bucket(bucketName)
 
 		file, err := Get(db, oldName)
 		if err != nil {

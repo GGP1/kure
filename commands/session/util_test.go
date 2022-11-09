@@ -125,37 +125,15 @@ func TestScanInput(t *testing.T) {
 	var buf bytes.Buffer
 	reader := bufio.NewReader(&buf)
 	buf.WriteString("tom && \"jerry\"")
-	timeout := &timeout{duration: 0}
+	timeout := &timeout{
+		duration: 0,
+	}
 	expected := [][]string{
 		{"tom"},
 		{"jerry"},
 	}
 
 	got, err := scanInput(reader, timeout, map[string]string{})
-	assert.NoError(t, err)
-
-	assert.Equal(t, expected, got)
-}
-
-func TestConcatenatedScripts(t *testing.T) {
-	var buf bytes.Buffer
-	reader := bufio.NewReader(&buf)
-	buf.WriteString("show test && login testing && clear -H")
-
-	scripts := map[string]string{
-		"show":  "ls -s $1",
-		"login": "copy -u $1 && copy $1 && 2fa -c $1",
-	}
-	timeout := &timeout{duration: 0}
-	expected := [][]string{
-		{"ls", "-s", "test"},
-		{"copy", "-u", "testing"},
-		{"copy", "testing"},
-		{"2fa", "-c", "testing"},
-		{"clear", "-H"},
-	}
-
-	got, err := scanInput(reader, timeout, scripts)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, got)

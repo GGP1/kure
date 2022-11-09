@@ -16,7 +16,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const example = `
+var createExample = `
 * Create a file and overwrite if it already exists
 kure file touch fileName -p path/to/folder -o
 
@@ -34,6 +34,7 @@ type touchOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := touchOptions{}
+
 	cmd := &cobra.Command{
 		Use:   "touch <name>",
 		Short: "Create stored files",
@@ -45,7 +46,7 @@ In case any of the paths contains spaces within it, it must be enclosed by doubl
 
 In case a path is passed, Kure will create any missing folders for you.`,
 		Aliases: []string{"th"},
-		Example: example,
+		Example: createExample,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return nil
@@ -75,7 +76,7 @@ func runTouch(db *bolt.DB, opts *touchOptions) cmdutil.RunEFunc {
 		}
 		opts.path = absolute
 
-		if err := os.MkdirAll(opts.path, 0o700); err != nil {
+		if err := os.MkdirAll(opts.path, 0700); err != nil {
 			return errors.Wrap(err, "making directory")
 		}
 
@@ -173,7 +174,7 @@ func createFile(file *pb.File, overwrite bool) error {
 		return errors.Errorf("%q already exists, use -o to overwrite files", filename)
 	}
 
-	if err := os.WriteFile(filename, file.Content, 0o600); err != nil {
+	if err := os.WriteFile(filename, file.Content, 0600); err != nil {
 		return errors.Wrapf(err, "writing %q", filename)
 	}
 	fmt.Println("Create:", file.Name)
@@ -204,7 +205,7 @@ func createFiles(file *pb.File, path string, overwrite bool) error {
 
 		// If it's not the last element, create a folder
 		// Use MkdirAll to avoid errors when the folder already exists
-		if err := os.MkdirAll(p, 0o700); err != nil {
+		if err := os.MkdirAll(p, 0700); err != nil {
 			return errors.Wrapf(err, "making %q directory", p)
 		}
 		if err := os.Chdir(p); err != nil {

@@ -7,7 +7,6 @@ import (
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
 	dbutil "github.com/GGP1/kure/db"
-	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
@@ -135,7 +134,7 @@ func TestProtoErrors(t *testing.T) {
 	db := setContext(t)
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.TOTP.GetName())
+		b := tx.Bucket([]byte(dbutil.TOTPBucket))
 		buf := make([]byte, 64)
 		rand.Read(buf)
 		encBuf, _ := crypt.Encrypt(buf)
@@ -158,5 +157,5 @@ func TestKeyError(t *testing.T) {
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutil.SetContext(t, "../testdata/database", bucket.TOTP.GetName())
+	return dbutil.SetContext(t, "../testdata/database", dbutil.TOTPBucket)
 }

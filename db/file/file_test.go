@@ -8,7 +8,6 @@ import (
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
 	dbutil "github.com/GGP1/kure/db"
-	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
@@ -110,14 +109,14 @@ func remove(db *bolt.DB, name string) func(*testing.T) {
 }
 
 func TestRemoveNone(t *testing.T) {
-	db := dbutil.SetContext(t, "../testdata/database", bucket.File.GetName())
+	db := dbutil.SetContext(t, "../testdata/database", bucketName)
 
 	err := Remove(db)
 	assert.NoError(t, err)
 }
 
 func TestCreateErrors(t *testing.T) {
-	db := dbutil.SetContext(t, "../testdata/database", bucket.File.GetName())
+	db := dbutil.SetContext(t, "../testdata/database", bucketName)
 
 	err := Create(db, &pb.File{})
 	assert.Error(t, err)
@@ -172,7 +171,7 @@ func TestProtoErrors(t *testing.T) {
 
 	name := "unformatted"
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.File.GetName())
+		b := tx.Bucket(bucketName)
 		buf := make([]byte, 64)
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte(name), encBuf)
@@ -203,5 +202,5 @@ func TestKeyError(t *testing.T) {
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutil.SetContext(t, "../testdata/database", bucket.File.GetName())
+	return dbutil.SetContext(t, "../testdata/database", bucketName)
 }

@@ -24,13 +24,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Example: example,
 	}
 
-	cmd.AddCommand(
-		cadd.NewCmd(db, os.Stdin),
-		ccopy.NewCmd(db),
-		cedit.NewCmd(db),
-		cls.NewCmd(db),
-		crm.NewCmd(db, os.Stdin),
-	)
+	cmd.AddCommand(cadd.NewCmd(db, os.Stdin), ccopy.NewCmd(db), cedit.NewCmd(db), cls.NewCmd(db), crm.NewCmd(db, os.Stdin))
 
 	return cmd
 }

@@ -9,12 +9,12 @@ import (
 )
 
 func TestExecute(t *testing.T) {
-	err := root.NewCmd(nil).Execute()
+	err := root.Execute(nil)
 	assert.NoError(t, err)
 }
 
 func TestHasDescription(t *testing.T) {
-	cmd := root.NewCmd(nil)
+	cmd := root.DevCmd()
 
 	for _, c := range cmd.Commands() {
 		if c.Short == "" && c.Long == "" {
@@ -24,7 +24,7 @@ func TestHasDescription(t *testing.T) {
 }
 
 func TestHasExample(t *testing.T) {
-	cmd := root.NewCmd(nil)
+	cmd := root.DevCmd()
 	exceptions := map[string]struct{}{
 		"restore":    {},
 		"help":       {},
@@ -42,7 +42,7 @@ func TestHasExample(t *testing.T) {
 }
 
 func TestRunnable(t *testing.T) {
-	cmd := root.NewCmd(nil)
+	cmd := root.DevCmd()
 	exceptions := map[string]struct{}{
 		"card":       {},
 		"file":       {},
