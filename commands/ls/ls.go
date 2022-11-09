@@ -151,8 +151,5 @@ func expired(expires string) bool {
 
 	// Error is always nil as "expires" field was already formatted before being saved
 	expiration, _ := time.Parse(time.RFC1123Z, expires)
-
-	// This never fails neither
-	now, _ := time.Parse(time.RFC1123Z, time.Now().Format(time.RFC1123Z))
-	return now.Sub(expiration) >= 0
+	return time.Now().After(expiration)
 }
