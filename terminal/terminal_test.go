@@ -73,9 +73,6 @@ func TestScanln(t *testing.T) {
 
 			got := terminal.Scanln(r, "test")
 			assert.Equal(t, tc.expected, got)
-			if got != tc.expected {
-				t.Errorf("Expected %s, got: %s", tc.expected, got)
-			}
 		})
 	}
 }
