@@ -1,6 +1,8 @@
 package tree
 
 import (
+	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -9,22 +11,36 @@ import (
 
 func TestPrint(t *testing.T) {
 	paths := []string{
-		"kure/atoll/password",
-		"kure/atoll/passphrase",
+		"kure/atoll/secret/password",
+		"kure/atoll/secret/passphrase",
+		"kure/atoll/test/password",
 		"sync/atomic",
 		"unsafe/pointer",
 	}
 
+	temp := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 	Print(paths)
-	// Output:
-	// ├── kure/
-	// │   └── atoll/
-	// │       ├── password
-	// │       └── passphrase
-	// ├── sync/
-	// │   └── atomic
-	// └── unsafe/
-	//     └── pointer
+	w.Close()
+
+	got, err := io.ReadAll(r)
+	assert.NoError(t, err)
+	os.Stdout = temp
+
+	expected := `├── kure
+│   └── atoll
+│       ├── secret
+│       │   ├── password
+│       │   └── passphrase
+│       └── test
+│           └── password
+├── sync
+│   └── atomic
+└── unsafe
+    └── pointer
+`
+	assert.Equal(t, expected, string(got))
 }
 
 func TestTreeStructure(t *testing.T) {
@@ -57,39 +73,6 @@ func TestTreeStructure(t *testing.T) {
 			assert.NotEmpty(t, r.children)
 		}
 	}
-}
-
-func TestPrintTree(t *testing.T) {
-	root := &node{
-		children: []*node{
-			{
-				name: "kure",
-				top:  true,
-				children: []*node{
-					{
-						name: "atoll",
-						children: []*node{
-							{name: "password"},
-							{name: "passphrase"},
-						},
-					},
-				},
-			},
-			{name: "sync", top: true, children: []*node{{name: "atomic"}}},
-			{name: "unsafe", top: true, children: []*node{{name: "pointer"}}},
-		},
-	}
-
-	printTree(root, "")
-	// Output:
-	// ├── kure/
-	// │   └── atoll/
-	// │       ├── password
-	// │       └── passphrase
-	// ├── sync/
-	// │   └── atomic
-	// └── unsafe/
-	//     └── pointer
 }
 
 func BenchmarkTree(b *testing.B) {

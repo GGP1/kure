@@ -11,13 +11,22 @@ import (
 type node struct {
 	name     string
 	children []*node
-	top      bool
 }
 
 // Print prints the paths passed as a tree on the console.
 func Print(paths []string) {
 	root := newTree(paths)
-	printTree(root, "")
+	start := "│  "
+	for i, r := range root.children {
+		lastChild := i == len(root.children)-1
+		symbol, _ := getTokens(lastChild)
+		if lastChild {
+			start = "   "
+		}
+
+		fmt.Println(symbol, r.name)
+		printChildren(r, "", start)
+	}
 }
 
 // newTree builds the tree and returns the root node.
@@ -33,7 +42,7 @@ func newTree(paths []string) *node {
 //
 // path will be something like [root, folder, subfolder, file].
 func buildBranch(root *node, path []string) {
-	child := &node{name: path[0], top: true}
+	child := &node{name: path[0]}
 
 	// len(path) will be never < 1 and if there is only
 	// one element it must be unique as we already verified
@@ -90,30 +99,20 @@ func deeperMatch(parent, child *node) bool {
 	return false
 }
 
-func printTree(parent *node, indent string) {
-	for i, child := range parent.children {
-		symbol, add := getTokens(i, len(parent.children))
+// printChildren uses recursion for printing every folder children and adds
+// indentation every time it prints the last element of a branch.
+func printChildren(root *node, indent, start string) {
+	for i, r := range root.children {
+		fmt.Print(start)
+		symbol, add := getTokens(i == len(root.children)-1)
+		fmt.Println(indent, symbol, r.name)
 
-		if child.top {
-			// Reset indentation for the top children
-			indent = ""
-		}
-		if len(child.children) > 0 {
-			child.name += "/"
-		}
-
-		fmt.Println(indent, symbol, child.name)
-
-		if len(child.children) > 0 {
-			indent += add
-		}
-
-		printTree(child, indent)
+		printChildren(r, indent+add, start)
 	}
 }
 
-func getTokens(i, childrenCount int) (symbol string, add string) {
-	if i == childrenCount-1 {
+func getTokens(lastChild bool) (string, string) {
+	if lastChild {
 		return "└──", "    "
 	}
 	return "├──", " │  "
