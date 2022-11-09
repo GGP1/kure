@@ -30,6 +30,7 @@ type copyOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := copyOptions{}
+
 	cmd := &cobra.Command{
 		Use:     "copy <name>",
 		Short:   "Copy card number or security code",

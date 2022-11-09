@@ -39,6 +39,7 @@ type lsOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := lsOptions{}
+
 	cmd := &cobra.Command{
 		Use:   "ls <name>",
 		Short: "List entries",
@@ -140,7 +141,8 @@ func printEntry(name string, e *pb.Entry, show bool) {
 	mp.Set("Expires", e.Expires)
 	mp.Set("Notes", e.Notes)
 
-	fmt.Println(cmdutil.BuildBox(name, mp))
+	box := cmdutil.BuildBox(name, mp)
+	fmt.Println("\n" + box)
 }
 
 // expired returns if the entry is expired or not.
@@ -154,5 +156,9 @@ func expired(expires string) bool {
 
 	// This never fails neither
 	now, _ := time.Parse(time.RFC1123Z, time.Now().Format(time.RFC1123Z))
-	return now.Sub(expiration) >= 0
+	if now.Sub(expiration) >= 0 {
+		return true
+	}
+
+	return false
 }

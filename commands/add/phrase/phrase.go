@@ -33,6 +33,7 @@ type phraseOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	opts := phraseOptions{}
+
 	cmd := &cobra.Command{
 		Use:     "phrase <name>",
 		Short:   "Create an entry using a passphrase",

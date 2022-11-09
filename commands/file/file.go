@@ -26,15 +26,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Example: example,
 	}
 
-	cmd.AddCommand(
-		fadd.NewCmd(db, os.Stdin),
-		fcat.NewCmd(db, os.Stdout),
-		fedit.NewCmd(db),
-		fls.NewCmd(db),
-		fmv.NewCmd(db),
-		frm.NewCmd(db, os.Stdin),
-		ftouch.NewCmd(db),
-	)
+	cmd.AddCommand(fadd.NewCmd(db, os.Stdin), fcat.NewCmd(db, os.Stdout), fedit.NewCmd(db), fls.NewCmd(db), fmv.NewCmd(db), frm.NewCmd(db, os.Stdin), ftouch.NewCmd(db))
 
 	return cmd
 }

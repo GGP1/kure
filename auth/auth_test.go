@@ -225,7 +225,7 @@ func TestSetAuthToConfig(t *testing.T) {
 	defer config.Reset()
 
 	expPassword := memguard.NewEnclave([]byte("test"))
-	const (
+	var (
 		expMem  uint32 = 150000
 		expIter uint32 = 110
 		expTh   uint32 = 4

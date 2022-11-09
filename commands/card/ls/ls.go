@@ -35,6 +35,7 @@ type lsOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := lsOptions{}
+
 	cmd := &cobra.Command{
 		Use:     "ls <name>",
 		Short:   "List cards",
@@ -129,5 +130,6 @@ func printCard(name string, c *pb.Card, show bool) {
 	mp.Set("Expire date", c.ExpireDate)
 	mp.Set("Notes", c.Notes)
 
-	fmt.Println(cmdutil.BuildBox(name, mp))
+	box := cmdutil.BuildBox(name, mp)
+	fmt.Println("\n" + box)
 }

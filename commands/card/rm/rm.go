@@ -23,7 +23,7 @@ kure card rm SampleDir/`
 
 // NewCmd returns the a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "rm <name>",
 		Short:   "Remove a card or directory",
 		Example: example,
@@ -31,6 +31,8 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 		PreRunE: auth.Login(db),
 		RunE:    runRm(db, r),
 	}
+
+	return cmd
 }
 
 func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {

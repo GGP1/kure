@@ -5,13 +5,14 @@ import (
 	"encoding/binary"
 
 	"github.com/GGP1/kure/crypt"
-	"github.com/GGP1/kure/db/bucket"
+	dbutil "github.com/GGP1/kure/db"
 
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 )
 
 var (
+	authBucket = []byte("kure_auth")
 	// authKey is the key we are trying to decrypt on every Login
 	authKey = []byte("key")
 	// keyfileKey will exist only if the user uses a keyfile
@@ -43,7 +44,7 @@ func GetParams(db *bolt.DB) (Params, error) {
 	}
 	defer tx.Rollback()
 
-	b := tx.Bucket(bucket.Auth.GetName())
+	b := tx.Bucket(authBucket)
 	if b == nil {
 		return Params{}, nil
 	}
@@ -70,7 +71,7 @@ func GetParams(db *bolt.DB) (Params, error) {
 func Register(db *bolt.DB, params Params) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		// Create all the buckets except auth, it will be created in setParameters()
-		buckets := bucket.GetNames()
+		buckets := [][]byte{dbutil.CardBucket, dbutil.EntryBucket, dbutil.FileBucket, dbutil.TOTPBucket}
 		for _, bucket := range buckets {
 			if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
 				return errors.Wrapf(err, "creating %q bucket", bucket)
@@ -85,7 +86,7 @@ func Register(db *bolt.DB, params Params) error {
 //
 // The transaction shouldn't be closed as it's already handled by Register().
 func storeParams(tx *bolt.Tx, params Params) error {
-	b, err := tx.CreateBucketIfNotExists(bucket.Auth.GetName())
+	b, err := tx.CreateBucketIfNotExists(authBucket)
 	if err != nil {
 		return errors.Wrap(err, "creating auth bucket")
 	}

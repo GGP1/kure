@@ -36,6 +36,7 @@ type editOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := editOptions{}
+
 	cmd := &cobra.Command{
 		Use:   "edit <name>",
 		Short: "Edit an entry",

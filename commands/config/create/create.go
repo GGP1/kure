@@ -21,6 +21,7 @@ type createOptions struct {
 // NewCmd returns a new command.
 func NewCmd() *cobra.Command {
 	opts := createOptions{}
+
 	cmd := &cobra.Command{
 		Use:     "create",
 		Short:   "Create a configuration file",

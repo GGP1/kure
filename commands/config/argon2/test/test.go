@@ -26,6 +26,7 @@ type testOptions struct {
 // NewCmd returns a new command.
 func NewCmd() *cobra.Command {
 	opts := testOptions{}
+
 	cmd := &cobra.Command{
 		Use:   "test",
 		Short: "Test argon2 performance",
@@ -74,8 +75,7 @@ func runTest(opts *testOptions) cmdutil.RunEFunc {
 			atoll.Upper,
 			atoll.Digit,
 			atoll.Space,
-			atoll.Special,
-		})
+			atoll.Special})
 		if err != nil {
 			return err
 		}

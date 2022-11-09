@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	dbutil "github.com/GGP1/kure/db"
-	"github.com/GGP1/kure/db/bucket"
 
 	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
@@ -38,7 +37,7 @@ func TestParameters(t *testing.T) {
 func TestEmptyParameters(t *testing.T) {
 	db := setContext(t)
 	tx, _ := db.Begin(true)
-	tx.DeleteBucket(bucket.Auth.GetName())
+	tx.DeleteBucket(authBucket)
 	tx.Commit()
 
 	expected := Params{}
@@ -105,5 +104,5 @@ func TestSetParametersInvalidKeys(t *testing.T) {
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutil.SetContext(t, "../testdata/database", bucket.Auth.GetName())
+	return dbutil.SetContext(t, "../testdata/database", authBucket)
 }

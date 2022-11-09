@@ -7,7 +7,7 @@ import (
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/crypt"
-	"github.com/GGP1/kure/db/bucket"
+	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/sig"
 
 	"github.com/pkg/errors"
@@ -15,9 +15,11 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+var buckets = [][]byte{dbutil.CardBucket, dbutil.EntryBucket, dbutil.FileBucket, dbutil.TOTPBucket}
+
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "restore",
 		Short: "Restore the database using new credentials",
 		Long: `Restore the database using new credentials.
@@ -28,13 +30,13 @@ Warning: this command is computationally expensive, it may cause memory (OOM) an
 		PreRunE: auth.Login(db),
 		RunE:    runRestore(db),
 	}
+
+	return cmd
 }
 
 func runRestore(db *bolt.DB) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		buckets := bucket.GetNames()
 		logs := make([]*log, 0, len(buckets))
-
 		for _, bucket := range buckets {
 			log, err := newLog(bucket)
 			if err != nil {

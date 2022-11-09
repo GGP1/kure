@@ -12,7 +12,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const example = `
+var argon2Example = `
 kure config argon2`
 
 // NewCmd returns a new command.
@@ -21,7 +21,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Use:     "argon2",
 		Short:   "Display currently used argon2 parameters",
 		Aliases: []string{"argon"},
-		Example: example,
+		Example: argon2Example,
 		PreRunE: auth.Login(db),
 		RunE:    runArgon2(db),
 	}

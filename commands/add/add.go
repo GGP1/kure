@@ -38,6 +38,7 @@ type addOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	opts := addOptions{}
+
 	cmd := &cobra.Command{
 		Use:     "add <name>",
 		Short:   "Add an entry",

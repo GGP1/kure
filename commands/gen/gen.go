@@ -39,6 +39,7 @@ type genOptions struct {
 // NewCmd returns a new command.
 func NewCmd() *cobra.Command {
 	opts := genOptions{}
+
 	cmd := &cobra.Command{
 		Use:   "gen",
 		Short: "Generate a random password",

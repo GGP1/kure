@@ -21,6 +21,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+var once sync.Once
+
 const example = `
 * Create a file backup
 kure backup --path path/to/file
@@ -39,7 +41,8 @@ type backupOptions struct {
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
-	opts := backupOptions{}
+	var opts backupOptions
+
 	cmd := &cobra.Command{
 		Use:     "backup",
 		Short:   "Create database backup",
@@ -101,7 +104,6 @@ func serveFile(db *bolt.DB, port uint16) error {
 
 	// Register route only once, otherwise it will panic if
 	// called multiple times inside a session
-	var once sync.Once
 	once.Do(func() {
 		http.HandleFunc("/", httpBackup(db))
 	})
@@ -122,7 +124,7 @@ func fileBackup(db *bolt.DB, path string) error {
 
 	dir := filepath.Dir(path)
 
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return errors.Wrap(err, "making directory")
 	}
 
@@ -130,7 +132,7 @@ func fileBackup(db *bolt.DB, path string) error {
 		return errors.Wrap(err, "changing working directory")
 	}
 
-	f, err := os.OpenFile(filepath.Base(path), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	f, err := os.OpenFile(filepath.Base(path), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return errors.Wrap(err, "opening file")
 	}
