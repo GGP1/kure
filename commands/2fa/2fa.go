@@ -44,7 +44,6 @@ type tfaOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := tfaOptions{}
-
 	cmd := &cobra.Command{
 		Use:   "2fa <name>",
 		Short: "List two-factor authentication codes",

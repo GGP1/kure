@@ -31,7 +31,6 @@ type catOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, w io.Writer) *cobra.Command {
 	opts := catOptions{}
-
 	cmd := &cobra.Command{
 		Use:     "cat <name>",
 		Short:   "Read file and write to standard output",

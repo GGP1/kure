@@ -47,7 +47,6 @@ type lsOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := lsOptions{}
-
 	cmd := &cobra.Command{
 		Use:     "ls <name>",
 		Short:   "List files",
@@ -147,6 +146,5 @@ func printFile(f *pb.FileCheap) {
 		mp.Set("Updated at", updatedAt.String())
 	}
 
-	box := cmdutil.BuildBox(f.Name, mp)
-	fmt.Println("\n" + box)
+	fmt.Println(cmdutil.BuildBox(f.Name, mp))
 }

@@ -35,5 +35,5 @@ kure clear -t
 
 Clear kure commands from terminal history:
 ```
-kure clear -h
+kure clear -H
 ```

@@ -6,6 +6,7 @@ import (
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
 	dbutil "github.com/GGP1/kure/db"
+	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/awnumar/memguard"
@@ -202,7 +203,7 @@ func TestProtoErrors(t *testing.T) {
 
 	name := "unformatted"
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(dbutil.EntryBucket))
+		b := tx.Bucket(bucket.Entry.GetName())
 		buf := make([]byte, 32)
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte(name), encBuf)

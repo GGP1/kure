@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime/debug"
 
+	cmdutil "github.com/GGP1/kure/commands"
 	tfa "github.com/GGP1/kure/commands/2fa"
 	"github.com/GGP1/kure/commands/add"
 	"github.com/GGP1/kure/commands/backup"
@@ -28,9 +29,14 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var (
+type rootOptions struct {
 	version bool
-	cmd     = &cobra.Command{
+}
+
+// NewCmd returns a new command.
+func NewCmd(db *bolt.DB) *cobra.Command {
+	opts := rootOptions{}
+	cmd := &cobra.Command{
 		Use:           "kure",
 		Short:         "Kure ~ CLI password manager",
 		SilenceErrors: true,
@@ -38,52 +44,44 @@ var (
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
 		},
-		Run: func(cmd *cobra.Command, args []string) {
-			if version {
-				printVersion()
-				return
-			}
-			_ = cmd.Usage()
-		},
+		RunE: runRoot(&opts),
 	}
-)
 
-// DevCmd returns the root command with all its sub commands and without a database object.
-//
-// It should be used for documentation or testing purposes only.
-func DevCmd() *cobra.Command {
-	registerCmds(nil)
+	cmd.Flags().BoolVarP(&opts.version, "version", "v", false, "version for kure")
+	cmd.AddCommand(
+		tfa.NewCmd(db),
+		add.NewCmd(db, os.Stdin),
+		backup.NewCmd(db),
+		card.NewCmd(db),
+		clear.NewCmd(),
+		config.NewCmd(db, os.Stdin),
+		copy.NewCmd(db),
+		edit.NewCmd(db),
+		export.NewCmd(db),
+		file.NewCmd(db),
+		gen.NewCmd(),
+		importt.NewCmd(db),
+		it.NewCmd(db),
+		ls.NewCmd(db),
+		restore.NewCmd(db),
+		rm.NewCmd(db, os.Stdin),
+		session.NewCmd(db, os.Stdin),
+		stats.NewCmd(db),
+	)
+
 	return cmd
 }
 
-// Execute adds all the subcommands to the root and executes it.
-func Execute(db *bolt.DB) error {
-	cmd.Flags().BoolVarP(&version, "version", "v", false, "version for kure")
-	registerCmds(db)
+func runRoot(opts *rootOptions) cmdutil.RunEFunc {
+	return func(cmd *cobra.Command, args []string) error {
+		if opts.version {
+			printVersion()
+			return nil
+		}
 
-	return cmd.Execute()
-}
-
-// registerCmds adds all the commands to the root.
-func registerCmds(db *bolt.DB) {
-	cmd.AddCommand(tfa.NewCmd(db))
-	cmd.AddCommand(add.NewCmd(db, os.Stdin))
-	cmd.AddCommand(backup.NewCmd(db))
-	cmd.AddCommand(card.NewCmd(db))
-	cmd.AddCommand(clear.NewCmd())
-	cmd.AddCommand(config.NewCmd(db, os.Stdin))
-	cmd.AddCommand(copy.NewCmd(db))
-	cmd.AddCommand(edit.NewCmd(db))
-	cmd.AddCommand(export.NewCmd(db))
-	cmd.AddCommand(file.NewCmd(db))
-	cmd.AddCommand(gen.NewCmd())
-	cmd.AddCommand(importt.NewCmd(db))
-	cmd.AddCommand(it.NewCmd(db))
-	cmd.AddCommand(ls.NewCmd(db))
-	cmd.AddCommand(restore.NewCmd(db))
-	cmd.AddCommand(rm.NewCmd(db, os.Stdin))
-	cmd.AddCommand(session.NewCmd(db, os.Stdin))
-	cmd.AddCommand(stats.NewCmd(db))
+		_ = cmd.Usage()
+		return nil
+	}
 }
 
 func printVersion() {

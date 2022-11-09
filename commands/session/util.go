@@ -15,12 +15,21 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const (
+	quote = `"`
+	space = " "
+)
+
 // cleanup resets signal cleanups and sets all flags as unchanged to keep using default values.
 //
 // It also sets the help flag internal variable to false in case it's used.
 func cleanup(cmd *cobra.Command) {
 	sig.Signal.ResetCleanups()
-	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Changed {
+			f.Changed = false
+		}
+	})
 	cmd.Flags().Set("help", "false")
 }
 
@@ -43,8 +52,9 @@ func fillScript(args []string, script string) string {
 // idleTimer executes a timer after x time has passed without receiving an input from the user.
 func idleTimer(done chan struct{}, timeout *timeout) {
 	// round(log(x^3))
-	d := math.Round(math.Log10(math.Pow(float64(timeout.duration), 3)))
+	d := math.Round(math.Log10(math.Pow(timeout.duration.Minutes(), 3)))
 	timer := time.NewTimer(time.Duration(d) * time.Minute)
+	defer timer.Stop()
 
 	select {
 	case <-done:
@@ -111,7 +121,7 @@ func parseDoubleQuotes(args []string) []string {
 				if strings.HasSuffix(args[j], quote) {
 					// Join enclosed words, store the sequence where the first one was
 					// and remove the others from the slice
-					words := strings.Join(args[i:j+1], " ")
+					words := strings.Join(args[i:j+1], space)
 					args[i] = strings.Trim(words, quote)
 					args = append(args[:i+1], args[j+1:]...)
 					i = j - 1
@@ -145,16 +155,27 @@ func scanInput(reader *bufio.Reader, timeout *timeout, scripts map[string]string
 	}
 
 	textStr := string(text)
-	args := strings.Split(textStr, " ")
+	args := strings.Split(textStr, space)
 	if strings.Contains(textStr, quote) {
 		args = parseDoubleQuotes(args)
 	}
 
-	script, ok := scripts[args[0]]
-	if ok {
-		script = fillScript(args[1:], script)
-		args = strings.Split(script, " ")
+	// Parse user input commands
+	cmds := parseCommands(args)
+	parsedCmds := make([][]string, 0, len(cmds))
+
+	for _, cmd := range cmds {
+		script, ok := scripts[cmd[0]]
+		if ok {
+			script = fillScript(cmd[1:], script)
+			cmd = strings.Split(script, space)
+			// Parse script commands
+			parsedCmds = append(parsedCmds, parseCommands(cmd)...)
+			continue
+		}
+
+		parsedCmds = append(parsedCmds, cmd)
 	}
 
-	return parseCommands(args), nil
+	return parsedCmds, nil
 }

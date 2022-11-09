@@ -16,15 +16,12 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const (
-	quote   = `"`
-	example = `
+const example = `
 * Run a session without timeout and using "$" as the prefix
 kure session -p $
 
 * Run a session for 1 hour
 kure session -t 1h`
-)
 
 type sessionOptions struct {
 	prefix  string
@@ -34,11 +31,10 @@ type sessionOptions struct {
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	opts := sessionOptions{}
-
 	cmd := &cobra.Command{
 		Use:   "session",
 		Short: "Run a session",
-		Long: `Sessions let you do multiple operations by providing the master password once. 
+		Long: `Sessions let you do multiple operations by providing the master password once.
 		
 They support running scripts using the logical AND (&&) operator and executing pre-defined ones from the configuration file by using their aliases.
 
