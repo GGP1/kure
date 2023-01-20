@@ -1,6 +1,7 @@
 package mv
 
 import (
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -53,6 +54,42 @@ func TestMvDir(t *testing.T) {
 		if !strings.HasPrefix(name, newDir) {
 			t.Errorf("%q wasn't moved into %q", name, newDir)
 		}
+	}
+}
+
+func TestMvFileIntoDir(t *testing.T) {
+	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+
+	cases := []struct {
+		desc     string
+		filename string
+		newDir   string
+	}{
+		{
+			desc:     "File with extension",
+			filename: "directory/test.csv",
+			newDir:   "folder/",
+		},
+		{
+			desc:     "File without extension",
+			filename: "directory/test",
+			newDir:   "folder/",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			createFile(t, db, tc.filename)
+
+			cmd := NewCmd(db)
+			cmd.SetArgs([]string{tc.filename, tc.newDir})
+
+			err := cmd.Execute()
+			assert.NoError(t, err)
+
+			_, err = file.GetCheap(db, tc.newDir+filepath.Base(tc.filename))
+			assert.NoError(t, err, "Failed getting the renamed file")
+		})
 	}
 }
 

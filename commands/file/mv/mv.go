@@ -19,7 +19,10 @@ const example = `
 kure file mv oldFile newFile
 
 * Move a directory
-kure file mv oldDir/ newDir/`
+kure file mv oldDir/ newDir/
+
+* Move a file into a directory
+kure file mv oldDir/test.txt newDir/`
 
 // NewCmd returns a new command.
 func NewCmd(db *bolt.DB) *cobra.Command {
@@ -56,12 +59,19 @@ func runMv(db *bolt.DB) cmdutil.RunEFunc {
 
 		oldName = cmdutil.NormalizeName(oldName, true)
 		newName = cmdutil.NormalizeName(newName, true)
+		oldNameIsDir := strings.HasSuffix(oldName, "/")
+		newNameIsDir := strings.HasSuffix(newName, "/")
 
-		if strings.HasSuffix(oldName, "/") {
-			if !strings.HasSuffix(newName, "/") {
+		if oldNameIsDir {
+			if !newNameIsDir {
 				return errors.New("cannot move a directory into a file")
 			}
 			return mvDir(db, oldName, newName)
+		}
+
+		// Move file into directory
+		if !oldNameIsDir && newNameIsDir {
+			newName += filepath.Base(oldName)
 		}
 
 		if filepath.Ext(newName) == "" {
@@ -76,7 +86,7 @@ func runMv(db *bolt.DB) cmdutil.RunEFunc {
 			return err
 		}
 
-		fmt.Printf("\n%q renamed as %q\n", oldName, newName)
+		fmt.Printf("\n%q moved to %q\n", oldName, newName)
 		return nil
 	}
 }
