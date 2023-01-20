@@ -23,3 +23,8 @@ Move a directory:
 ```
 kure file mv oldDir/ newDir/
 ```
+
+Move a file into a directory:
+```
+kure file mv oldDir/test.txt newDir/
+```
