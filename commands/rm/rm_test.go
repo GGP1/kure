@@ -13,7 +13,7 @@ import (
 )
 
 func TestRm(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	name := "test"
 	createEntries(t, db, name)
 
@@ -30,7 +30,7 @@ func TestRm(t *testing.T) {
 }
 
 func TestRmDir(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	// Create the entries inside a folder to remove them
 	names := []string{"test/entry1", "test/entry2"}
 	createEntries(t, db, names...)
@@ -50,7 +50,7 @@ func TestRmDir(t *testing.T) {
 }
 
 func TestRmAbort(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	name := "may the force be with you"
 	createEntries(t, db, name)
 
@@ -63,7 +63,7 @@ func TestRmAbort(t *testing.T) {
 }
 
 func TestRmErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createEntries(t, db, "fail.txt")
 
 	cases := []struct {

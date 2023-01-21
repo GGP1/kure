@@ -14,7 +14,7 @@ import (
 )
 
 func TestCat(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	name1 := "test.txt"
 	name2 := "testall2/subfolder/file.txt"
@@ -70,7 +70,7 @@ func TestCat(t *testing.T) {
 }
 
 func TestCatErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc string

@@ -2,6 +2,7 @@ package sig
 
 import (
 	"errors"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -51,7 +52,10 @@ func TestKeepAlive(t *testing.T) {
 }
 
 func TestListenKeepAlive(t *testing.T) {
-	db, err := bolt.Open("../db/testdata/database", 0o600, &bolt.Options{Timeout: 1 * time.Second})
+	dbFile, err := os.CreateTemp("", "*")
+	assert.NoError(t, err)
+
+	db, err := bolt.Open(dbFile.Name(), 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	assert.NoError(t, err, "Failed connecting to the database")
 	defer db.Close()
 

@@ -179,5 +179,5 @@ func TestKeyError(t *testing.T) {
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutil.SetContext(t, "../testdata/database", bucket.Card.GetName())
+	return dbutil.SetContext(t, bucket.Card.GetName())
 }

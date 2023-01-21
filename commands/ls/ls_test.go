@@ -12,7 +12,7 @@ import (
 )
 
 func TestLs(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createEntry(t, db, "test", "testing")
 
 	cases := []struct {
@@ -64,7 +64,7 @@ func TestLs(t *testing.T) {
 }
 
 func TestLsErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createEntry(t, db, "test", "")
 
 	cases := []struct {
@@ -110,7 +110,7 @@ func TestLsErrors(t *testing.T) {
 }
 
 func TestQRCodeError(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createEntry(t, db, "test", longSecret)
 
 	cmd := NewCmd(db)

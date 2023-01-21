@@ -13,7 +13,7 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc      string
@@ -89,7 +89,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestAddErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	err := file.Create(db, &pb.File{Name: "already exists.txt"})
 	assert.NoError(t, err, "Failed creating the file")

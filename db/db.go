@@ -1,6 +1,7 @@
 package dbutil
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -166,8 +167,11 @@ func Remove(db *bolt.DB, bucketName []byte, names ...string) error {
 }
 
 // SetContext creates a bucket and its context to test the database operations.
-func SetContext(t testing.TB, path string, bucketName []byte) *bolt.DB {
-	db, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: 1 * time.Second})
+func SetContext(t testing.TB, bucketName []byte) *bolt.DB {
+	dbFile, err := os.CreateTemp("", "*")
+	assert.NoError(t, err)
+
+	db, err := bolt.Open(dbFile.Name(), 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	assert.NoError(t, err, "Failed connecting to the database")
 
 	config.Reset()

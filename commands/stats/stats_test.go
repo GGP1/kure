@@ -9,7 +9,7 @@ import (
 )
 
 func TestStats(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	t.Run("Success", func(t *testing.T) {
 		cmd := NewCmd(db)

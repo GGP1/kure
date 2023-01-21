@@ -10,7 +10,7 @@ import (
 )
 
 func TestEditErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc string

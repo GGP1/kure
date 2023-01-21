@@ -19,7 +19,7 @@ func Test2FA(t *testing.T) {
 	if clipboard.Unsupported {
 		t.Skip("No clipboard utilities available")
 	}
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createElements(t, db)
 
 	cases := []struct {
@@ -73,7 +73,7 @@ func Test2FA(t *testing.T) {
 }
 
 func Test2FAErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc string

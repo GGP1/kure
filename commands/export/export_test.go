@@ -17,7 +17,7 @@ import (
 )
 
 func TestExport(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createEntry(t, db)
 
 	cases := []struct {
@@ -94,7 +94,7 @@ func TestExport(t *testing.T) {
 }
 
 func TestInvalidExport(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc    string
@@ -119,7 +119,7 @@ func TestInvalidExport(t *testing.T) {
 }
 
 func TestArgs(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	cmd := NewCmd(db)
 
 	t.Run("Supported", func(t *testing.T) {
@@ -143,7 +143,7 @@ func TestArgs(t *testing.T) {
 }
 
 func TestGetTOTP(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	tp := &pb.TOTP{
 		Name:   "test",

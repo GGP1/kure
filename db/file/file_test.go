@@ -110,14 +110,14 @@ func remove(db *bolt.DB, name string) func(*testing.T) {
 }
 
 func TestRemoveNone(t *testing.T) {
-	db := dbutil.SetContext(t, "../testdata/database", bucket.File.GetName())
+	db := dbutil.SetContext(t, bucket.File.GetName())
 
 	err := Remove(db)
 	assert.NoError(t, err)
 }
 
 func TestCreateErrors(t *testing.T) {
-	db := dbutil.SetContext(t, "../testdata/database", bucket.File.GetName())
+	db := dbutil.SetContext(t, bucket.File.GetName())
 
 	err := Create(db, &pb.File{})
 	assert.Error(t, err)
@@ -203,5 +203,5 @@ func TestKeyError(t *testing.T) {
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutil.SetContext(t, "../testdata/database", bucket.File.GetName())
+	return dbutil.SetContext(t, bucket.File.GetName())
 }

@@ -16,7 +16,7 @@ import (
 )
 
 func TestEditErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createEntry(t, db, "test")
 
 	cases := []struct {
@@ -111,7 +111,7 @@ func TestReadTmpFile(t *testing.T) {
 }
 
 func TestUpdateEntry(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	name := "test_update"
 	createEntry(t, db, name)
 

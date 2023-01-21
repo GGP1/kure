@@ -18,7 +18,7 @@ import (
 )
 
 func TestLogin(t *testing.T) {
-	db := cmdutil.SetContext(t, "../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	// This mock is used to execute Login as PreRunE
 	mock := func(db *bolt.DB) *cobra.Command {

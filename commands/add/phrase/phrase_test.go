@@ -12,7 +12,7 @@ import (
 )
 
 func TestPhrase(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc      string
@@ -61,7 +61,7 @@ func TestPhrase(t *testing.T) {
 }
 
 func TestPhraseErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	err := entry.Create(db, &pb.Entry{Name: "test"})
 	assert.NoError(t, err)

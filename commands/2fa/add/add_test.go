@@ -12,7 +12,7 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc   string
@@ -64,7 +64,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestAddErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	name := "test"
 	err := createTOTP(db, name, "", 0)
@@ -130,7 +130,7 @@ func TestAddErrors(t *testing.T) {
 }
 
 func TestCreateTOTP(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	t.Run("Success", func(t *testing.T) {
 		name := "test"

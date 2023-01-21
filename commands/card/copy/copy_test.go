@@ -16,7 +16,7 @@ func TestCopy(t *testing.T) {
 	if clipboard.Unsupported {
 		t.Skip("No clipboard utilities available")
 	}
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	c := &pb.Card{
 		Name:         "test",
@@ -69,7 +69,7 @@ func TestCopy(t *testing.T) {
 }
 
 func TestCopyErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc string
