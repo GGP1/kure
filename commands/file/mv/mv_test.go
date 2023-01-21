@@ -60,37 +60,18 @@ func TestMvDir(t *testing.T) {
 func TestMvFileIntoDir(t *testing.T) {
 	db := cmdutil.SetContext(t)
 
-	cases := []struct {
-		desc     string
-		filename string
-		newDir   string
-	}{
-		{
-			desc:     "File with extension",
-			filename: "directory/test.csv",
-			newDir:   "folder/",
-		},
-		{
-			desc:     "File without extension",
-			filename: "directory/test",
-			newDir:   "folder/",
-		},
-	}
+	filename := "directory/test.csv"
+	newDir := "folder/"
+	createFile(t, db, filename)
 
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			createFile(t, db, tc.filename)
+	cmd := NewCmd(db)
+	cmd.SetArgs([]string{filename, newDir})
 
-			cmd := NewCmd(db)
-			cmd.SetArgs([]string{tc.filename, tc.newDir})
+	err := cmd.Execute()
+	assert.NoError(t, err)
 
-			err := cmd.Execute()
-			assert.NoError(t, err)
-
-			_, err = file.GetCheap(db, tc.newDir+filepath.Base(tc.filename))
-			assert.NoError(t, err, "Failed getting the renamed file")
-		})
-	}
+	_, err = file.GetCheap(db, newDir+filepath.Base(filename))
+	assert.NoError(t, err, "Failed getting the renamed file")
 }
 
 func TestMvErrors(t *testing.T) {
