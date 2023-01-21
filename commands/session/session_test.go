@@ -11,7 +11,7 @@ import (
 )
 
 func TestExecute(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	scripts := map[string]string{
 		"login": "copy -u $1 && copy $1",
 	}

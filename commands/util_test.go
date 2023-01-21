@@ -51,7 +51,7 @@ func TestErase(t *testing.T) {
 }
 
 func TestExistsTrue(t *testing.T) {
-	db := SetContext(t, "../db/testdata/database")
+	db := SetContext(t)
 
 	name := "naboo/tatooine"
 	createObjects(t, db, name)
@@ -93,7 +93,7 @@ func TestExistsTrue(t *testing.T) {
 }
 
 func TestExistsFalse(t *testing.T) {
-	db := SetContext(t, "../db/testdata/database")
+	db := SetContext(t)
 
 	cases := []struct {
 		desc   string
@@ -169,7 +169,7 @@ func TestFmtExpires(t *testing.T) {
 }
 
 func TestMustExist(t *testing.T) {
-	db := SetContext(t, "../db/testdata/database")
+	db := SetContext(t)
 
 	name := "test/testing"
 	createObjects(t, db, name)
@@ -228,7 +228,7 @@ func TestMustExist(t *testing.T) {
 }
 
 func TestMustExistLs(t *testing.T) {
-	db := SetContext(t, "../db/testdata/database")
+	db := SetContext(t)
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("filter", false, "")
 	objects := []object{Card, Entry, File, TOTP}
@@ -280,7 +280,7 @@ func TestMustExistLs(t *testing.T) {
 }
 
 func TestMustNotExist(t *testing.T) {
-	db := SetContext(t, "../db/testdata/database")
+	db := SetContext(t)
 	cmd := &cobra.Command{}
 	objects := []object{Card, Entry, File, TOTP}
 
@@ -403,17 +403,6 @@ func TestSelectEditor(t *testing.T) {
 		got := SelectEditor()
 		assert.Equal(t, "vim", got)
 	})
-}
-
-func TestSetContext(t *testing.T) {
-	path := "../db/testdata/database"
-	db := SetContext(t, path)
-
-	gotPath := db.Path()
-	assert.Equal(t, path, gotPath)
-
-	gotOpenTx := db.Stats().OpenTxN
-	assert.Zero(t, gotOpenTx, "Expected to have no opened transactions")
 }
 
 func TestWatchFile(t *testing.T) {

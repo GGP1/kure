@@ -14,7 +14,7 @@ import (
 )
 
 func TestTouch(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createTestFiles(t, db)
 
 	rootDir, err := os.Getwd()

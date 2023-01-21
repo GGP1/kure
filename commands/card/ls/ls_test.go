@@ -11,7 +11,7 @@ import (
 )
 
 func TestLs(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	err := card.Create(db, &pb.Card{
 		Name:   "test",
@@ -68,7 +68,7 @@ func TestLs(t *testing.T) {
 }
 
 func TestLsErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	err := card.Create(db, &pb.Card{Name: "test"})
 	assert.NoError(t, err, "Failed creating the card")

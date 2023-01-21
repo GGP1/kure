@@ -10,7 +10,7 @@ import (
 )
 
 func TestRead(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	config.SetFilename("./testdata/mock_config.yaml")
 
 	cmd := NewCmd(db, nil)
@@ -19,7 +19,7 @@ func TestRead(t *testing.T) {
 }
 
 func TestReadError(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	config.SetFilename("")
 
 	cmd := NewCmd(db, nil)

@@ -13,7 +13,7 @@ import (
 )
 
 func TestEditErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	err := file.Create(db, &pb.File{Name: "test"})
 	assert.NoError(t, err, "Failed creating file")
@@ -81,7 +81,7 @@ func TestWatchFile(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	expectedContent := []byte("test")
 	name := "test_read_and_update.txt"

@@ -16,7 +16,7 @@ import (
 )
 
 func TestMv(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	oldName := "test.txt"
 	newName := "renamed-test" // omit extension on purpose
@@ -33,7 +33,7 @@ func TestMv(t *testing.T) {
 }
 
 func TestMvDir(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	oldDir := "directory/"
 	for i := 0; i < 2; i++ {
@@ -58,7 +58,7 @@ func TestMvDir(t *testing.T) {
 }
 
 func TestMvFileIntoDir(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc     string
@@ -98,7 +98,7 @@ func TestMvErrors(t *testing.T) {
 		t.Skip("For some strange reason this test fails in unix systems because the database file throws \"bad file descriptor\"")
 	}
 
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createFile(t, db, "exists")
 	dir := "dir/"
 	createFile(t, db, dir+"1")
@@ -142,7 +142,7 @@ func TestMvErrors(t *testing.T) {
 }
 
 func TestMissingArguments(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cmd := NewCmd(db)
 	cmd.SetArgs([]string{"oldName"})

@@ -105,5 +105,5 @@ func TestSetParametersInvalidKeys(t *testing.T) {
 }
 
 func setContext(t testing.TB) *bolt.DB {
-	return dbutil.SetContext(t, "../testdata/database", bucket.Auth.GetName())
+	return dbutil.SetContext(t, bucket.Auth.GetName())
 }

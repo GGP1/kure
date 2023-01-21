@@ -12,7 +12,7 @@ import (
 )
 
 func TestRm(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	names := []string{"test.txt", "directory/test.txt"}
 	for _, name := range names {
@@ -55,7 +55,7 @@ func TestRm(t *testing.T) {
 }
 
 func TestRmErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc  string

@@ -13,7 +13,7 @@ import (
 )
 
 func TestBackupFile(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	filename := "backup-test"
 
 	cmd := NewCmd(db)
@@ -28,7 +28,7 @@ func TestBackupFile(t *testing.T) {
 }
 
 func TestBackupServer(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	rec := httptest.NewRecorder()
 	req, err := http.NewRequest("GET", "localhost:4000/", nil)
@@ -46,7 +46,7 @@ func TestBackupServer(t *testing.T) {
 }
 
 func TestBackupErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc string
@@ -85,7 +85,7 @@ func TestBackupErrors(t *testing.T) {
 }
 
 func TestWriteTo(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	var buf bytes.Buffer
 	err := writeTo(db, &buf)

@@ -19,7 +19,7 @@ func TestCopy(t *testing.T) {
 		t.Skip("No clipboard utilities available")
 	}
 
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	e := createEntry(t, db)
 
 	cases := []struct {
@@ -68,7 +68,7 @@ func TestCopyWithConfigTimeout(t *testing.T) {
 	if clipboard.Unsupported {
 		t.Skip("No clipboard utilities available")
 	}
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	e := createEntry(t, db)
 
 	config.Set("clipboard.timeout", "1ns")
@@ -85,7 +85,7 @@ func TestCopyWithConfigTimeout(t *testing.T) {
 }
 
 func TestCopyErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc string

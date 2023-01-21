@@ -14,7 +14,7 @@ import (
 )
 
 func TestImport(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		expected *pb.Entry
@@ -105,7 +105,7 @@ func TestImport(t *testing.T) {
 }
 
 func TestInvalidImport(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc    string
@@ -163,7 +163,7 @@ func TestInvalidImport(t *testing.T) {
 }
 
 func TestImportAndErase(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	tempFile, err := os.CreateTemp("", "*.csv")
 	assert.NoError(t, err, "Failed creating temporary file")
@@ -187,7 +187,7 @@ func TestImportAndEraseError(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		t.SkipNow()
 	}
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	tempFile, err := os.CreateTemp("", "*.csv")
 	assert.NoError(t, err, "Failed creating temporary file")
@@ -205,7 +205,7 @@ func TestImportAndEraseError(t *testing.T) {
 }
 
 func TestCreateTOTP(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc string
@@ -232,7 +232,7 @@ func TestCreateTOTP(t *testing.T) {
 }
 
 func TestArgs(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	cmd := NewCmd(db)
 
 	t.Run("Supported", func(t *testing.T) {

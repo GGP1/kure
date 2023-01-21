@@ -12,7 +12,7 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc string
@@ -44,7 +44,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestAddErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	err := card.Create(db, &pb.Card{Name: "test"})
 	assert.NoError(t, err)
@@ -76,7 +76,7 @@ func TestAddErrors(t *testing.T) {
 }
 
 func TestInput(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	expected := &pb.Card{
 		Name:         "test",

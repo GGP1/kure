@@ -17,7 +17,7 @@ import (
 )
 
 func TestEditErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	createCard(t, db, "test")
 
 	cases := []struct {
@@ -109,7 +109,7 @@ func TestReadTmpFile(t *testing.T) {
 }
 
 func TestUpdateCard(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 	name := "test_update"
 	createCard(t, db, name)
 
@@ -139,7 +139,7 @@ func TestUpdateCard(t *testing.T) {
 }
 
 func TestUseStdin(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	oldCard := &pb.Card{
 		Name:         "test",

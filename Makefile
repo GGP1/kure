@@ -5,10 +5,10 @@ install:
 	@go install -ldflags="-s -w" .
 
 test:
-	go test ./... -p 1
+	go test ./...
 
 test-race:
-	go test ./... -p 1 -race
+	go test ./... -race
 
 proto:
 	@cd pb && for type in card entry file totp ; do \

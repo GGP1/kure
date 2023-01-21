@@ -345,9 +345,13 @@ func SelectEditor() string {
 //
 // It uses t.Cleanup() to close the database connection after the test and
 // all its subtests are completed.
-func SetContext(t testing.TB, path string) *bolt.DB {
+func SetContext(t testing.TB) *bolt.DB {
 	t.Helper()
-	db, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: 1 * time.Second})
+
+	dbFile, err := os.CreateTemp("", "*")
+	assert.NoError(t, err)
+
+	db, err := bolt.Open(dbFile.Name(), 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	assert.NoError(t, err, "Failed connecting to the database")
 
 	config.Reset()

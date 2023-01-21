@@ -14,7 +14,7 @@ import (
 )
 
 func TestLogs(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	expected := &pb.Entry{
 		Name:     "test",
@@ -44,7 +44,7 @@ func TestLogs(t *testing.T) {
 }
 
 func TestReadLogs(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	expected := &pb.Card{
 		Name:         "testRead",
@@ -70,7 +70,7 @@ func TestReadLogs(t *testing.T) {
 }
 
 func TestWriteLogs(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	l, err := newLog(bucket.Entry.GetName())
 	assert.NoError(t, err)

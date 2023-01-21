@@ -16,19 +16,19 @@ import (
 )
 
 var (
-	bucketName = []byte("test")
-	record     = &pb.Card{
+	record = &pb.Card{
 		Name:         "test",
 		Number:       "12313121",
 		SecurityCode: "007",
 	}
+	bucketName = dbutil.GetBucketName(record)
 )
 
 func TestGet(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucketName)
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(dbutil.GetBucketName(record))
+		b := tx.Bucket(bucketName)
 		return dbutil.Put(b, record)
 	})
 	assert.NoError(t, err)
@@ -50,22 +50,22 @@ func TestGetBucketName(t *testing.T) {
 		{
 			desc:     "Entry",
 			record:   &pb.Entry{},
-			expected: []byte("kure_entry"),
+			expected: bucket.Entry.GetName(),
 		},
 		{
 			desc:     "Card",
 			record:   &pb.Card{},
-			expected: []byte("kure_card"),
+			expected: bucket.Card.GetName(),
 		},
 		{
 			desc:     "File",
 			record:   &pb.File{},
-			expected: []byte("kure_file"),
+			expected: bucket.File.GetName(),
 		},
 		{
 			desc:     "TOTP",
 			record:   &pb.TOTP{},
-			expected: []byte("kure_totp"),
+			expected: bucket.TOTP.GetName(),
 		},
 	}
 
@@ -78,7 +78,7 @@ func TestGetBucketName(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucketName)
 
 	createRecord(t, db, record)
 	record2 := &pb.Card{
@@ -101,7 +101,7 @@ func TestList(t *testing.T) {
 }
 
 func TestListNames(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucketName)
 
 	recordA := "a"
 	recordB := "b"
@@ -123,7 +123,7 @@ func TestListNames(t *testing.T) {
 }
 
 func TestListNamesNil(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucketName)
 
 	err := db.Update(func(tx *bolt.Tx) error {
 		return tx.DeleteBucket(bucketName)
@@ -136,12 +136,12 @@ func TestListNamesNil(t *testing.T) {
 }
 
 func TestPut(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucketName)
 	createRecord(t, db, record)
 }
 
 func TestRemove(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucketName)
 
 	recordA := "a"
 	err := db.Update(func(tx *bolt.Tx) error {
@@ -166,7 +166,7 @@ func TestRemoveNone(t *testing.T) {
 }
 
 func TestCryptErrors(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucket.Entry.GetName())
 
 	name := "test decrypt error"
 
@@ -184,22 +184,22 @@ func TestCryptErrors(t *testing.T) {
 }
 
 func TestGetErrors(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucket.Entry.GetName())
 
 	err := dbutil.Get(db, "non-existent", &pb.Entry{})
 	assert.Error(t, err)
 }
 
 func TestKeyError(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucketName)
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
-		return dbutil.Put(b, &pb.Entry{Name: ""})
+		return dbutil.Put(b, &pb.Card{Name: ""})
 	})
 }
 
 func TestProtoErrors(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucket.Entry.GetName())
 
 	name := "unformatted"
 	err := db.Update(func(tx *bolt.Tx) error {
@@ -217,7 +217,7 @@ func TestProtoErrors(t *testing.T) {
 }
 
 func TestPutErrors(t *testing.T) {
-	db := dbutil.SetContext(t, "./testdata/database", bucketName)
+	db := dbutil.SetContext(t, bucketName)
 
 	cases := []struct {
 		desc string
@@ -237,7 +237,7 @@ func TestPutErrors(t *testing.T) {
 		b := tx.Bucket(bucketName)
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
-				err := dbutil.Put(b, &pb.Entry{Name: tc.name})
+				err := dbutil.Put(b, &pb.Card{Name: tc.name})
 				assert.Error(t, err)
 			})
 		}

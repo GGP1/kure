@@ -12,7 +12,7 @@ import (
 )
 
 func TestRm(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	err := totp.Create(db, &pb.TOTP{Name: "test"})
 	assert.NoError(t, err)
@@ -47,7 +47,7 @@ func TestRm(t *testing.T) {
 }
 
 func TestRmErrors(t *testing.T) {
-	db := cmdutil.SetContext(t, "../../../db/testdata/database")
+	db := cmdutil.SetContext(t)
 
 	cases := []struct {
 		desc         string
