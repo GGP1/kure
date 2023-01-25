@@ -120,7 +120,7 @@ func askArgon2Params(r io.Reader) (authDB.Argon2, error) {
 		return authDB.Argon2{}, err
 	}
 
-	// memory is measured in kibibytes, 1 kibibyte = 1024 bytes. 1048576 kibibytes -> 1GB
+	// memory is measured in kibibytes, 1 kibibyte = 1024 bytes. 1048576 kibibytes -> 1GiB
 	memory, err := scanParameter(reader, "Memory", 1<<20)
 	if err != nil {
 		return authDB.Argon2{}, err

@@ -144,7 +144,9 @@ Every record is encrypted using a **unique** password, protecting the user again
 
 The Argon2id variant with 1 iteration and maximum available memory is recommended as a default setting for all environments. This setting is secure against side-channel attacks and maximizes adversarial costs on dedicated bruteforce hardware.
 
-> If one of the devices that will handle the database has 1GB of memory or less, we recommend setting the *memory* value to the half of that device RAM availability. Otherwise, default values should be fine.
+> If one of the devices that will handle the database has 1GB of memory or less, we recommend setting the *memory* value according to that device's RAM availability.
+>
+> The command `kure config argon2 test` provides a way of testing the performance implications of different parameter combinations on your device.
 
 ### Memory security
 

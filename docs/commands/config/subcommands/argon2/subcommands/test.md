@@ -8,11 +8,11 @@ Test how is argon2 going to perform with the parameters passed.
 
 The Argon2id variant with 1 iteration and maximum available memory is recommended as a default setting for all environments. This setting is secure against side-channel attacks and maximizes adversarial costs on dedicated bruteforce hardware.
 
-If one of the devices that will handle the database has lower than 1GB of memory, we recommend setting the memory value to the half of that device RAM availability. Otherwise, default values should be fine.
+> If one of the devices that will handle the database has lower than 1GB of memory, we recommend setting the memory according to that device's RAM availability.
 
-- Memory: amount of memory allowed for argon2 to use. There is no "insecure" value for this parameter, though clearly the more memory the better. The value is represented in kibibytes, 1 kibibyte = 1024 bytes. Default is 1048576 kibibytes (1024 MB).
+- Memory: amount of memory allowed for argon2 to use, the more memory the better. The value is represented in kibibytes, 1 kibibyte = 1024 bytes. Default is 1048576 kibibytes (1 GiB).
 
-- Iterations: number of passes over the memory. The running time depends linearly on this parameter. Again, there is no "insecure value". Default is 1.
+- Iterations: number of passes over the memory. The running time depends linearly on this parameter. Default is 1.
 
 - Threads: number of threads number in parallel. Default is the maximum number of logical CPUs usable.
 
@@ -26,7 +26,7 @@ If one of the devices that will handle the database has lower than 1GB of memory
 
 ### Examples
 
-Test using 700MB of memory, 2 iterations and 4 threads:
+Test using 700MiB of memory, 2 iterations and 4 threads:
 ```
 kure config argon2 test -m 716800 -i 2 -t 4
 ```
