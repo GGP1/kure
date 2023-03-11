@@ -365,11 +365,10 @@ func SetContext(t testing.TB) *bolt.DB {
 	config.Set("auth", auth)
 
 	db.Update(func(tx *bolt.Tx) error {
-		buckets := bucket.GetNames()
-		for _, bucket := range buckets {
+		for _, b := range bucket.GetNames() {
 			// Ignore errors on purpose
-			tx.DeleteBucket(bucket)
-			tx.CreateBucketIfNotExists(bucket)
+			tx.DeleteBucket(b)
+			tx.CreateBucketIfNotExists(b)
 		}
 		return nil
 	})
