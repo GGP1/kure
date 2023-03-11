@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/orderedmap"
@@ -48,7 +47,6 @@ Listing all the entries does not check for expired entries, this decision was ta
 		Aliases: []string{"entries", "list"},
 		Example: example,
 		Args:    cmdutil.MustExistLs(db, cmdutil.Entry),
-		PreRunE: auth.Login(db),
 		RunE:    runLs(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)
@@ -119,12 +117,12 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 			}
 		}
 
-		printEntry(name, e, opts.show)
+		printEntry(e, opts.show)
 		return nil
 	}
 }
 
-func printEntry(name string, e *pb.Entry, show bool) {
+func printEntry(e *pb.Entry, show bool) {
 	if !show {
 		e.Password = "•••••••••••••••"
 	}
@@ -140,7 +138,7 @@ func printEntry(name string, e *pb.Entry, show bool) {
 	mp.Set("Expires", e.Expires)
 	mp.Set("Notes", e.Notes)
 
-	fmt.Println(cmdutil.BuildBox(name, mp))
+	fmt.Println(cmdutil.BuildBox(e.Name, mp))
 }
 
 // expired returns if the entry is expired or not.

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
@@ -52,8 +51,7 @@ In case a path is passed, Kure will create any missing folders for you.`,
 			}
 			return cmdutil.MustExist(db, cmdutil.File, true)(cmd, args)
 		},
-		PreRunE: auth.Login(db),
-		RunE:    runTouch(db, &opts),
+		RunE: runTouch(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)
 			opts = touchOptions{}
@@ -69,11 +67,11 @@ In case a path is passed, Kure will create any missing folders for you.`,
 
 func runTouch(db *bolt.DB, opts *touchOptions) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		absolute, err := filepath.Abs(opts.path)
+		absPath, err := filepath.Abs(opts.path)
 		if err != nil {
 			return cmdutil.ErrInvalidPath
 		}
-		opts.path = absolute
+		opts.path = absPath
 
 		if err := os.MkdirAll(opts.path, 0o700); err != nil {
 			return errors.Wrap(err, "making directory")
@@ -83,23 +81,8 @@ func runTouch(db *bolt.DB, opts *touchOptions) cmdutil.RunEFunc {
 			return errors.Wrap(err, "changing directory")
 		}
 
-		// Create all
 		if len(args) == 0 {
-			files, err := file.List(db)
-			if err != nil {
-				return err
-			}
-
-			fmt.Println("Creating files at", opts.path)
-
-			for _, f := range files {
-				// Log errors, do not return
-				if err := createFiles(f, opts.path, opts.overwrite); err != nil {
-					fmt.Fprintln(os.Stderr, "error:", err)
-				}
-			}
-
-			return nil
+			return createAll(db, opts)
 		}
 
 		// Create one or more, files or directories
@@ -131,6 +114,24 @@ func runTouch(db *bolt.DB, opts *touchOptions) cmdutil.RunEFunc {
 
 		return nil
 	}
+}
+
+func createAll(db *bolt.DB, opts *touchOptions) error {
+	files, err := file.List(db)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Creating files at", opts.path)
+
+	for _, f := range files {
+		// Log errors, do not return
+		if err := createFiles(f, opts.path, opts.overwrite); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+		}
+	}
+
+	return nil
 }
 
 func createDirectory(db *bolt.DB, name, path string, overwrite bool) error {

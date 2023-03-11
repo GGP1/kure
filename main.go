@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/GGP1/kure/auth"
 	"github.com/GGP1/kure/commands/root"
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/sig"
@@ -28,6 +29,12 @@ func main() {
 
 	// Listen for a signal to release resources and delete sensitive information
 	sig.Signal.Listen(db)
+
+	if err := auth.Login(db); err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		db.Close()
+		memguard.SafeExit(1)
+	}
 
 	if err := root.NewCmd(db).Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)

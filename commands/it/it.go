@@ -3,7 +3,6 @@ package it
 import (
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 
 	"github.com/spf13/cobra"
@@ -37,7 +36,6 @@ command and flags 		name
 name 				command and flags`,
 		Example:            example,
 		DisableFlagParsing: true,
-		PreRunE:            auth.Login(db),
 		RunE:               runIt(db),
 	}
 }

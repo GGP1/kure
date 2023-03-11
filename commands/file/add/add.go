@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
@@ -55,7 +54,6 @@ The user can specify a path to a folder as well, on this occasion, Kure will ite
 		Aliases: []string{"new"},
 		Example: example,
 		Args:    cmdutil.MustNotExist(db, cmdutil.File),
-		PreRunE: auth.Login(db),
 		RunE:    runAdd(db, r, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)

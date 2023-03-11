@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 
@@ -36,7 +35,6 @@ func NewCmd(db *bolt.DB, w io.Writer) *cobra.Command {
 		Short:   "Read file and write to standard output",
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.File),
-		PreRunE: auth.Login(db),
 		RunE:    runCat(db, w, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)

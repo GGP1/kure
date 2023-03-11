@@ -22,10 +22,6 @@ func TestAdd(t *testing.T) {
 			desc: "Add",
 			name: "test",
 		},
-		{
-			desc: "Add2",
-			name: "test2",
-		},
 	}
 
 	for _, tc := range cases {

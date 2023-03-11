@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	argon2cmd "github.com/GGP1/kure/commands/config/argon2"
 	"github.com/GGP1/kure/commands/config/create"
@@ -29,7 +28,6 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 		Short:   "Read the configuration file",
 		Aliases: []string{"cfg"},
 		Example: example,
-		PreRunE: auth.Login(db),
 		RunE:    runConfig(r),
 	}
 

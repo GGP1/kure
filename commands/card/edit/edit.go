@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
@@ -43,7 +42,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 If the name is edited, Kure will remove the old card and create one with the new name.`,
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.Card),
-		PreRunE: auth.Login(db),
 		RunE:    runEdit(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)

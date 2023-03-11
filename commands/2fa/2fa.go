@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/commands/2fa/add"
 	"github.com/GGP1/kure/commands/2fa/rm"
@@ -52,7 +51,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 Use the [-i info] flag to display information about the setup key, it also generates a QR code with the key in URL format that can be scanned by any authenticator.`,
 		Example: example,
 		Args:    cmdutil.MustExistLs(db, cmdutil.TOTP),
-		PreRunE: auth.Login(db),
 		RunE:    run2FA(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)
@@ -99,7 +97,7 @@ func run2FA(db *bolt.DB, opts *tfaOptions) cmdutil.RunEFunc {
 			return cmdutil.WriteClipboard(cmd, opts.timeout, "TOTP", code)
 		}
 
-		fmt.Println(strings.Title(t.Name), code)
+		printTOTPCode(t.Name, code)
 		return nil
 	}
 }
@@ -144,7 +142,12 @@ func printKeyInfo(t *pb.TOTP) error {
 	mp.Set("Key", t.Raw)
 	mp.Set("Digits", fmt.Sprint(t.Digits))
 
-	box := cmdutil.BuildBox(t.Name, mp)
-	fmt.Println(box)
+	fmt.Println(cmdutil.BuildBox(t.Name, mp))
 	return nil
+}
+
+func printTOTPCode(name, code string) {
+	mp := orderedmap.New()
+	mp.Set("Code", code)
+	fmt.Println(cmdutil.BuildBox(name, mp))
 }

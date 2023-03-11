@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/sig"
@@ -44,7 +43,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Use:     "backup",
 		Short:   "Create database backup",
 		Example: example,
-		PreRunE: auth.Login(db),
 		RunE:    opts.runBackup(db),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/totp"
@@ -48,8 +47,7 @@ Supported:
    	• Keepass/X/XC
 	• Lastpass`,
 		Example: example,
-		Args:    managersSupported(),
-		PreRunE: auth.Login(db),
+		Args:    supportedManagers(),
 		RunE:    runImport(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)
@@ -217,7 +215,7 @@ func readCSV(path string) ([][]string, error) {
 	return records, nil
 }
 
-func managersSupported() cobra.PositionalArgs {
+func supportedManagers() cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		manager := strings.Join(args, " ")
 
@@ -227,7 +225,7 @@ func managersSupported() cobra.PositionalArgs {
 		default:
 			return errors.Errorf(`%q is not supported
 
-Managers supported: 1Password, Bitwarden, Keepass/X/XC, Lastpass`, manager)
+Supported managers: 1Password, Bitwarden, Keepass/X/XC, Lastpass`, manager)
 		}
 		return nil
 	}

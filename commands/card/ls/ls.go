@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/orderedmap"
@@ -40,7 +39,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Short:   "List cards",
 		Example: example,
 		Args:    cmdutil.MustExistLs(db, cmdutil.Card),
-		PreRunE: auth.Login(db),
 		RunE:    runLs(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)
@@ -111,12 +109,12 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 			}
 		}
 
-		printCard(name, c, opts.show)
+		printCard(c, opts.show)
 		return nil
 	}
 }
 
-func printCard(name string, c *pb.Card, show bool) {
+func printCard(c *pb.Card, show bool) {
 	if !show {
 		c.Number = "••••••••••••••••"
 		c.SecurityCode = "•••"
@@ -129,5 +127,5 @@ func printCard(name string, c *pb.Card, show bool) {
 	mp.Set("Expire date", c.ExpireDate)
 	mp.Set("Notes", c.Notes)
 
-	fmt.Println(cmdutil.BuildBox(name, mp))
+	fmt.Println(cmdutil.BuildBox(c.Name, mp))
 }

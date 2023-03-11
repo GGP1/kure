@@ -5,7 +5,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/terminal"
@@ -24,7 +23,6 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 		Short:   "Remove a two-factor authentication code from an entry",
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.TOTP),
-		PreRunE: auth.Login(db),
 		RunE:    runRm(db, r),
 	}
 }
