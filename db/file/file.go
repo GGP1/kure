@@ -24,8 +24,7 @@ func Create(db *bolt.DB, file *pb.File) error {
 	file.Content = compressedContent
 
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.File.GetName())
-		return dbutil.Put(b, file)
+		return dbutil.Put(tx, file)
 	})
 }
 
@@ -95,19 +94,19 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 
 // ListNames returns a slice with all the files names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutil.ListNames(db, bucket.File.GetName())
+	return dbutil.ListNames(db, bucket.FileNames.GetName())
 }
 
 // Remove removes one or more files from the database.
 func Remove(db *bolt.DB, names ...string) error {
-	return dbutil.Remove(db, bucket.File.GetName(), names...)
+	return db.Update(func(tx *bolt.Tx) error {
+		return dbutil.Remove(tx, &pb.File{}, names...)
+	})
 }
 
 // Rename recreates a file with a new key and deletes the old one.
 func Rename(db *bolt.DB, oldName, newName string) error {
-	return db.Batch(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.File.GetName())
-
+	return db.Update(func(tx *bolt.Tx) error {
 		file, err := Get(db, oldName)
 		if err != nil {
 			return err
@@ -120,11 +119,11 @@ func Rename(db *bolt.DB, oldName, newName string) error {
 		file.Name = newName
 		file.Content = compressedContent
 
-		if err := dbutil.Put(b, file); err != nil {
+		if err := dbutil.Put(tx, file); err != nil {
 			return err
 		}
 
-		return b.Delete([]byte(oldName))
+		return dbutil.Remove(tx, &pb.File{}, oldName)
 	})
 }
 

@@ -14,8 +14,7 @@ import (
 // Create a new bank card.
 func Create(db *bolt.DB, card *pb.Card) error {
 	return db.Batch(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.Card.GetName())
-		return dbutil.Put(b, card)
+		return dbutil.Put(tx, card)
 	})
 }
 
@@ -36,12 +35,14 @@ func List(db *bolt.DB) ([]*pb.Card, error) {
 
 // ListNames returns a list with all the cards names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutil.ListNames(db, bucket.Card.GetName())
+	return dbutil.ListNames(db, bucket.CardNames.GetName())
 }
 
 // Remove removes one or more cards from the database.
 func Remove(db *bolt.DB, names ...string) error {
-	return dbutil.Remove(db, bucket.Card.GetName(), names...)
+	return db.Update(func(tx *bolt.Tx) error {
+		return dbutil.Remove(tx, &pb.Card{}, names...)
+	})
 }
 
 // Update updates a card, it removes the old one if the name differs.
@@ -57,6 +58,6 @@ func Update(db *bolt.DB, oldName string, card *pb.Card) error {
 				return errors.Wrap(err, "remove old card")
 			}
 		}
-		return dbutil.Put(b, card)
+		return dbutil.Put(tx, card)
 	})
 }

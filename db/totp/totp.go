@@ -11,8 +11,7 @@ import (
 // Create a new TOTP.
 func Create(db *bolt.DB, totp *pb.TOTP) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.TOTP.GetName())
-		return dbutil.Put(b, totp)
+		return dbutil.Put(tx, totp)
 	})
 }
 
@@ -33,10 +32,12 @@ func List(db *bolt.DB) ([]*pb.TOTP, error) {
 
 // ListNames returns a slice with all the totps names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutil.ListNames(db, bucket.TOTP.GetName())
+	return dbutil.ListNames(db, bucket.TOTPNames.GetName())
 }
 
 // Remove removes one or more totps from the database.
 func Remove(db *bolt.DB, names ...string) error {
-	return dbutil.Remove(db, bucket.TOTP.GetName(), names...)
+	return db.Update(func(tx *bolt.Tx) error {
+		return dbutil.Remove(tx, &pb.TOTP{}, names...)
+	})
 }

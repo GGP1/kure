@@ -18,9 +18,8 @@ func Create(db *bolt.DB, entries ...*pb.Entry) error {
 	}
 
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.Entry.GetName())
 		for _, entry := range entries {
-			if err := dbutil.Put(b, entry); err != nil {
+			if err := dbutil.Put(tx, entry); err != nil {
 				return err
 			}
 		}
@@ -46,12 +45,14 @@ func List(db *bolt.DB) ([]*pb.Entry, error) {
 
 // ListNames returns a list with all the entries names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutil.ListNames(db, bucket.Entry.GetName())
+	return dbutil.ListNames(db, bucket.EntryNames.GetName())
 }
 
 // Remove removes one or more entries from the database.
 func Remove(db *bolt.DB, names ...string) error {
-	return dbutil.Remove(db, bucket.Entry.GetName(), names...)
+	return db.Update(func(tx *bolt.Tx) error {
+		return dbutil.Remove(tx, &pb.Entry{}, names...)
+	})
 }
 
 // Update updates an entry, it removes the old one if the name differs.
@@ -67,6 +68,6 @@ func Update(db *bolt.DB, oldName string, entry *pb.Entry) error {
 				return errors.Wrap(err, "remove old entry")
 			}
 		}
-		return dbutil.Put(b, entry)
+		return dbutil.Put(tx, entry)
 	})
 }

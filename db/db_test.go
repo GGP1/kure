@@ -21,15 +21,15 @@ var (
 		Number:       "12313121",
 		SecurityCode: "007",
 	}
-	bucketName = dbutil.GetBucketName(record)
+	bucketName      = dbutil.GetBucketName(record)
+	namesBucketName = dbutil.GetNamesBucketName(record)
 )
 
 func TestGet(t *testing.T) {
-	db := dbutil.SetContext(t, bucketName)
+	db := dbutil.SetContext(t, bucketName, namesBucketName)
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
-		return dbutil.Put(b, record)
+		return dbutil.Put(tx, record)
 	})
 	assert.NoError(t, err)
 
@@ -78,7 +78,7 @@ func TestGetBucketName(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	db := dbutil.SetContext(t, bucketName)
+	db := dbutil.SetContext(t, bucketName, namesBucketName)
 
 	createRecord(t, db, record)
 	record2 := &pb.Card{
@@ -101,47 +101,43 @@ func TestList(t *testing.T) {
 }
 
 func TestListNames(t *testing.T) {
-	db := dbutil.SetContext(t, bucketName)
+	db := dbutil.SetContext(t, bucketName, namesBucketName)
 
 	recordA := "a"
 	recordB := "b"
+	names := []string{recordA, recordB}
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
-		if err := b.Put([]byte(recordB), nil); err != nil {
-			return err
+		for _, name := range names {
+			if err := dbutil.Put(tx, &pb.Card{Name: name}); err != nil {
+				return err
+			}
 		}
-		return b.Put([]byte(recordA), nil)
+		return nil
 	})
 	assert.NoError(t, err)
 
-	got, err := dbutil.ListNames(db, bucketName)
+	got, err := dbutil.ListNames(db, namesBucketName)
 	assert.NoError(t, err)
 
 	// We expect them to be ordered
-	expected := []string{recordA, recordB}
-	assert.Equal(t, expected, got)
+	assert.Equal(t, names, got)
 }
 
 func TestListNamesNil(t *testing.T) {
-	db := dbutil.SetContext(t, bucketName)
+	db := dbutil.SetContext(t, namesBucketName)
 
-	err := db.Update(func(tx *bolt.Tx) error {
-		return tx.DeleteBucket(bucketName)
-	})
-	assert.NoError(t, err, "Failed deleting the file bucket")
-
-	list, err := dbutil.ListNames(db, bucketName)
+	list, err := dbutil.ListNames(db, namesBucketName)
 	assert.NoError(t, err)
-	assert.Nil(t, list)
+	assert.Empty(t, list)
 }
 
 func TestPut(t *testing.T) {
-	db := dbutil.SetContext(t, bucketName)
+	db := dbutil.SetContext(t, bucketName, namesBucketName)
 	createRecord(t, db, record)
 }
 
 func TestRemove(t *testing.T) {
-	db := dbutil.SetContext(t, bucketName)
+	db := dbutil.SetContext(t, bucketName, namesBucketName)
 
 	recordA := "a"
 	err := db.Update(func(tx *bolt.Tx) error {
@@ -150,11 +146,13 @@ func TestRemove(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	err = dbutil.Remove(db, bucketName, recordA)
+	err = db.Update(func(tx *bolt.Tx) error {
+		return dbutil.Remove(tx, record, recordA)
+	})
 	assert.NoError(t, err)
 
 	expected := make([]string, 0)
-	got, err := dbutil.ListNames(db, bucketName)
+	got, err := dbutil.ListNames(db, namesBucketName)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, got)
@@ -166,58 +164,57 @@ func TestRemoveNone(t *testing.T) {
 }
 
 func TestCryptErrors(t *testing.T) {
-	db := dbutil.SetContext(t, bucket.Entry.GetName())
+	db := dbutil.SetContext(t, bucketName, namesBucketName)
 
 	name := "test decrypt error"
 
-	e := &pb.Entry{Name: name, Expires: "Never"}
+	e := &pb.Card{Name: name}
 	createRecord(t, db, e)
 
 	// Try to get the entry with other password
 	config.Set("auth.password", memguard.NewEnclave([]byte("invalid")))
 
-	err := dbutil.Get(db, name, &pb.Entry{})
+	err := dbutil.Get(db, name, &pb.Card{})
 	assert.Error(t, err)
 	// For some reason it does not fail if a card struct is used
-	_, err = dbutil.List(db, &pb.Entry{})
+	_, err = dbutil.List(db, &pb.Card{})
 	assert.Error(t, err)
 }
 
 func TestGetErrors(t *testing.T) {
-	db := dbutil.SetContext(t, bucket.Entry.GetName())
+	db := dbutil.SetContext(t, bucketName, namesBucketName)
 
-	err := dbutil.Get(db, "non-existent", &pb.Entry{})
+	err := dbutil.Get(db, "non-existent", &pb.Card{})
 	assert.Error(t, err)
 }
 
 func TestKeyError(t *testing.T) {
 	db := dbutil.SetContext(t, bucketName)
 	db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
-		return dbutil.Put(b, &pb.Card{Name: ""})
+		return dbutil.Put(tx, &pb.Card{Name: ""})
 	})
 }
 
 func TestProtoErrors(t *testing.T) {
-	db := dbutil.SetContext(t, bucket.Entry.GetName())
+	db := dbutil.SetContext(t, bucketName, namesBucketName)
 
 	name := "unformatted"
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.Entry.GetName())
+		b := tx.Bucket(bucket.Card.GetName())
 		buf := make([]byte, 32)
 		encBuf, _ := crypt.Encrypt(buf)
 		return b.Put([]byte(name), encBuf)
 	})
 	assert.NoError(t, err, "Failed writing invalid type")
 
-	err = dbutil.Get(db, name, &pb.Entry{})
+	err = dbutil.Get(db, name, &pb.Card{})
 	assert.Error(t, err)
-	_, err = dbutil.List(db, &pb.Entry{})
+	_, err = dbutil.List(db, &pb.Card{})
 	assert.Error(t, err)
 }
 
 func TestPutErrors(t *testing.T) {
-	db := dbutil.SetContext(t, bucketName)
+	db := dbutil.SetContext(t, bucketName, namesBucketName)
 
 	cases := []struct {
 		desc string
@@ -234,10 +231,9 @@ func TestPutErrors(t *testing.T) {
 	}
 
 	db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketName)
 		for _, tc := range cases {
 			t.Run(tc.desc, func(t *testing.T) {
-				err := dbutil.Put(b, &pb.Card{Name: tc.name})
+				err := dbutil.Put(tx, &pb.Card{Name: tc.name})
 				assert.Error(t, err)
 			})
 		}
@@ -247,8 +243,7 @@ func TestPutErrors(t *testing.T) {
 
 func createRecord(t *testing.T, db *bolt.DB, record dbutil.Record) {
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(dbutil.GetBucketName(record))
-		return dbutil.Put(b, record)
+		return dbutil.Put(tx, record)
 	})
 	assert.NoError(t, err)
 }

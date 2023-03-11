@@ -70,10 +70,9 @@ func GetParams(db *bolt.DB) (Params, error) {
 func Register(db *bolt.DB, params Params) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		// Create all the buckets except auth, it will be created in setParameters()
-		buckets := bucket.GetNames()
-		for _, bucket := range buckets {
-			if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
-				return errors.Wrapf(err, "creating %q bucket", bucket)
+		for _, b := range bucket.GetNames() {
+			if _, err := tx.CreateBucketIfNotExists(b); err != nil {
+				return errors.Wrapf(err, "creating %q bucket", b)
 			}
 		}
 
