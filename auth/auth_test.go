@@ -12,24 +12,15 @@ import (
 	"github.com/GGP1/kure/db/auth"
 
 	"github.com/awnumar/memguard"
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
-	bolt "go.etcd.io/bbolt"
 )
 
 func TestLogin(t *testing.T) {
 	db := cmdutil.SetContext(t)
+	config.Set(authKey, "savedPassword")
 
-	// This mock is used to execute Login as PreRunE
-	mock := func(db *bolt.DB) *cobra.Command {
-		return &cobra.Command{
-			Use:     "mock",
-			PreRunE: Login(db),
-		}
-	}
-
-	cmd := mock(db)
-	assert.NoError(t, cmd.PreRunE(cmd, nil))
+	err := Login(db)
+	assert.NoError(t, err)
 }
 
 func TestAskArgon2Params(t *testing.T) {

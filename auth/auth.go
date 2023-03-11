@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/db/auth"
@@ -19,7 +18,6 @@ import (
 
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -33,43 +31,41 @@ const (
 // a command is effectively the owner of the information.
 //
 // If it's the first record the user is registered.
-func Login(db *bolt.DB) cmdutil.RunEFunc {
-	return func(cmd *cobra.Command, args []string) error {
-		// If auth is not nil it means the user is already logged in (session)
-		if auth := config.Get(authKey); auth != nil {
-			return nil
-		}
-
-		params, err := authDB.GetParams(db)
-		if err != nil {
-			return err
-		}
-		// The auth key will be nil only on the user's first (successful) command
-		if params.AuthKey == nil {
-			return Register(db, os.Stdin)
-		}
-
-		password, err := terminal.ScanPassword("Enter master password", false)
-		if err != nil {
-			return err
-		}
-
-		if params.UseKeyfile {
-			password, err = combineKeys(os.Stdin, password)
-			if err != nil {
-				return err
-			}
-		}
-
-		setAuthToConfig(password, params)
-
-		// Try to decrypt the authentication key
-		if _, err := crypt.Decrypt(params.AuthKey); err != nil {
-			return errors.New("invalid master password")
-		}
-
+func Login(db *bolt.DB) error {
+	// If auth is not nil it means the user is already logged in (session)
+	if auth := config.Get(authKey); auth != nil {
 		return nil
 	}
+
+	params, err := authDB.GetParams(db)
+	if err != nil {
+		return err
+	}
+	// The auth key will be nil only on the user's first (successful) command
+	if params.AuthKey == nil {
+		return Register(db, os.Stdin)
+	}
+
+	password, err := terminal.ScanPassword("Enter master password", false)
+	if err != nil {
+		return err
+	}
+
+	if params.UseKeyfile {
+		password, err = combineKeys(os.Stdin, password)
+		if err != nil {
+			return err
+		}
+	}
+
+	setAuthToConfig(password, params)
+
+	// Try to decrypt the authentication key
+	if _, err := crypt.Decrypt(params.AuthKey); err != nil {
+		return errors.New("invalid master password")
+	}
+
+	return nil
 }
 
 // Register registers the user when there aren't any records yet.
