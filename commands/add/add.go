@@ -65,9 +65,6 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 
 func runAdd(db *bolt.DB, r io.Reader, opts *addOptions) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		name := strings.Join(args, " ")
-		name = cmdutil.NormalizeName(name)
-
 		if !opts.custom {
 			if opts.length < 1 || opts.length > math.MaxUint64 {
 				return cmdutil.ErrInvalidLength
@@ -77,6 +74,8 @@ func runAdd(db *bolt.DB, r io.Reader, opts *addOptions) cmdutil.RunEFunc {
 			}
 		}
 
+		name := strings.Join(args, " ")
+		name = cmdutil.NormalizeName(name)
 		e, err := entryInput(r, name, opts.custom)
 		if err != nil {
 			return err
@@ -84,10 +83,11 @@ func runAdd(db *bolt.DB, r io.Reader, opts *addOptions) cmdutil.RunEFunc {
 
 		if !opts.custom {
 			// Generate random password
-			e.Password, err = genPassword(opts)
+			pwd, err := genPassword(opts)
 			if err != nil {
 				return err
 			}
+			e.Password = string(pwd)
 		}
 
 		if err := entry.Create(db, e); err != nil {
@@ -100,7 +100,7 @@ func runAdd(db *bolt.DB, r io.Reader, opts *addOptions) cmdutil.RunEFunc {
 }
 
 // genPassword returns a customized random password or an error.
-func genPassword(opts *addOptions) (string, error) {
+func genPassword(opts *addOptions) ([]byte, error) {
 	levels := make([]atoll.Level, len(opts.levels))
 	for i, lvl := range opts.levels {
 		switch lvl {
@@ -116,7 +116,7 @@ func genPassword(opts *addOptions) (string, error) {
 			levels[i] = atoll.Special
 
 		default:
-			return "", errors.Errorf("invalid level [%d]", lvl)
+			return nil, errors.Errorf("invalid level [%d]", lvl)
 		}
 	}
 

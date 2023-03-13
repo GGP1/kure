@@ -59,22 +59,22 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 
 func runPhrase(db *bolt.DB, r io.Reader, opts *phraseOptions) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		name := strings.Join(args, " ")
-		name = cmdutil.NormalizeName(name)
-
 		if opts.length < 1 || opts.length > math.MaxUint64 {
 			return cmdutil.ErrInvalidLength
 		}
 
+		name := strings.Join(args, " ")
+		name = cmdutil.NormalizeName(name)
 		e, err := entryInput(r, name)
 		if err != nil {
 			return err
 		}
 
-		e.Password, err = genPassphrase(opts)
+		pwd, err := genPassphrase(opts)
 		if err != nil {
 			return err
 		}
+		e.Password = string(pwd)
 
 		if err := entry.Create(db, e); err != nil {
 			return err
@@ -109,7 +109,7 @@ func entryInput(r io.Reader, name string) (*pb.Entry, error) {
 }
 
 // genPassphrase returns a customized random passphrase.
-func genPassphrase(opts *phraseOptions) (string, error) {
+func genPassphrase(opts *phraseOptions) ([]byte, error) {
 	l := atoll.WordList
 
 	if opts.list != "" {
@@ -126,7 +126,7 @@ func genPassphrase(opts *phraseOptions) (string, error) {
 			l = atoll.SyllableList
 
 		default:
-			return "", errors.Errorf("invalid list: %q", opts.list)
+			return nil, errors.Errorf("invalid list: %q", opts.list)
 		}
 	}
 
