@@ -94,13 +94,13 @@ func List(db *bolt.DB) ([]*pb.File, error) {
 
 // ListNames returns a slice with all the files names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutil.ListNames(db, bucket.FileNames.GetName())
+	return dbutil.ListNames[*pb.File](db)
 }
 
 // Remove removes one or more files from the database.
 func Remove(db *bolt.DB, names ...string) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		return dbutil.Remove(tx, &pb.File{}, names...)
+		return dbutil.Remove[*pb.File](tx, names...)
 	})
 }
 
@@ -123,7 +123,7 @@ func Rename(db *bolt.DB, oldName, newName string) error {
 			return err
 		}
 
-		return dbutil.Remove(tx, &pb.File{}, oldName)
+		return dbutil.Remove[*pb.File](tx, oldName)
 	})
 }
 

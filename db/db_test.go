@@ -116,7 +116,7 @@ func TestListNames(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	got, err := dbutil.ListNames(db, namesBucketName)
+	got, err := dbutil.ListNames[*pb.Card](db)
 	assert.NoError(t, err)
 
 	// We expect them to be ordered
@@ -126,7 +126,7 @@ func TestListNames(t *testing.T) {
 func TestListNamesNil(t *testing.T) {
 	db := dbutil.SetContext(t, namesBucketName)
 
-	list, err := dbutil.ListNames(db, namesBucketName)
+	list, err := dbutil.ListNames[*pb.Card](db)
 	assert.NoError(t, err)
 	assert.Empty(t, list)
 }
@@ -147,19 +147,19 @@ func TestRemove(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		return dbutil.Remove(tx, record, recordA)
+		return dbutil.Remove[*pb.Card](tx, recordA)
 	})
 	assert.NoError(t, err)
 
 	expected := make([]string, 0)
-	got, err := dbutil.ListNames(db, namesBucketName)
+	got, err := dbutil.ListNames[*pb.Card](db)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, got)
 }
 
 func TestRemoveNone(t *testing.T) {
-	err := dbutil.Remove(nil, nil)
+	err := dbutil.Remove[*pb.Card](nil)
 	assert.NoError(t, err)
 }
 

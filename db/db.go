@@ -1,9 +1,7 @@
 package dbutil
 
 import (
-	"bytes"
 	"crypto/rand"
-	"encoding/gob"
 	"os"
 	"sort"
 	"strings"
@@ -129,26 +127,29 @@ func List[R Record](db *bolt.DB, record R) ([]R, error) {
 }
 
 // ListNames returns a list with all the records names.
-func ListNames(db *bolt.DB, bucketName []byte) ([]string, error) {
+func ListNames[R Record](db *bolt.DB) ([]string, error) {
 	tx, err := db.Begin(false)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	mp, err := getNames(tx, bucketName)
+	var record R
+	bucketName := GetNamesBucketName(record)
+
+	names, err := getNames(tx, bucketName)
 	if err != nil {
 		return nil, err
 	}
 
-	names := make([]string, 0, len(mp))
-	for name := range mp {
-		names = append(names, name)
+	list := make([]string, 0, len(names.Map))
+	for name := range names.Map {
+		list = append(list, name)
 	}
 
 	// Sort alphabetically
-	sort.Slice(names, func(i, j int) bool { return names[i] < names[j] })
-	return names, nil
+	sort.Slice(list, func(i, j int) bool { return list[i] < list[j] })
+	return list, nil
 }
 
 // Put encrypts and saves a record into the database.
@@ -182,13 +183,14 @@ func Put(tx *bolt.Tx, record Record) error {
 }
 
 // Remove removes records from the database.
-func Remove(tx *bolt.Tx, record Record, names ...string) error {
+func Remove[R Record](tx *bolt.Tx, names ...string) error {
 	if len(names) == 0 {
 		return nil
 	}
 
+	var record R
 	namesBucketName := GetNamesBucketName(record)
-	namesMap, err := getNames(tx, namesBucketName)
+	recordNames, err := getNames(tx, namesBucketName)
 	if err != nil {
 		return err
 	}
@@ -198,10 +200,10 @@ func Remove(tx *bolt.Tx, record Record, names ...string) error {
 		if err := b.Delete([]byte(name)); err != nil {
 			return errors.Wrapf(err, "delete record %q", name)
 		}
-		delete(namesMap, name)
+		delete(recordNames.Map, name)
 	}
 
-	return saveNamesMap(tx, namesBucketName, namesMap)
+	return saveNamesMap(tx, namesBucketName, recordNames)
 }
 
 // SetContext creates a bucket and its context to test the database operations.
@@ -244,38 +246,44 @@ func SetContext(t testing.TB, bucketNames ...[]byte) *bolt.DB {
 // getKey returns the key corresponding to the name provided.
 func getKey(tx *bolt.Tx, name string, record Record) ([]byte, error) {
 	bucketName := GetNamesBucketName(record)
-	mp, err := getNames(tx, bucketName)
+	names, err := getNames(tx, bucketName)
 	if err != nil {
 		return nil, err
 	}
 
-	return mp[name], nil
+	return names.Map[name], nil
 }
 
-func getNames(tx *bolt.Tx, bucketName []byte) (map[string][]byte, error) {
-	namesMap := make(map[string][]byte, 0)
+func getNames(tx *bolt.Tx, bucketName []byte) (*pb.Names, error) {
+	names := &pb.Names{
+		Map: make(map[string][]byte),
+	}
+
 	b := tx.Bucket(bucketName)
-	encMap := b.Get(namesKey)
-	if encMap == nil {
-		return namesMap, nil
+	encNames := b.Get(namesKey)
+	if encNames == nil {
+		return names, nil
 	}
 
-	decMap, err := crypt.Decrypt(encMap)
+	decNames, err := crypt.Decrypt(encNames)
 	if err != nil {
-		return nil, errors.Wrap(err, "decrypt map")
+		return nil, errors.Wrap(err, "decrypt names")
 	}
 
-	reader := bytes.NewBuffer(decMap)
-	if err := gob.NewDecoder(reader).Decode(&namesMap); err != nil {
-		return nil, err
+	if err := proto.Unmarshal(decNames, names); err != nil {
+		return nil, errors.Wrap(err, "unmarshal names")
 	}
 
-	return namesMap, nil
+	if names.Map == nil {
+		names.Map = make(map[string][]byte)
+	}
+
+	return names, nil
 }
 
 func putKey(tx *bolt.Tx, name string, record Record) ([]byte, error) {
 	bucketName := GetNamesBucketName(record)
-	namesMap, err := getNames(tx, bucketName)
+	names, err := getNames(tx, bucketName)
 	if err != nil {
 		return nil, err
 	}
@@ -285,25 +293,25 @@ func putKey(tx *bolt.Tx, name string, record Record) ([]byte, error) {
 		return nil, err
 	}
 
-	namesMap[name] = key
-	if err := saveNamesMap(tx, bucketName, namesMap); err != nil {
+	names.Map[name] = key
+	if err := saveNamesMap(tx, bucketName, names); err != nil {
 		return nil, err
 	}
 
 	return key, nil
 }
 
-func saveNamesMap(tx *bolt.Tx, bucketName []byte, namesMap map[string][]byte) error {
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(namesMap); err != nil {
-		return err
+func saveNamesMap(tx *bolt.Tx, bucketName []byte, names *pb.Names) error {
+	buf, err := proto.Marshal(names)
+	if err != nil {
+		return errors.Wrap(err, "marshal names")
 	}
 
-	updatedMap, err := crypt.Encrypt(buf.Bytes())
+	encNames, err := crypt.Encrypt(buf)
 	if err != nil {
 		return errors.Wrap(err, "encrypt names")
 	}
 
 	b := tx.Bucket(bucketName)
-	return b.Put(namesKey, updatedMap)
+	return b.Put(namesKey, encNames)
 }

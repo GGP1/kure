@@ -1,10 +1,7 @@
 package card
 
 import (
-	"strings"
-
 	dbutil "github.com/GGP1/kure/db"
-	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/pb"
 
 	"github.com/pkg/errors"
@@ -35,26 +32,21 @@ func List(db *bolt.DB) ([]*pb.Card, error) {
 
 // ListNames returns a list with all the cards names.
 func ListNames(db *bolt.DB) ([]string, error) {
-	return dbutil.ListNames(db, bucket.CardNames.GetName())
+	return dbutil.ListNames[*pb.Card](db)
 }
 
 // Remove removes one or more cards from the database.
 func Remove(db *bolt.DB, names ...string) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		return dbutil.Remove(tx, &pb.Card{}, names...)
+		return dbutil.Remove[*pb.Card](tx, names...)
 	})
 }
 
 // Update updates a card, it removes the old one if the name differs.
 func Update(db *bolt.DB, oldName string, card *pb.Card) error {
-	if strings.ContainsRune(card.Name, '\x00') {
-		return errors.New("card name contains null characters")
-	}
-
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket.Card.GetName())
 		if oldName != card.Name {
-			if err := b.Delete([]byte(oldName)); err != nil {
+			if err := dbutil.Remove[*pb.Card](tx, oldName); err != nil {
 				return errors.Wrap(err, "remove old card")
 			}
 		}
