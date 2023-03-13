@@ -10,9 +10,9 @@ test:
 test-race:
 	go test ./... -race
 
-proto:
-	@cd pb && for type in card entry file totp ; do \
-		protoc -I. --go_out=. $$type.proto ; \
+proto: pb/*.proto
+	@for file in $^ ; do \
+		protoc -I. --go_out=./pb $$file ; \
 	done
 
 docker-build:
