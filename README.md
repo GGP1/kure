@@ -218,7 +218,7 @@ Two-factor authentication adds an extra layer of security to your accounts, in c
 
 ### Key files
 
-Key files are a [two-factor authentication](#two-factor-authentication) method but for the database, where the user is required not only to provide the correct password but also the path to the key file, which contains a **key** that is **combined with the password** to encrypt the records. 
+Key files are a form of local [two-factor authentication](#two-factor-authentication) method. The user is required to provide not only the correct password but also the path to the key file, which contains a **key** that is **combined with the password** to encrypt the records. 
 
 Using a key file is **optional**, as well as specifying the path to it in the configuration file (if it isn't, it will be requested every time you try to access the database).
 
