@@ -140,5 +140,10 @@ func genPassphrase(opts *phraseOptions) (string, error) {
 		List:      l,
 	}
 
-	return atoll.NewSecret(p)
+	passphrase, err := atoll.NewSecret(p)
+	if err != nil {
+		return "", err
+	}
+
+	return string(passphrase), nil
 }
