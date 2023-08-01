@@ -130,7 +130,12 @@ func genPassword(opts *addOptions) (string, error) {
 		Repeat:  opts.repeat,
 	}
 
-	return atoll.NewSecret(p)
+	password, err := atoll.NewSecret(p)
+	if err != nil {
+		return "", err
+	}
+
+	return string(password), nil
 }
 
 func entryInput(r io.Reader, name string, custom bool) (*pb.Entry, error) {
