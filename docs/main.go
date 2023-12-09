@@ -50,6 +50,19 @@ func main() {
 func cmdDocs(args []string) error {
 	root := root.NewCmd(nil)
 
+	if args[2] == "all" {
+		commands := root.Commands()
+		for _, c := range commands {
+			fmt.Println("#", c.Name())
+			if err := customMarkdown(c, os.Stdout); err != nil {
+				return err
+			}
+			fmt.Println("---")
+		}
+
+		return nil
+	}
+
 	cmd, _, err := root.Find(args[2:])
 	if err != nil {
 		return err
@@ -68,7 +81,7 @@ func customMarkdown(cmd *cobra.Command, w io.Writer) error {
 			return strings.Replace(s, old, new, n)
 		},
 		"visitFlags": func(cmd *cobra.Command) string {
-			return visitFlags(cmd)
+			return strings.TrimSpace(visitFlags(cmd))
 		},
 		"visitFlagsTable": func(cmd *cobra.Command) string {
 			buf := new(bytes.Buffer)
