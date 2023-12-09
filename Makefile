@@ -21,5 +21,8 @@ docker-build:
 docker-run:
 	docker run -it --rm kure sh
 
-completion:
-	@cd docs && go build main.go && ./main --completion
+cmds:
+	@cd docs && go build main.go && ./main --cmd all
+
+summary:
+	@cd docs && go build main.go && ./main --summary
