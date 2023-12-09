@@ -1,6 +1,6 @@
 ## Use
 
-`{{ replace (printf "%s " .UseLine) "[flags]" "" -1 -}}
+`{{ replace (printf "%s" .UseLine) "[flags]" "" -1 -}}
 {{ visitFlags . -}}` 
 
 {{ if ne (len .Aliases) 0 -}}
