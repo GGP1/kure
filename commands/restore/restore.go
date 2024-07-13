@@ -24,7 +24,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 Overwrite the registered credentials and re-encrypt every record with the new ones.
 
-Warning: this command is computationally expensive, it may cause memory (OOM) and CPU errors.`,
+WARNING: this command is computationally expensive, it may cause memory (OOM) and CPU errors.`,
 		PreRunE: auth.Login(db),
 		RunE:    runRestore(db),
 	}
