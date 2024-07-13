@@ -162,17 +162,9 @@ Finally, it's important to mention that **password comparisons are done in const
 
 Data encryption is done using a **256-bit key**, the symmetric block cipher [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) (Advanced Encryption Standard) along with [GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) (Galois/Counter Mode) a cipher mode providing an [authenticated encryption](https://en.wikipedia.org/wiki/Authenticated_encryption) algorithm designed to ensure data authenticity, integrity and confidentiality.
 
-> The national institute of standards and technology (NIST) selected AES as the best algorithm in terms of security, cost, resilience, integrity and surveillance of the algorithm in October 2000.
+Names are obfuscated using a bitwise xor operation and the authentication key, which is encrypted and used to determine whether the password is correct by decrypting it at the start of every command.
 
-#### Names aren't encrypted, why?
-
-Although it might be considered a downside and especially if one of the objectives is to make your information as private as possible, there is an explanation.
-
-Encrypting record names would force Kure to use the **exact same key** to do it (it would be virtually impossible to get a match otherwise), making the key susceptible to **precomputation attacks**.
-
-Moreover, the decryption process would be slower, only for the users, preventing them to spend resources on what really matters, the **key derivation function**. 
-
-To sum up, the attacker may (depending on the names) be able to choose which record to attempt a brute-force attack on but using the same key for encryption and "low" argon2 parameters would make it much easier for them to get access to **all** your data.
+This way, we ensure that the record names are not in plaintext while being able to access them without using a compute-expensive operation.
 
 ### Backups
 
