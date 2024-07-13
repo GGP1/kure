@@ -17,11 +17,11 @@ import (
 var Signal = sig{}
 
 type sig struct {
-	mu sync.RWMutex
 	// channel listening to signals
 	interrupt chan os.Signal
 	// list of functions to be executed after a signal
 	cleanups []func() error
+	mu       sync.RWMutex
 	// keepAlive prevents the program from exiting on a signal,
 	// it should be always accessed atomically
 	//
