@@ -5,7 +5,10 @@ before:
     - go mod tidy
 builds:
   -
-    ldflags: -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }}
+    ldflags: -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }} -X main.date={{ .CommitDate }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
     env:
         - CGO_ENABLED=0
     goos: 
