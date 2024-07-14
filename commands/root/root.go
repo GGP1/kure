@@ -54,7 +54,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		backup.NewCmd(db),
 		card.NewCmd(db),
 		clear.NewCmd(),
-		config.NewCmd(db, os.Stdin),
+		config.NewCmd(db),
 		copy.NewCmd(db),
 		edit.NewCmd(db),
 		export.NewCmd(db),
