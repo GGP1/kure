@@ -1,7 +1,6 @@
 package mv
 
 import (
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -70,7 +69,8 @@ func TestMvFileIntoDir(t *testing.T) {
 	err := cmd.Execute()
 	assert.NoError(t, err)
 
-	_, err = file.GetCheap(db, newDir+filepath.Base(filename))
+	newName := newDir + strings.Split(filename, "/")[1]
+	_, err = file.GetCheap(db, newName)
 	assert.NoError(t, err, "Failed getting the renamed file")
 }
 
