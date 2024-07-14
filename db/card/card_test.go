@@ -26,13 +26,13 @@ func TestCard(t *testing.T) {
 		ExpireDate:   "16/2024",
 	}
 
-	// Create destroys the buffer, hence we cannot use their fields anymore
 	t.Run("Create", create(db, c))
 	t.Run("Get", get(db, c))
 	t.Run("List", list(db, c))
 	t.Run("List names", listNames(db, c))
 	t.Run("Remove", remove(db, c.Name))
 	t.Run("Update", update(db))
+	t.Run("Update name", updateName(db))
 }
 
 func create(db *bolt.DB, c *pb.Card) func(*testing.T) {
@@ -92,6 +92,21 @@ func remove(db *bolt.DB, name string) func(*testing.T) {
 
 func update(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
+		oldCard := &pb.Card{Name: "test"}
+		err := Create(db, oldCard)
+		assert.NoError(t, err)
+
+		newCard := &pb.Card{Name: "test", Type: "debit"}
+		err = Update(db, oldCard.Name, newCard)
+		assert.NoError(t, err)
+
+		_, err = Get(db, newCard.Name)
+		assert.NoError(t, err)
+	}
+}
+
+func updateName(db *bolt.DB) func(*testing.T) {
+	return func(t *testing.T) {
 		oldCard := &pb.Card{Name: "old"}
 		err := Create(db, oldCard)
 		assert.NoError(t, err)
@@ -102,6 +117,9 @@ func update(db *bolt.DB) func(*testing.T) {
 
 		_, err = Get(db, newCard.Name)
 		assert.NoError(t, err)
+
+		_, err = Get(db, oldCard.Name)
+		assert.Error(t, err)
 	}
 }
 
@@ -118,7 +136,7 @@ func TestCreateErrors(t *testing.T) {
 		},
 		{
 			desc: "Null characters",
-			name: string('\x00'),
+			name: string([]rune{'\x00'}),
 		},
 	}
 
@@ -134,6 +152,14 @@ func TestGetError(t *testing.T) {
 	db := setContext(t)
 
 	_, err := Get(db, "non-existent")
+	assert.Error(t, err)
+}
+
+func TestUpdateError(t *testing.T) {
+	db := setContext(t)
+
+	name := string([]rune{'\x00'})
+	err := Update(db, "old", &pb.Card{Name: name})
 	assert.Error(t, err)
 }
 

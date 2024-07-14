@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
@@ -52,8 +51,7 @@ In case a path is passed, Kure will create any missing folders for you.`,
 			}
 			return cmdutil.MustExist(db, cmdutil.File, true)(cmd, args)
 		},
-		PreRunE: auth.Login(db),
-		RunE:    runTouch(db, &opts),
+		RunE: runTouch(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)
 			opts = touchOptions{}

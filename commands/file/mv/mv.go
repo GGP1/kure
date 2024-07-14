@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 
@@ -44,7 +43,6 @@ In case any of the paths contains spaces within it, it must be enclosed by doubl
 			return nil
 		},
 		Example: example,
-		PreRunE: auth.Login(db),
 		RunE:    runMv(db),
 	}
 }

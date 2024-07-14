@@ -37,6 +37,7 @@ func TestEntry(t *testing.T) {
 	t.Run("List names", listNames(db, names))
 	t.Run("Remove", remove(db, e.Name, e2.Name))
 	t.Run("Update", update(db))
+	t.Run("Update name", updateName(db))
 }
 
 func create(db *bolt.DB, entries ...*pb.Entry) func(*testing.T) {
@@ -94,6 +95,21 @@ func remove(db *bolt.DB, names ...string) func(*testing.T) {
 
 func update(db *bolt.DB) func(*testing.T) {
 	return func(t *testing.T) {
+		oldEntry := &pb.Entry{Name: "test"}
+		err := Create(db, oldEntry)
+		assert.NoError(t, err)
+
+		newEntry := &pb.Entry{Name: "test", Username: "username"}
+		err = Update(db, oldEntry.Name, newEntry)
+		assert.NoError(t, err)
+
+		_, err = Get(db, newEntry.Name)
+		assert.NoError(t, err)
+	}
+}
+
+func updateName(db *bolt.DB) func(*testing.T) {
+	return func(t *testing.T) {
 		oldEntry := &pb.Entry{Name: "old"}
 		err := Create(db, oldEntry)
 		assert.NoError(t, err)
@@ -104,6 +120,9 @@ func update(db *bolt.DB) func(*testing.T) {
 
 		_, err = Get(db, newEntry.Name)
 		assert.NoError(t, err)
+
+		_, err = Get(db, oldEntry.Name)
+		assert.Error(t, err)
 	}
 }
 
@@ -147,6 +166,14 @@ func TestGetErrors(t *testing.T) {
 	db := setContext(t)
 
 	_, err := Get(db, "non-existent")
+	assert.Error(t, err)
+}
+
+func TestUpdateError(t *testing.T) {
+	db := setContext(t)
+
+	name := string([]rune{'\x00'})
+	err := Update(db, "old", &pb.Entry{Name: name})
 	assert.Error(t, err)
 }
 

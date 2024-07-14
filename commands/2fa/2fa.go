@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/commands/2fa/add"
 	"github.com/GGP1/kure/commands/2fa/rm"
@@ -52,7 +51,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 Use the [-i info] flag to display information about the setup key, it also generates a QR code with the key in URL format that can be scanned by any authenticator.`,
 		Example: example,
 		Args:    cmdutil.MustExistLs(db, cmdutil.TOTP),
-		PreRunE: auth.Login(db),
 		RunE:    run2FA(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)

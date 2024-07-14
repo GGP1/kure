@@ -361,6 +361,7 @@ func SetContext(t testing.TB) *bolt.DB {
 		"iterations": 1,
 		"memory":     1,
 		"threads":    1,
+		"key":        []byte("01234567890123456789012345678901"),
 	}
 	config.Set("auth", auth)
 
@@ -381,6 +382,23 @@ func SetContext(t testing.TB) *bolt.DB {
 	})
 
 	return db
+}
+
+// SupportedManagers validates if the password manager used to import/export records is supported.
+func SupportedManagers() cobra.PositionalArgs {
+	return func(_ *cobra.Command, args []string) error {
+		manager := strings.Join(args, " ")
+
+		switch strings.ToLower(manager) {
+		case "1password", "bitwarden", "keepass", "keepassx", "keepassxc", "lastpass":
+
+		default:
+			return errors.Errorf(`%q is not supported
+
+Supported managers: 1Password, Bitwarden, Keepass/X/XC, Lastpass`, manager)
+		}
+		return nil
+	}
 }
 
 // WatchFile looks for the file initial state and loops until the first modification.

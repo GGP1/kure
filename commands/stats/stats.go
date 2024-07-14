@@ -3,7 +3,6 @@ package stats
 import (
 	"fmt"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/bucket"
 
@@ -21,7 +20,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Use:     "stats",
 		Short:   "Show database statistics",
 		Example: example,
-		PreRunE: auth.Login(db),
 		RunE:    runStats(db),
 	}
 }

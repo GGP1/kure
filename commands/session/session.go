@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
 
@@ -49,7 +48,6 @@ Session commands:
 • ttset [duration] - set a new timeout.
 • sleep [duration] - sleep for x time.`,
 		Example: example,
-		PreRunE: auth.Login(db),
 		RunE:    runSession(r, &opts),
 	}
 

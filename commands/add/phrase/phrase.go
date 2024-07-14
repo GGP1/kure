@@ -7,7 +7,6 @@ import (
 	"math"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/pb"
@@ -39,7 +38,6 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 		Aliases: []string{"passphrase"},
 		Example: example,
 		Args:    cmdutil.MustNotExist(db, cmdutil.Entry),
-		PreRunE: auth.Login(db),
 		RunE:    runPhrase(db, r, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)

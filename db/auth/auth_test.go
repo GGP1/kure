@@ -14,8 +14,9 @@ import (
 func TestParameters(t *testing.T) {
 	db := setContext(t)
 
+	key := []byte("test")
 	expected := Params{
-		AuthKey: []byte("test"),
+		AuthKey: key,
 		Argon2: Argon2{
 			Iterations: 1,
 			Memory:     1500000,
@@ -24,14 +25,14 @@ func TestParameters(t *testing.T) {
 		UseKeyfile: true,
 	}
 
-	err := Register(db, expected)
+	err := Register(db, key, expected)
 	assert.NoError(t, err, "Registration failed")
 
 	got, err := GetParams(db)
 	assert.NoError(t, err)
 
-	// Force auth key to be test as it's randomly generated and it won't match
-	got.AuthKey = []byte("test")
+	// Force auth key to be the same as it's encrypted and it won't match
+	got.AuthKey = key
 	assert.Equal(t, expected, got)
 }
 
@@ -51,8 +52,9 @@ func TestEmptyParameters(t *testing.T) {
 func TestSetParametersInvalidKeys(t *testing.T) {
 	db := setContext(t)
 
+	key := []byte("invalid")
 	params := Params{
-		AuthKey: []byte("invalid"),
+		AuthKey: key,
 		Argon2: Argon2{
 			Iterations: 1,
 			Memory:     1,
@@ -94,7 +96,7 @@ func TestSetParametersInvalidKeys(t *testing.T) {
 			tx, err := db.Begin(true)
 			assert.NoError(t, err, "Failed opening transaction")
 
-			err = storeParams(tx, params)
+			err = storeParams(tx, key, params)
 			assert.Error(t, err)
 			tx.Commit()
 

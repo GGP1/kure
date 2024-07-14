@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/orderedmap"
@@ -48,7 +47,6 @@ Listing all the entries does not check for expired entries, this decision was ta
 		Aliases: []string{"entries", "list"},
 		Example: example,
 		Args:    cmdutil.MustExistLs(db, cmdutil.Entry),
-		PreRunE: auth.Login(db),
 		RunE:    runLs(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)

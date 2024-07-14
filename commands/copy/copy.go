@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 
@@ -37,7 +36,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Aliases: []string{"cp"},
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.Entry),
-		PreRunE: auth.Login(db),
 		RunE:    runCopy(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)
