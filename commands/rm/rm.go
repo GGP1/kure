@@ -5,7 +5,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/terminal"
@@ -28,7 +27,6 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 		Short:   "Remove an entry or a directory",
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.Entry, true),
-		PreRunE: auth.Login(db),
 		RunE:    runRm(db, r),
 	}
 }

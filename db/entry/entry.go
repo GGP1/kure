@@ -63,7 +63,8 @@ func Update(db *bolt.DB, oldName string, entry *pb.Entry) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucket.Entry.GetName())
 		if oldName != entry.Name {
-			if err := b.Delete([]byte(oldName)); err != nil {
+			xorName := dbutil.XorName([]byte(oldName))
+			if err := b.Delete(xorName); err != nil {
 				return errors.Wrap(err, "remove old entry")
 			}
 		}

@@ -107,17 +107,17 @@ func TestListNames(t *testing.T) {
 	recordB := "b"
 	err := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
-		if err := b.Put([]byte(recordB), nil); err != nil {
+		if err := b.Put(dbutil.XorName([]byte(recordA)), nil); err != nil {
 			return err
 		}
-		return b.Put([]byte(recordA), nil)
+		return b.Put(dbutil.XorName([]byte(recordB)), nil)
 	})
 	assert.NoError(t, err)
 
 	got, err := dbutil.ListNames(db, bucketName)
 	assert.NoError(t, err)
 
-	// We expect them to be ordered
+	// We expect the names xored with the auth key. They should be ordered
 	expected := []string{recordA, recordB}
 	assert.Equal(t, expected, got)
 }
@@ -146,7 +146,7 @@ func TestRemove(t *testing.T) {
 	recordA := "a"
 	err := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
-		return b.Put([]byte(recordA), nil)
+		return b.Put(dbutil.XorName([]byte(recordA)), nil)
 	})
 	assert.NoError(t, err)
 
@@ -243,6 +243,57 @@ func TestPutErrors(t *testing.T) {
 		}
 		return nil
 	})
+}
+
+func TestXorName(t *testing.T) {
+	defer config.Reset()
+
+	key := []byte{
+		51, 0, 107, 95, 158, 240, 55, 129, 1, 249, 4,
+		159, 37, 118, 174, 228, 69, 140, 141, 199, 105,
+		124, 4, 120, 253, 220, 202, 0, 199, 47, 164, 134,
+	}
+	config.Set("auth.key", key)
+
+	cases := []struct {
+		name     string
+		expected string
+	}{
+		{
+			name: "test",
+		},
+		{
+			name: "adidas",
+		},
+		{
+			name: "github",
+		},
+		{
+			name: "nike",
+		},
+		{
+			name: "folder/test",
+		},
+		{
+			name: "super_extralarge_name",
+		},
+		{
+			name: "123456789",
+		},
+		{
+			name: string([]byte{51, 0, 107, 95, 158, 240}),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			xorName := dbutil.XorName([]byte(tc.name))
+			assert.NotEqual(t, tc.name, xorName)
+
+			gotName := dbutil.XorName(xorName)
+			assert.Equal(t, tc.name, string(gotName))
+		})
+	}
 }
 
 func createRecord(t *testing.T, db *bolt.DB, record dbutil.Record) {

@@ -124,7 +124,8 @@ func Rename(db *bolt.DB, oldName, newName string) error {
 			return err
 		}
 
-		return b.Delete([]byte(oldName))
+		xorName := dbutil.XorName([]byte(oldName))
+		return b.Delete(xorName)
 	})
 }
 

@@ -12,24 +12,13 @@ import (
 	"github.com/GGP1/kure/db/auth"
 
 	"github.com/awnumar/memguard"
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
-	bolt "go.etcd.io/bbolt"
 )
 
 func TestLogin(t *testing.T) {
 	db := cmdutil.SetContext(t)
-
-	// This mock is used to execute Login as PreRunE
-	mock := func(db *bolt.DB) *cobra.Command {
-		return &cobra.Command{
-			Use:     "mock",
-			PreRunE: Login(db),
-		}
-	}
-
-	cmd := mock(db)
-	assert.NoError(t, cmd.PreRunE(cmd, nil))
+	err := Login(db)
+	assert.NoError(t, err)
 }
 
 func TestAskArgon2Params(t *testing.T) {
@@ -242,7 +231,7 @@ func TestSetAuthToConfig(t *testing.T) {
 	setAuthToConfig(expPassword, authParams)
 
 	// reflect.DeepEqual does not work
-	got := config.Get("auth").(map[string]interface{})
+	got := config.Get(authKey).(map[string]interface{})
 	gotPassword := got["password"]
 	gotMem := got["memory"].(uint32)
 	gotIter := got["iterations"].(uint32)
@@ -252,4 +241,17 @@ func TestSetAuthToConfig(t *testing.T) {
 	assert.Equal(t, expMem, gotMem)
 	assert.Equal(t, expIter, gotIter)
 	assert.Equal(t, expTh, gotTh)
+}
+
+func TestSetKeyToConfig(t *testing.T) {
+	defer config.Reset()
+
+	key := []byte("test")
+	setKeyToConfig(key)
+
+	got := config.Get(authKey).(map[string]interface{})
+	gotKey, ok := got["key"].([]byte)
+
+	assert.True(t, ok)
+	assert.Equal(t, key, gotKey)
 }

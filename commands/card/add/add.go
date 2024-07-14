@@ -6,7 +6,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/card"
 	"github.com/GGP1/kure/pb"
@@ -28,7 +27,6 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 		Aliases: []string{"create", "new"},
 		Example: example,
 		Args:    cmdutil.MustNotExist(db, cmdutil.Card),
-		PreRunE: auth.Login(db),
 		RunE:    runAdd(db, r),
 	}
 }

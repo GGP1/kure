@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/entry"
 	"github.com/GGP1/kure/db/totp"
@@ -40,8 +39,7 @@ Supported:
    	• Keepass/X/XC
    	• Lastpass`,
 		Example: example,
-		Args:    managersSupported(),
-		PreRunE: auth.Login(db),
+		Args:    cmdutil.SupportedManagers(),
 		RunE:    runExport(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)
@@ -177,20 +175,4 @@ func splitName(path string) (dir, name string) {
 	name = filepath.Base(path)
 
 	return
-}
-
-func managersSupported() cobra.PositionalArgs {
-	return func(cmd *cobra.Command, args []string) error {
-		manager := strings.Join(args, " ")
-
-		switch strings.ToLower(manager) {
-		case "1password", "bitwarden", "keepass", "keepassx", "keepassxc", "lastpass":
-
-		default:
-			return errors.Errorf(`%q is not supported
-
-Managers supported: 1Password, Bitwarden, Keepass/X/XC, Lastpass`, manager)
-		}
-		return nil
-	}
 }

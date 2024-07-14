@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
 
@@ -22,7 +21,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Use:     "edit",
 		Short:   "Edit the current configuration file",
 		Example: example,
-		PreRunE: auth.Login(db),
 		RunE:    runEdit(),
 	}
 }

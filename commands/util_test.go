@@ -405,6 +405,24 @@ func TestSelectEditor(t *testing.T) {
 	})
 }
 
+func TestSupportedManagers(t *testing.T) {
+	t.Run("Supported", func(t *testing.T) {
+		list := []string{"1password", "bitwarden", "keepass", "keepassx", "keepassxc", "lastpass"}
+		for _, name := range list {
+			err := SupportedManagers()(nil, []string{name})
+			assert.NoError(t, err)
+		}
+	})
+
+	t.Run("Unsupported", func(t *testing.T) {
+		list := []string{"", "unsupported"}
+		for _, name := range list {
+			err := SupportedManagers()(nil, []string{name})
+			assert.Error(t, err)
+		}
+	})
+}
+
 func TestWatchFile(t *testing.T) {
 	f, err := os.CreateTemp("", "*")
 	assert.NoError(t, err)

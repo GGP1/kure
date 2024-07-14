@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/totp"
 	"github.com/GGP1/kure/pb"
@@ -51,8 +50,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 
 			return cmdutil.MustNotExist(db, cmdutil.TOTP)(cmd, args)
 		},
-		PreRunE: auth.Login(db),
-		RunE:    runAdd(db, r, &opts),
+		RunE: runAdd(db, r, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			opts = addOptions{
 				digits: 6,

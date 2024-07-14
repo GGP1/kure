@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"crypto/rand"
 	"encoding/binary"
 
 	"github.com/GGP1/kure/crypt"
@@ -67,7 +66,7 @@ func GetParams(db *bolt.DB) (Params, error) {
 }
 
 // Register creates all the buckets, saves the authentication key and the argon2 parameters used.
-func Register(db *bolt.DB, params Params) error {
+func Register(db *bolt.DB, key []byte, params Params) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		// Create all the buckets except auth, it will be created in setParameters()
 		buckets := bucket.GetNames()
@@ -77,14 +76,14 @@ func Register(db *bolt.DB, params Params) error {
 			}
 		}
 
-		return storeParams(tx, params)
+		return storeParams(tx, key, params)
 	})
 }
 
 // storeParams creates the auth bucket and sets the authentication parameters.
 //
 // The transaction shouldn't be closed as it's already handled by Register().
-func storeParams(tx *bolt.Tx, params Params) error {
+func storeParams(tx *bolt.Tx, key []byte, params Params) error {
 	b, err := tx.CreateBucketIfNotExists(bucket.Auth.GetName())
 	if err != nil {
 		return errors.Wrap(err, "creating auth bucket")
@@ -98,7 +97,7 @@ func storeParams(tx *bolt.Tx, params Params) error {
 		return err
 	}
 
-	return storeAuthKey(b, params)
+	return storeAuthKey(b, key)
 }
 
 func storeArgon2Params(b *bolt.Bucket, params Params) error {
@@ -139,12 +138,7 @@ func storeKeyfileFlag(b *bolt.Bucket, params Params) error {
 	return nil
 }
 
-func storeAuthKey(b *bolt.Bucket, params Params) error {
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		return errors.Wrap(err, "generating key")
-	}
-
+func storeAuthKey(b *bolt.Bucket, key []byte) error {
 	encKey, err := crypt.Encrypt(key)
 	if err != nil {
 		return err

@@ -2,6 +2,7 @@ package dbutil
 
 import (
 	"os"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -31,7 +32,8 @@ func Get(db *bolt.DB, name string, record Record) error {
 	return db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(GetBucketName(record))
 
-		encRecord := b.Get([]byte(name))
+		xorName := XorName([]byte(name))
+		encRecord := b.Get(xorName)
 		if encRecord == nil {
 			return errors.Errorf("record %q does not exist", name)
 		}
@@ -77,7 +79,7 @@ func List[R Record](db *bolt.DB, record R) ([]R, error) {
 	b := tx.Bucket(GetBucketName(record))
 	records := make([]R, 0, b.Stats().KeyN)
 
-	err = b.ForEach(func(k, v []byte) error {
+	err = b.ForEach(func(_, v []byte) error {
 		decRecord, err := crypt.Decrypt(v)
 		if err != nil {
 			return errors.Wrap(err, "decrypt record")
@@ -115,13 +117,17 @@ func ListNames(db *bolt.DB, bucketName []byte) ([]string, error) {
 		return nil, nil
 	}
 
-	records := make([]string, 0, b.Stats().KeyN)
+	names := make([]string, 0, b.Stats().KeyN)
 	_ = b.ForEach(func(k, _ []byte) error {
-		records = append(records, string(k))
+		// Xor record name to get the original one
+		name := XorName(k)
+		names = append(names, string(name))
 		return nil
 	})
 
-	return records, nil
+	sort.Strings(names)
+
+	return names, nil
 }
 
 // Put encrypts and saves a record into the database.
@@ -141,7 +147,8 @@ func Put(b *bolt.Bucket, record Record) error {
 		return errors.Wrap(err, "encrypt record")
 	}
 
-	if err := b.Put([]byte(name), encRecord); err != nil {
+	xorName := XorName([]byte(name))
+	if err := b.Put(xorName, encRecord); err != nil {
 		return errors.Wrap(err, "store record")
 	}
 
@@ -157,7 +164,8 @@ func Remove(db *bolt.DB, bucketName []byte, names ...string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
 		for _, name := range names {
-			if err := b.Delete([]byte(name)); err != nil {
+			xorName := XorName([]byte(name))
+			if err := b.Delete(xorName); err != nil {
 				return errors.Wrapf(err, "delete record %q", name)
 			}
 		}
@@ -181,6 +189,7 @@ func SetContext(t testing.TB, bucketName []byte) *bolt.DB {
 		"iterations": 1,
 		"memory":     1,
 		"threads":    1,
+		"key":        []byte("01234567890123456789012345678901"),
 	}
 	config.Set("auth", auth)
 
@@ -199,4 +208,19 @@ func SetContext(t testing.TB, bucketName []byte) *bolt.DB {
 	})
 
 	return db
+}
+
+// XorName does the bitwise xor operation between a name and the authentication key.
+func XorName(name []byte) []byte {
+	key, ok := config.Get("auth.key").([]byte)
+	if !ok {
+		memguard.SafeExit(1)
+	}
+	xor := make([]byte, len(name))
+
+	for i := range name {
+		xor[i] = key[i%len(key)] ^ name[i]
+	}
+
+	return xor
 }

@@ -123,20 +123,17 @@ func TestArgs(t *testing.T) {
 	cmd := NewCmd(db)
 
 	t.Run("Supported", func(t *testing.T) {
-		managers := []string{"1password", "bitwarden", "keepass", "keepassx", "keepassxc", "lastpass"}
-
-		for _, m := range managers {
-			t.Run(m, func(t *testing.T) {
-				err := cmd.Args(cmd, []string{m})
-				assert.NoError(t, err)
-			})
+		list := []string{"1password", "bitwarden", "keepass", "keepassx", "keepassxc", "lastpass"}
+		for _, name := range list {
+			err := cmd.Args(cmd, []string{name})
+			assert.NoError(t, err)
 		}
 	})
 
 	t.Run("Unsupported", func(t *testing.T) {
-		invalids := []string{"", "unsupported"}
-		for _, inv := range invalids {
-			err := cmd.Args(cmd, []string{inv})
+		list := []string{"", "unsupported"}
+		for _, name := range list {
+			err := cmd.Args(cmd, []string{name})
 			assert.Error(t, err)
 		}
 	})

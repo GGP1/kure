@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/pb"
@@ -47,7 +46,6 @@ Notes:
 	- Modifying the file with a different program will prevent Kure from erasing the file as its being blocked by another process.`,
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.File),
-		PreRunE: auth.Login(db),
 		RunE:    runEdit(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)

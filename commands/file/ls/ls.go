@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/db/file"
 	"github.com/GGP1/kure/orderedmap"
@@ -52,7 +51,6 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Short:   "List files",
 		Example: example,
 		Args:    cmdutil.MustExistLs(db, cmdutil.File),
-		PreRunE: auth.Login(db),
 		RunE:    runLs(db, &opts),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Reset variables (session)

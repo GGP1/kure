@@ -2,6 +2,7 @@ package auth
 
 import (
 	"bufio"
+	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -10,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/crypt"
 	"github.com/GGP1/kure/db/auth"
@@ -19,7 +19,6 @@ import (
 
 	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -33,43 +32,44 @@ const (
 // a command is effectively the owner of the information.
 //
 // If it's the first record the user is registered.
-func Login(db *bolt.DB) cmdutil.RunEFunc {
-	return func(cmd *cobra.Command, args []string) error {
-		// If auth is not nil it means the user is already logged in (session)
-		if auth := config.Get(authKey); auth != nil {
-			return nil
-		}
-
-		params, err := authDB.GetParams(db)
-		if err != nil {
-			return err
-		}
-		// The auth key will be nil only on the user's first (successful) command
-		if params.AuthKey == nil {
-			return Register(db, os.Stdin)
-		}
-
-		password, err := terminal.ScanPassword("Enter master password", false)
-		if err != nil {
-			return err
-		}
-
-		if params.UseKeyfile {
-			password, err = combineKeys(os.Stdin, password)
-			if err != nil {
-				return err
-			}
-		}
-
-		setAuthToConfig(password, params)
-
-		// Try to decrypt the authentication key
-		if _, err := crypt.Decrypt(params.AuthKey); err != nil {
-			return errors.New("invalid master password")
-		}
-
+func Login(db *bolt.DB) error {
+	// If auth is not nil it means the user is already logged in (session)
+	if auth := config.Get(authKey); auth != nil {
 		return nil
 	}
+
+	params, err := authDB.GetParams(db)
+	if err != nil {
+		return err
+	}
+	// The auth key will be nil only on the user's first (successful) command
+	if params.AuthKey == nil {
+		return Register(db, os.Stdin)
+	}
+
+	password, err := terminal.ScanPassword("Enter master password", false)
+	if err != nil {
+		return err
+	}
+
+	if params.UseKeyfile {
+		password, err = combineKeys(os.Stdin, password)
+		if err != nil {
+			return err
+		}
+	}
+
+	setAuthToConfig(password, params)
+
+	// Try to decrypt the authentication key
+	key, err := crypt.Decrypt(params.AuthKey)
+	if err != nil {
+		return errors.New("invalid master password")
+	}
+
+	setKeyToConfig(key)
+
+	return nil
 }
 
 // Register registers the user when there aren't any records yet.
@@ -106,7 +106,14 @@ func Register(db *bolt.DB, r io.Reader) error {
 	}
 
 	setAuthToConfig(password, params)
-	return authDB.Register(db, params)
+
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		return errors.Wrap(err, "generating key")
+	}
+	setKeyToConfig(key)
+
+	return authDB.Register(db, key, params)
 }
 
 func askArgon2Params(r io.Reader) (authDB.Argon2, error) {
@@ -209,4 +216,9 @@ func setAuthToConfig(password *memguard.Enclave, params auth.Params) {
 		"threads":    params.Argon2.Threads,
 	}
 	config.Set(authKey, auth)
+}
+
+// Auth key must be set to the configuration before any database operation is performed.
+func setKeyToConfig(key []byte) {
+	config.Set(authKey+".key", key)
 }
