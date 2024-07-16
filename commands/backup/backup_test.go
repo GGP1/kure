@@ -8,6 +8,9 @@ import (
 	"testing"
 
 	cmdutil "github.com/GGP1/kure/commands"
+	"github.com/GGP1/kure/db/entry"
+	"github.com/GGP1/kure/pb"
+	bolt "go.etcd.io/bbolt"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -15,16 +18,33 @@ import (
 func TestBackupFile(t *testing.T) {
 	db := cmdutil.SetContext(t)
 	filename := "backup-test"
+	name := "test"
+
+	t.Cleanup(func() {
+		err := os.Remove(filename)
+		assert.NoError(t, err, "Failed removing the database backup")
+	})
+
+	err := entry.Create(db, &pb.Entry{Name: name})
+	assert.NoError(t, err)
 
 	cmd := NewCmd(db)
 	f := cmd.Flags()
 	f.Set("path", filename)
 
-	err := cmd.Execute()
-	assert.NoError(t, err, "Failed creating the backup file")
+	err = cmd.Execute()
+	assert.NoError(t, err, "Failed creating the database backup")
 
-	err = os.Remove(filename)
-	assert.NoError(t, err, "Failed removing the backup file")
+	newDB, err := bolt.Open(filename, 0o600, bolt.DefaultOptions)
+	assert.NoError(t, err)
+
+	e, err := entry.Get(newDB, name)
+	assert.NoError(t, err)
+
+	assert.Equal(t, name, e.Name)
+
+	err = newDB.Close()
+	assert.NoError(t, err)
 }
 
 func TestBackupServer(t *testing.T) {

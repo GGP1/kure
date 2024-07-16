@@ -128,17 +128,17 @@ func fileBackup(db *bolt.DB, path string) error {
 		return errors.Wrap(err, "changing working directory")
 	}
 
-	f, err := os.OpenFile(filepath.Base(path), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	newDB, err := bolt.Open(filepath.Base(path), 0o600, nil)
 	if err != nil {
-		return errors.Wrap(err, "opening file")
+		return errors.Wrap(err, "opening database backup")
 	}
 
-	if err := writeTo(db, f); err != nil {
-		return err
+	if err := bolt.Compact(newDB, db, 0); err != nil {
+		return errors.Wrap(err, "compacting database backup")
 	}
 
-	if err := f.Close(); err != nil {
-		return errors.Wrap(err, "closing file")
+	if err := newDB.Close(); err != nil {
+		return errors.Wrap(err, "closing database backup")
 	}
 
 	abs, _ := filepath.Abs(path)
