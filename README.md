@@ -162,7 +162,7 @@ Finally, it's important to mention that **password comparisons are done in const
 
 Data encryption is done using a **256-bit key**, the symmetric block cipher [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) (Advanced Encryption Standard) along with [GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) (Galois/Counter Mode) a cipher mode providing an [authenticated encryption](https://en.wikipedia.org/wiki/Authenticated_encryption) algorithm designed to ensure data authenticity, integrity and confidentiality.
 
-Names are obfuscated using a bitwise xor operation and the authentication key, which is encrypted and used to determine whether the password is correct by decrypting it at the start of every command.
+Names are obfuscated using the bitwise XOR operation and the authentication key, which is encrypted and used to determine whether the password is correct by decrypting it at the start of every command.
 
 This way, we ensure that the record names are not in plaintext while being able to access them without using a compute-expensive operation.
 
