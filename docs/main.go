@@ -31,7 +31,7 @@ func main() {
 			log.Fatalf("failed generating %s documentation: %v", os.Args[1], err)
 		}
 	} else if *summ {
-		if err := summary(os.Args); err != nil {
+		if err := summary(); err != nil {
 			log.Fatalf("failed generating commands summary: %v", err)
 		}
 	}
@@ -137,7 +137,7 @@ func visitFlags(cmd *cobra.Command) string {
 // https://www.github.com/kure/wiki/Commands-summary
 //
 // Usage: main --summary.
-func summary(args []string) error {
+func summary() error {
 	cmdAndFlags := func(c *cobra.Command) string {
 		buf := new(bytes.Buffer)
 		buf.WriteString(c.Use)

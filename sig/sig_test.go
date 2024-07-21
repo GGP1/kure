@@ -33,10 +33,10 @@ func TestAddCleanup(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(count)
 		for i := 0; i < count; i++ {
-			go func(i int) {
+			go func() {
 				Signal.AddCleanup(f)
 				wg.Done()
-			}(i)
+			}()
 		}
 		wg.Wait()
 
