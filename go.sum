@@ -1,7 +1,7 @@
 github.com/AlecAivazis/survey/v2 v2.3.7 h1:6I/u8FvytdGsgonrYsVn2t8t4QiRnh6QSTqkkhIiSjQ=
 github.com/AlecAivazis/survey/v2 v2.3.7/go.mod h1:xUTIdE4KCOIjsBAE1JYsUPoCqYdZ1reCfTwbto0Fduo=
-github.com/GGP1/atoll v0.6.0 h1:O0vUrdqF/lC9l7iSBqJdQRPt+TNvluAAZ2eq0emRPFY=
-github.com/GGP1/atoll v0.6.0/go.mod h1:0ara0O+YfFSlqcKubEu4UJfTzy/wz7OAHs38K7P5CvU=
+github.com/GGP1/atoll v0.7.0 h1:qIo6aIJtViWcZx7lQ/cRwAg2TpuqVS23r/rsSZwzfeI=
+github.com/GGP1/atoll v0.7.0/go.mod h1:t1D8dwqO+DJjdtA7B60hXBG7b3hJJEDS3kV9KHHRc3M=
 github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2 h1:+vx7roKuyA63nhn5WAunQHLTznkw5W8b1Xc0dNjp83s=
 github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2/go.mod h1:HBCaDeC1lPdgDeDbhX8XFpy1jqjK0IBG8W5K+xYqA0w=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=

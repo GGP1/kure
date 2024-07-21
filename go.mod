@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
-	github.com/GGP1/atoll v0.6.0
+	github.com/GGP1/atoll v0.7.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/awnumar/memguard v0.22.5
 	github.com/pelletier/go-toml/v2 v2.2.2
