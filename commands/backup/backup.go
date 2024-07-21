@@ -134,7 +134,7 @@ func fileBackup(db *bolt.DB, path string) error {
 	}
 
 	if err := bolt.Compact(newDB, db, 0); err != nil {
-		return errors.Wrap(err, "compacting database backup")
+		return errors.Wrap(err, "copying database backup")
 	}
 
 	if err := newDB.Close(); err != nil {

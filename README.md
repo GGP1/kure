@@ -86,7 +86,7 @@ make install
 
 Further information and examples under [docs/commands](/docs/commands).
 
-<img src="https://user-images.githubusercontent.com/51374959/109055273-b4413180-76bd-11eb-8e71-ae73e7e06522.png" height=550 width=550 />
+<img src="https://github.com/user-attachments/assets/64646f5f-a49d-4dea-97d7-99fab2884158" height=600 width=600 />
 
 ## Configuration
 

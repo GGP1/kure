@@ -5,6 +5,7 @@ For more information about a command, its flags and examples please visit the [c
 {{ end }}
 {{ range .Commands }}
 ### {{ .Name }}
+
 ```
 {{ cmdAndFlags . -}}
 {{ subCmds . "" }}

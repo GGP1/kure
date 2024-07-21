@@ -93,7 +93,7 @@ func (s *sig) Listen(db *bolt.DB) {
 
 		db.Close()
 		fmt.Println("\nExiting...")
-		memguard.SafeExit(0)
+		memguard.SafeExit(1)
 	}()
 }
 

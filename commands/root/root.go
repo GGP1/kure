@@ -22,6 +22,7 @@ import (
 	"github.com/GGP1/kure/commands/ls"
 	"github.com/GGP1/kure/commands/restore"
 	"github.com/GGP1/kure/commands/rm"
+	"github.com/GGP1/kure/commands/rotate"
 	"github.com/GGP1/kure/commands/session"
 	"github.com/GGP1/kure/commands/stats"
 
@@ -64,6 +65,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		it.NewCmd(db),
 		ls.NewCmd(db),
 		restore.NewCmd(db),
+		rotate.NewCmd(db),
 		rm.NewCmd(db, os.Stdin),
 		session.NewCmd(db, os.Stdin),
 		stats.NewCmd(db),
