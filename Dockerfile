@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine3.19 as builder
+FROM golang:1.22-alpine3.20 as builder
 
 WORKDIR /kure
 
@@ -14,7 +14,7 @@ RUN CGO_ENABLED=0 go install -ldflags="-s -w" .
 
 # ---------------------------------------------
 
-FROM alpine:3.19
+FROM alpine:3.20
 
 RUN apk add --update --no-cache vim
 
