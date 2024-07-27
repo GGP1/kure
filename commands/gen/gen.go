@@ -63,7 +63,7 @@ Average time taken to crack is based on a brute force attack scenario where the 
 	f.StringVarP(&opts.include, "include", "i", "", "characters to include in the password")
 	f.StringVarP(&opts.exclude, "exclude", "e", "", "characters to exclude from the password")
 	f.BoolVarP(&opts.repeat, "repeat", "r", false, "allow character repetition")
-	f.BoolVarP(&opts.qr, "qr", "q", false, "show the QR code image on the terminal")
+	f.BoolVarP(&opts.qr, "qr", "q", false, "display the password QR code on the terminal")
 	f.BoolVarP(&opts.mute, "mute", "m", false, "mute standard output when the password is copied")
 
 	return cmd
@@ -111,14 +111,12 @@ func runGen(opts *genOptions) cmdutil.RunEFunc {
 			return err
 		}
 
-		pwdBuf := memguard.NewBufferFromBytes([]byte(password))
-		memguard.WipeBytes([]byte(password))
+		pwdBuf := memguard.NewBufferFromBytes(password)
+		memguard.WipeBytes(password)
 		defer pwdBuf.Destroy()
 
 		if opts.qr {
-			if err := terminal.DisplayQRCode(pwdBuf.String()); err != nil {
-				return err
-			}
+			return terminal.DisplayQRCode(pwdBuf.String())
 		}
 
 		entropy := p.Entropy()

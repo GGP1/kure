@@ -11,7 +11,7 @@ List cards.
 |  Name     | Shorthand |     Type      |    Default    |                 Description                   |
 |-----------|-----------|---------------|---------------|-----------------------------------------------|
 | filter    | f         | bool          | false         | Filter cards                                  |
-| qr        | q         | bool          | false         | Display card number QR code on the terminal   |
+| qr        | q         | bool          | false         | Display the number QR code on the terminal   	|
 | show      | s         | bool          | false         | Show card number and security code            |
 
 ### Examples
