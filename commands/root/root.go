@@ -99,3 +99,13 @@ func printVersion() {
 
 	fmt.Printf("[%s] %s %s\n", bi.GoVersion, bi.Main.Version, lastCommitHash)
 }
+
+// StatelessCommand returns true if the specified command does not require opening the database.
+func StatelessCommand(command string) bool {
+	for _, name := range []string{"clear", "gen", "help"} {
+		if name == command {
+			return true
+		}
+	}
+	return false
+}

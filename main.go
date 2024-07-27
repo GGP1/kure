@@ -21,6 +21,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Check for and run stateless commands
+	if len(os.Args) < 2 || root.StatelessCommand(os.Args[1]) {
+		if err := root.NewCmd(nil).Execute(); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	dbPath := filepath.Clean(config.GetString("database.path"))
 	db, err := bolt.Open(dbPath, 0o600, &bolt.Options{Timeout: 200 * time.Millisecond})
 	if err != nil {
