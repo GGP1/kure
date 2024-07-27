@@ -81,7 +81,7 @@ Average time taken to crack is based on a brute force attack scenario where the 
 	f.StringVarP(&opts.list, "list", "L", "WordList", "passphrase list used {NoList|WordList|SyllableList}")
 	f.StringSliceVarP(&opts.incl, "include", "i", nil, "words to include in the passphrase")
 	f.StringSliceVarP(&opts.excl, "exclude", "e", nil, "words to exclude from the passphrase")
-	f.BoolVarP(&opts.qr, "qr", "q", false, "show QR code on terminal")
+	f.BoolVarP(&opts.qr, "qr", "q", false, "display the passphrase QR code on terminal")
 	f.BoolVarP(&opts.mute, "mute", "m", false, "mute standard output when the passphrase is copied")
 
 	return cmd
@@ -126,14 +126,12 @@ func runPhrase(opts *phraseOptions) cmdutil.RunEFunc {
 			return err
 		}
 
-		phraseBuf := memguard.NewBufferFromBytes([]byte(passphrase))
-		memguard.WipeBytes([]byte(passphrase))
+		phraseBuf := memguard.NewBufferFromBytes(passphrase)
+		memguard.WipeBytes(passphrase)
 		defer phraseBuf.Destroy()
 
 		if opts.qr {
-			if err := terminal.DisplayQRCode(phraseBuf.String()); err != nil {
-				return err
-			}
+			return terminal.DisplayQRCode(phraseBuf.String())
 		}
 
 		entropy := p.Entropy()

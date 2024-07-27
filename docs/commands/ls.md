@@ -12,11 +12,11 @@ List entries.
 
 ## Flags 
 
-|  Name     | Shorthand |     Type      |    Default    |                                  Description                                         |
-|-----------|-----------|---------------|---------------|--------------------------------------------------------------------------------------|
-| filter    | f         | bool          | false         | Filter entries                                                                       |
-| qr        | q         | bool          | false         | Show the password QR code on the terminal (non-available when listing all entries)   |
-| show      | s         | bool          | false         | Show entry password                                                                  |
+|  Name     | Shorthand |     Type      |    Default    |                                  Description                                         	|
+|-----------|-----------|---------------|---------------|---------------------------------------------------------------------------------------|
+| filter    | f         | bool          | false         | Filter entries                                                                       	|
+| qr        | q         | bool          | false         | Display the password QR code on the terminal (not-available when listing all entries)	|
+| show      | s         | bool          | false         | Show entry password                                                                  	|
 
 ### Examples
 

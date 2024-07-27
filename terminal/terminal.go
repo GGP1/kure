@@ -72,7 +72,7 @@ func DisplayQRCode(secret string) error {
 		return errors.Wrap(err, "creating QR code")
 	}
 
-	fmt.Println(qr.ToSmallString(false))
+	fmt.Print(qr.ToSmallString(false))
 	return nil
 }
 

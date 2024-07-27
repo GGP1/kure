@@ -20,8 +20,8 @@ Generate a random password.
 | include   | i         | string        | ""            | Characters to include in the password             |
 | exclude   | e         | string        | ""            | Characters to exclude from the password           |
 | repeat    | r         | bool          | false         | Character repetition                              |
-| qr        | q         | bool          | false         | Show QR code image on the terminal                |
-| mute      | m         | bool          | false         | Mute standard output when the password is copied  |
+| qr        | q         | bool          | false         | Display the password QR code on the terminal		|
+| mute      | m         | bool          | false         | Mute standard output when the password is copied 	|
 
 ### Format levels
 

@@ -56,7 +56,7 @@ Listing all the entries does not check for expired entries, this decision was ta
 
 	f := cmd.Flags()
 	f.BoolVarP(&opts.filter, "filter", "f", false, "filter by name")
-	f.BoolVarP(&opts.qr, "qr", "q", false, "show the password QR code on the terminal")
+	f.BoolVarP(&opts.qr, "qr", "q", false, "display the password QR code on the terminal")
 	f.BoolVarP(&opts.show, "show", "s", false, "show entry password")
 
 	return cmd
@@ -112,9 +112,7 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 		}
 
 		if opts.qr {
-			if err := terminal.DisplayQRCode(e.Password); err != nil {
-				return err
-			}
+			return terminal.DisplayQRCode(e.Password)
 		}
 
 		printEntry(name, e, opts.show)

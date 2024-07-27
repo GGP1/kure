@@ -18,7 +18,7 @@ Generate a random passphrase.
 | include   | i         | []string      | nil           | Words to include in the passphrase                            |
 | exclude   | e         | []string      | nil           | Words to exclude from the passphrase                          |
 | list      | L         | string        | "WordList"    | Passphrase generating method (NoList, WordList, SyllableList) |
-| qr        | q         | bool          | false         | Show the QR code image on the terminal                        |
+| qr        | q         | bool          | false         | Display the passphrase QR code image on the terminal			|
 | mute      | m         | bool          | false         | Mute standard output when the passphrase is copied            |
 
 ### Examples

@@ -58,3 +58,42 @@ func TestRunnable(t *testing.T) {
 		}
 	}
 }
+
+func TestStatelessCommand(t *testing.T) {
+	cases := []struct {
+		commandName string
+		expected    bool
+	}{
+		{
+			commandName: "",
+			expected:    false,
+		},
+		{
+			commandName: "help",
+			expected:    true,
+		},
+		{
+			commandName: "add",
+			expected:    false,
+		},
+		{
+			commandName: "gen",
+			expected:    true,
+		},
+		{
+			commandName: "clear",
+			expected:    true,
+		},
+		{
+			commandName: "it",
+			expected:    false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.commandName, func(t *testing.T) {
+			got := root.StatelessCommand(tc.commandName)
+			assert.Equal(t, tc.expected, got)
+		})
+	}
+}

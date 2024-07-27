@@ -48,7 +48,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 
 	f := cmd.Flags()
 	f.BoolVarP(&opts.filter, "filter", "f", false, "filter by name")
-	f.BoolVarP(&opts.qr, "qr", "q", false, "show the number QR code on the terminal")
+	f.BoolVarP(&opts.qr, "qr", "q", false, "display the QR code of the number on the terminal")
 	f.BoolVarP(&opts.show, "show", "s", false, "show card number and security code")
 
 	return cmd
@@ -104,9 +104,7 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 		}
 
 		if opts.qr {
-			if err := terminal.DisplayQRCode(c.Number); err != nil {
-				return err
-			}
+			return terminal.DisplayQRCode(c.Number)
 		}
 
 		printCard(name, c, opts.show)
