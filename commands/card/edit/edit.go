@@ -39,7 +39,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Short: "Edit a card",
 		Long: `Edit a card.
 
-If the name is edited, Kure will remove the old card and create one with the new name.`,
+If the name is edited, kure will remove the old card and create one with the new name.`,
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.Card),
 		RunE:    runEdit(db, &opts),

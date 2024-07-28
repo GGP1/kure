@@ -42,8 +42,8 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 Caution: a temporary file is created with a random name, it will be erased right after the first save but it could still be read by a malicious actor.
 
 Notes:
-	- Some editors flush the changes to the disk when closed, Kure won't notice any modifications until then.
-	- Modifying the file with a different program will prevent Kure from erasing the file as its being blocked by another process.`,
+	- Some editors flush the changes to the disk when closed, kure won't notice any modifications until then.
+	- Modifying the file with a different program will prevent kure from erasing the file as its being blocked by another process.`,
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.File),
 		RunE:    runEdit(db, &opts),
@@ -130,7 +130,7 @@ func createTempFile(ext string, content []byte) (string, error) {
 func logTempFilename(filename string) {
 	fmt.Printf(`Temporary file path: %s
 
-Caution: if any process is accessing the file at the time of modification, Kure won't be able to erase it
+Caution: if any process is accessing the file at the time of modification, kure won't be able to erase it
 `, filepath.ToSlash(filename))
 }
 

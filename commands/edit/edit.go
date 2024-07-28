@@ -40,7 +40,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Short: "Edit an entry",
 		Long: `Edit an entry. 
 		
-If the name is edited, Kure will remove the entry with the old name and create one with the new name.`,
+If the name is edited, kure will remove the entry with the old name and create one with the new name.`,
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.Entry),
 		RunE:    runEdit(db, &opts),

@@ -10,7 +10,7 @@ Add files to the database. As they are stored in a database, the whole file is r
 
 Path to a file must include its extension (in case it has).
 
-The user can specify a path to a folder as well, on this occasion, Kure will iterate over all the files in the folder and potential subfolders (if the -i flag is false) and store them into the database with the name "name/subfolders/filename". Empty folders will be skipped.
+The user can specify a path to a folder as well, on this occasion, kure will iterate over all the files in the folder and potential subfolders (if the -i flag is false) and store them into the database with the name "name/subfolders/filename". Empty folders will be skipped.
 
 ## Flags 
 

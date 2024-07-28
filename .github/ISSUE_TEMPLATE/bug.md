@@ -8,7 +8,7 @@ assignees: ''
 
 <!-- Please answer these questions before submitting your issue. Thanks! -->
 
-#### What version of Kure are you using?
+#### Which version are you using?
 
 
 

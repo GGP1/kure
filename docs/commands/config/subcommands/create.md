@@ -4,7 +4,7 @@
 
 ## Description
 
-Create a configuration file. Kure will create the file for you if necessary.
+Create a configuration file. kure will create the file for you if necessary.
 
 ### Formats supported
 

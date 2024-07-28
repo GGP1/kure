@@ -1,6 +1,6 @@
 ## Configuration
 
-By default Kure will read the file at `$HOME/.kure/kure.yaml` or the one specified in the `KURE_CONFIG` environment variable in case it is set. To change the file used, simply change the environment variable.
+By default kure will read the file at `$HOME/.kure/kure.yaml` or the one specified in the `KURE_CONFIG` environment variable in case it is set. To change the file used, simply change the environment variable.
 
 Paths inside it **MUST** be **absolute**.
 
@@ -46,7 +46,7 @@ Path to the database file (if it doesn't exist, it will be created).
 
 ### Editor
 
-The command of the editor you would like to use. If no editor is set in the configuration file, Kure will look for it in the `$EDITOR` and `$VISUAL` environment variables, if still nothing is found, it will try using vim by default.
+The command of the editor you would like to use. If no editor is set in the configuration file, kure will look for it in the `$EDITOR` and `$VISUAL` environment variables, if still nothing is found, it will try using vim by default.
 
 ---
 

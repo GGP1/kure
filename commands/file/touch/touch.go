@@ -38,11 +38,11 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		Short: "Create stored files",
 		Long: `Create one, multiple, all the files or an specific directory.
 
-For creating an specific file the extension must be included in the arguments, if not, Kure will consider that the user is trying to create a directory and will create all the files in it.
+For creating an specific file the extension must be included in the arguments, if not, kure will consider that the user is trying to create a directory and will create all the files in it.
 
 In case any of the paths contains spaces within it, it must be enclosed by double quotes.
 
-In case a path is passed, Kure will create any missing folders for you.`,
+In case a path is passed, kure will create any missing folders for you.`,
 		Aliases: []string{"th"},
 		Example: example,
 		Args: func(cmd *cobra.Command, args []string) error {

@@ -21,7 +21,7 @@ import (
 
 const nullChar = string('\x00')
 
-// Record is an interface that all Kure objects implement.
+// Record is an interface that all kure objects implement.
 type Record interface {
 	GetName() string
 	proto.Message

@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Utils to help developers update Kure's documentation.
+// Utils to help developers update kure's documentation.
 // Remember to update the wiki if necessary.
 // go run main.go [flags] [args]
 

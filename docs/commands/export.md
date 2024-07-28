@@ -8,7 +8,7 @@ Export entries to other password managers.
 
 This command creates a CSV file with all the entries unencrypted, make sure to delete it after it's used.
 
-Password managers supported:
+Supported password managers:
 - 1Password
 - Bitwarden
 - Keepass/X/XC

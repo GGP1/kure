@@ -22,7 +22,7 @@ func TestExecute(t *testing.T) {
 		args [][]string
 	}{
 		{
-			desc: "Kure command",
+			desc: "Root command",
 			args: [][]string{{"kure", "stats"}},
 		},
 		{
@@ -30,7 +30,7 @@ func TestExecute(t *testing.T) {
 			args: [][]string{{"pwd"}},
 		},
 		{
-			desc: "Kure help",
+			desc: "Help command",
 			args: [][]string{{"kure"}},
 		},
 		{

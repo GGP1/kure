@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// config is the variable used to manage Kure's configuration.
+// config is the variable used to manage kure's configuration.
 var config *Config
 
 func init() {
@@ -81,7 +81,7 @@ func (c *Config) Write(filename string, flags int) error {
 		return err
 	}
 
-	f, err := os.OpenFile(filename, flags, 0600)
+	f, err := os.OpenFile(filename, flags, 0o600)
 	if err != nil {
 		return err
 	}

@@ -8,9 +8,9 @@
 
 Create one, multiple, all the files or an specific directory.
 
-For creating an specific file the extension must be included in the arguments, if not, Kure will consider that the user is trying to create a directory and it will search for it.
+For creating an specific file the extension must be included in the arguments, if not, kure will consider that the user is trying to create a directory and it will search for it.
 
-In case a path is passed, Kure will create any missing folders for you.
+In case a path is passed, kure will create any missing folders for you.
 
 ## Flags
 
@@ -36,6 +36,6 @@ Create all files (tree recreation):
 kure file touch -p path/to/folder/new/new2
 ```
 
-Kure will recreate the file tree inside new2 folder which is inside path/to/folder/new.
+kure will recreate the file tree inside new2 folder which is inside path/to/folder/new.
 
-If the user doesn't include a path, Kure will create them inside the directory the user is located.
+If the user doesn't include a path, kure will create them inside the directory the user is located.

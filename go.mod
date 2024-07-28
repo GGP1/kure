@@ -21,7 +21,7 @@ require (
 )
 
 require (
-	github.com/awnumar/memcall v0.3.0 // indirect
+	github.com/awnumar/memcall v0.4.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect

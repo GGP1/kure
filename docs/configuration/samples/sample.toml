@@ -1,5 +1,5 @@
 # Identitation must be respected and paths must be absolute. 
-# In case any of these values is omitted, Kure will use the default one.
+# In case any of these values is omitted, kure will use the default one.
 # See ../configuration.md for further information.
 
 editor = "vim"

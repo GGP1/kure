@@ -8,8 +8,8 @@ Edit a file.
 
 Caution: a temporary file is created with a random name, it will be erased right after the first save but it could still be read by a malicious actor.
 Notes:
-    - Some editors flush the changes to the disk when closed, Kure won't notice any modifications until then.
-    - Modifying the file with a different program will prevent Kure from erasing the file as its being blocked by another process.
+    - Some editors flush the changes to the disk when closed, kure won't notice any modifications until then.
+    - Modifying the file with a different program will prevent kure from erasing the file as its being blocked by another process.
 
 #### Text editors commands
 *Editor*: *command*

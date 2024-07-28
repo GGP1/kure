@@ -16,7 +16,7 @@ assignees: ''
 
 
 
-#### Is it applicable to all Kure's supported platforms?
+#### Is it applicable to all of kure's supported platforms?
 
 
 
