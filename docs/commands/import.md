@@ -12,7 +12,7 @@ Delete the CSV used with the `erase` flag, the file will be deleted only if no e
 
 > It's not recommended to export using KeepassX its CSV encoding is erroneous. It escapes characters like "\" but not '"' and it does not use double quotes. This can lead to information being misinterpreted.
 
-Password managers supported:
+Supported password managers:
 - 1Password
 - Bitwarden
 - Keepass/X/XC

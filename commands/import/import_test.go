@@ -60,7 +60,7 @@ func TestImport(t *testing.T) {
 		{
 			manager: "Lastpass",
 			path:    "testdata/test_lastpass.csv",
-			// Kure will join folders with the entry names
+			// kure will join folders with the entry names
 			expected: &pb.Entry{
 				Name:     "test/lastpass",
 				Username: "test@lastpass.com",
@@ -73,7 +73,7 @@ func TestImport(t *testing.T) {
 		{
 			manager: "Bitwarden",
 			path:    "testdata/test_bitwarden.csv",
-			// Kure will join folders with the entry names
+			// kure will join folders with the entry names
 			expected: &pb.Entry{
 				Name:     "test/bitwarden",
 				Username: "test@bitwarden.com",

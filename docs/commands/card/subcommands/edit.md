@@ -6,7 +6,7 @@
 
 Edit a card.
 
-If the name is edited, Kure will remove the card with the old name and create one with the new name.
+If the name is edited, kure will remove the card with the old name and create one with the new name.
 
 **Caution**: when using a text editor the content of the card is written in plaintext to a temporary file, although the file has a random name and it's erased right after the first save, this isn't secure enough.
 

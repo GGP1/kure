@@ -39,7 +39,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 	opts := rootOptions{}
 	cmd := &cobra.Command{
 		Use:           "kure",
-		Short:         "Kure ~ CLI password manager",
+		Short:         "kure ~ CLI password manager with sessions",
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		CompletionOptions: cobra.CompletionOptions{

@@ -50,7 +50,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 
 Path to a file must include its extension (in case it has one).
 
-The user can specify a path to a folder as well, on this occasion, Kure will iterate over all the files in the folder and potential subfolders (if the -i flag is false) and store them into the database with the name "name/subfolders/filename". Empty folders will be skipped.`,
+The user can specify a path to a folder as well, on this occasion, kure will iterate over all the files in the folder and potential subfolders (if the -i flag is false) and store them into the database with the name "name/subfolders/filename". Empty folders will be skipped.`,
 		Aliases: []string{"new"},
 		Example: example,
 		Args:    cmdutil.MustNotExist(db, cmdutil.File),
