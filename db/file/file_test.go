@@ -202,6 +202,38 @@ func TestKeyError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestCompression(t *testing.T) {
+	content := []byte{1, 2, 3}
+
+	compressed, err := compress(content)
+	assert.NoError(t, err)
+
+	assert.NotEqual(t, content, compressed)
+
+	decompressed, err := decompress(compressed)
+	assert.NoError(t, err)
+
+	assert.Equal(t, content, decompressed)
+}
+
+func TestCompressNil(t *testing.T) {
+	var content []byte
+
+	compressed, err := compress(content)
+	assert.NoError(t, err)
+
+	assert.Equal(t, content, compressed)
+}
+
+func TestDecompressNil(t *testing.T) {
+	var content []byte
+
+	decompressed, err := decompress(content)
+	assert.NoError(t, err)
+
+	assert.Equal(t, content, decompressed)
+}
+
 func setContext(t testing.TB) *bolt.DB {
 	return dbutil.SetContext(t, bucket.File.GetName())
 }

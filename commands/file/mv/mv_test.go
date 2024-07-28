@@ -1,7 +1,6 @@
 package mv
 
 import (
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -75,10 +74,6 @@ func TestMvFileIntoDir(t *testing.T) {
 }
 
 func TestMvErrors(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		t.Skip("For some strange reason this test fails in unix systems because the database file throws \"bad file descriptor\"")
-	}
-
 	db := cmdutil.SetContext(t)
 	createFile(t, db, "exists")
 	dir := "dir/"
