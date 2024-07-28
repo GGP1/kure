@@ -5,8 +5,6 @@
 
 Password manager for the command-line that aims to offer a secure and private way of operating with sensitive information by reducing the attack surface to its minimum expression.
 
-![Overview](https://user-images.githubusercontent.com/51374959/160211818-b30efbfe-1f1e-44f6-9264-d6faa2f9c0ab.gif)
-
 ## Features
 
 - **Cross-Platform:** Linux, macOS, BSD, Windows and mobile supported.
@@ -15,6 +13,14 @@ Password manager for the command-line that aims to offer a secure and private wa
 - **Sessions:** Run multiple commands by entering the master password only once. They support setting a timeout and running custom scripts.
 - **Portable:** Both kure and its database compile to binary files and they can be easily carried around in an external device.
 - **Easy-to-use:** Intuitive, does not require advanced technical skills.
+
+## Usage
+
+For further information and examples, visit [docs/commands](/docs/commands).
+
+<img src="https://github.com/user-attachments/assets/64646f5f-a49d-4dea-97d7-99fab2884158" height=600 width=600 />
+
+![Overview](https://user-images.githubusercontent.com/51374959/160211818-b30efbfe-1f1e-44f6-9264-d6faa2f9c0ab.gif)
 
 ## Installation
 
@@ -82,12 +88,6 @@ make install
 ```
 
 </details>
-
-## Usage
-
-Further information and examples under [docs/commands](/docs/commands).
-
-<img src="https://github.com/user-attachments/assets/64646f5f-a49d-4dea-97d7-99fab2884158" height=600 width=600 />
 
 ## Configuration
 
