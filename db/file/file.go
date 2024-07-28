@@ -130,6 +130,10 @@ func Rename(db *bolt.DB, oldName, newName string) error {
 }
 
 func compress(content []byte) ([]byte, error) {
+	if len(content) == 0 {
+		return nil, nil
+	}
+
 	var gzipBuf bytes.Buffer
 	gw := gzip.NewWriter(&gzipBuf)
 
@@ -145,6 +149,10 @@ func compress(content []byte) ([]byte, error) {
 }
 
 func decompress(content []byte) ([]byte, error) {
+	if len(content) == 0 {
+		return nil, nil
+	}
+
 	compressed := bytes.NewBuffer(content)
 	gr, err := gzip.NewReader(compressed)
 	if err != nil {
