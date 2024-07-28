@@ -1,6 +1,4 @@
-# This file contains details about how to execute Kure inside a container while persisting the information.
-version: "3.8"
-
+# This file contains details about how to execute kure inside a container while persisting the information.
 services:
   # Run using "docker-compose run kure"
   kure:
