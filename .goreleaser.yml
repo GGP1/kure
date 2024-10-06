@@ -5,7 +5,7 @@ before:
     - go mod tidy
 builds:
   -
-    ldflags: -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }} -X main.date={{ .CommitDate }}
+    ldflags: -s -w -X main.version={{ .Tag }} -X main.commit={{ .ShortCommit }} -X main.date={{ .CommitDate }}
     mod_timestamp: "{{ .CommitTimestamp }}"
     flags:
       - -trimpath
