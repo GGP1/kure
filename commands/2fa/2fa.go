@@ -52,10 +52,6 @@ Use the [-i info] flag to display information about the setup key, it also gener
 		Example: example,
 		Args:    cmdutil.MustExistLs(db, cmdutil.TOTP),
 		RunE:    run2FA(db, &opts),
-		PostRun: func(cmd *cobra.Command, args []string) {
-			// Reset variables (session)
-			opts = tfaOptions{}
-		},
 	}
 
 	cmd.AddCommand(add.NewCmd(db, os.Stdin), rm.NewCmd(db, os.Stdin))
@@ -64,6 +60,12 @@ Use the [-i info] flag to display information about the setup key, it also gener
 	f.BoolVarP(&opts.copy, "copy", "c", false, "copy code to clipboard")
 	f.BoolVarP(&opts.info, "info", "i", false, "display information about the setup key")
 	f.DurationVarP(&opts.timeout, "timeout", "t", 0, "clipboard clearing timeout")
+
+	cmd.PostRun = func(cmd *cobra.Command, args []string) {
+		// Reset variables (session)
+		opts = tfaOptions{}
+		f.Lookup("timeout").Changed = false
+	}
 
 	return cmd
 }
