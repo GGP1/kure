@@ -40,7 +40,7 @@ func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 			return nil
 		}
 
-		// Remove single file
+		// Remove single entry
 		if !strings.HasSuffix(name, "/") {
 			if err := entry.Remove(db, name); err != nil {
 				return err
