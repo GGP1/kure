@@ -17,6 +17,9 @@ func TestRm(t *testing.T) {
 	err := totp.Create(db, &pb.TOTP{Name: "test"})
 	assert.NoError(t, err)
 
+	err = totp.Create(db, &pb.TOTP{Name: "test_dir/toast"})
+	assert.NoError(t, err)
+
 	cases := []struct {
 		desc         string
 		name         string
@@ -32,6 +35,11 @@ func TestRm(t *testing.T) {
 			name:         "test",
 			confirmation: "y",
 		},
+		{
+			desc:         "Directory",
+			name:         "test_dir/",
+			confirmation: "y",
+		},
 	}
 
 	for _, tc := range cases {
@@ -42,6 +50,13 @@ func TestRm(t *testing.T) {
 
 			err := cmd.Execute()
 			assert.NoError(t, err, "Failed removing the TOTP")
+
+			_, err = totp.Get(db, tc.name)
+			if tc.confirmation == "n" {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
 		})
 	}
 }
