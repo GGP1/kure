@@ -32,7 +32,7 @@ func main() {
 	}
 
 	// Check for and run stateless commands
-	if len(os.Args) < 2 || root.StatelessCommand(os.Args[1]) {
+	if len(os.Args) < 2 || root.IsStatelessCommand(os.Args[1]) {
 		if err := root.NewCmd(nil).Execute(); err != nil {
 			fmt.Fprintln(os.Stderr, "error:", err)
 			os.Exit(1)
