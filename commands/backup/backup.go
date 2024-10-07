@@ -57,6 +57,8 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 	f.StringVar(&opts.path, "path", "", "destination file path")
 	f.Uint16Var(&opts.port, "port", 8080, "server port")
 
+	cmd.MarkFlagsMutuallyExclusive("http", "path")
+
 	return cmd
 }
 
