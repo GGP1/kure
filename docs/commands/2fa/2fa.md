@@ -11,7 +11,7 @@ Use the `[-i info]` flag to display information about the setup key, it also gen
 ## Subcommands
 
 - [`kure 2fa add`](https://github.com/GGP1/kure/tree/master/docs/commands/2fa/subcommands/add.md): Add a two-factor authentication code.
-- [`kure 2fa rm`](https://github.com/GGP1/kure/tree/master/docs/commands/2fa/subcommands/rm.md): Remove a two-factor authentication code from an entry.
+- [`kure 2fa rm`](https://github.com/GGP1/kure/tree/master/docs/commands/2fa/subcommands/rm.md): Remove two-factor authentication codes from the database.
 
 ## Flags
 

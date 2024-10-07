@@ -1,10 +1,10 @@
 ## Use
 
-`kure card rm <name>`
+`kure card rm <names>`
 
 ## Description
 
-Remove a card or directory.
+Remove cards or directories.
 
 ## Flags
 
@@ -20,4 +20,9 @@ kure card rm Sample
 Remove a directory:
 ```
 kure card rm SampleDir/
+```
+
+Remove multiple cards:
+```
+kure card rm Sample Sample2 Sample3
 ```

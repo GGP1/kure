@@ -18,13 +18,16 @@ const example = `
 kure card rm Sample
 
 * Remove a directory
-kure card rm SampleDir/`
+kure card rm SampleDir/
+
+* Remove multiple cards
+kure card rm Sample Sample2 Sample3`
 
 // NewCmd returns the a new command.
 func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	return &cobra.Command{
-		Use:     "rm <name>",
-		Short:   "Remove a card or directory",
+		Use:     "rm <names>",
+		Short:   "Remove cards or directories",
 		Example: example,
 		Args:    cmdutil.MustExist(db, cmdutil.Card, true),
 		RunE:    runRm(db, r),
@@ -33,39 +36,33 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 
 func runRm(db *bolt.DB, r io.Reader) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		name := strings.Join(args, " ")
-		name = cmdutil.NormalizeName(name, true)
-
 		if !terminal.Confirm(r, "Are you sure you want to proceed?") {
 			return nil
 		}
 
-		// Remove single file
-		if !strings.HasSuffix(name, "/") {
-			if err := card.Remove(db, name); err != nil {
+		names := make([]string, 0, len(args))
+		for _, name := range args {
+			name = cmdutil.NormalizeName(name, true)
+
+			if !strings.HasSuffix(name, "/") {
+				names = append(names, name)
+				fmt.Println("Remove:", name)
+				continue
+			}
+
+			cards, err := card.ListNames(db)
+			if err != nil {
 				return err
 			}
 
-			fmt.Printf("\n%q removed\n", name)
-			return nil
-		}
-
-		fmt.Printf("Removing %q directory...\n", name)
-
-		cards, err := card.ListNames(db)
-		if err != nil {
-			return err
-		}
-
-		for _, c := range cards {
-			if strings.HasPrefix(c, name) {
-				if err := card.Remove(db, c); err != nil {
-					return err
+			for _, c := range cards {
+				if strings.HasPrefix(c, name) {
+					names = append(names, c)
+					fmt.Println("Remove:", c)
 				}
-				fmt.Println("Remove:", c)
 			}
 		}
 
-		return nil
+		return card.Remove(db, names...)
 	}
 }

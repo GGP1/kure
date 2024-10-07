@@ -14,48 +14,53 @@ import (
 func TestRm(t *testing.T) {
 	db := cmdutil.SetContext(t)
 
-	err := totp.Create(db, &pb.TOTP{Name: "test"})
-	assert.NoError(t, err)
-
-	err = totp.Create(db, &pb.TOTP{Name: "test_dir/toast"})
-	assert.NoError(t, err)
+	names := []string{"test", "directory/test", "kure", "atoll"}
+	for _, name := range names {
+		err := totp.Create(db, &pb.TOTP{Name: name})
+		assert.NoErrorf(t, err, "Failed creating %q", name)
+	}
 
 	cases := []struct {
-		desc         string
-		name         string
-		confirmation string
+		desc  string
+		input string
+		names []string
 	}{
 		{
-			desc:         "Abort",
-			name:         "test",
-			confirmation: "n",
+			desc:  "Do not proceed",
+			names: []string{"test"},
+			input: "n",
 		},
 		{
-			desc:         "Proceed",
-			name:         "test",
-			confirmation: "y",
+			desc:  "Remove one entry",
+			names: []string{"test"},
+			input: "y",
 		},
 		{
-			desc:         "Directory",
-			name:         "test_dir/",
-			confirmation: "y",
+			desc:  "Remove multiple entries",
+			names: []string{"kure", "atoll"},
+			input: "y",
+		},
+		{
+			desc:  "Remove directory",
+			names: []string{"directory/"},
+			input: "y",
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			buf := bytes.NewBufferString(tc.confirmation)
+			buf := bytes.NewBufferString(tc.input)
 			cmd := NewCmd(db, buf)
-			cmd.SetArgs([]string{tc.name})
+			cmd.SetArgs(tc.names)
 
 			err := cmd.Execute()
-			assert.NoError(t, err, "Failed removing the TOTP")
+			assert.NoError(t, err)
 
-			_, err = totp.Get(db, tc.name)
-			if tc.confirmation == "n" {
-				assert.NoError(t, err)
-			} else {
-				assert.Error(t, err)
+			if tc.input == "y" {
+				for _, name := range tc.names {
+					_, err := totp.Get(db, name)
+					assert.Error(t, err)
+				}
 			}
 		})
 	}
@@ -64,19 +69,27 @@ func TestRm(t *testing.T) {
 func TestRmErrors(t *testing.T) {
 	db := cmdutil.SetContext(t)
 
+	name := "random"
+	err := totp.Create(db, &pb.TOTP{Name: name})
+	assert.NoErrorf(t, err, "Failed creating %q", name)
+
 	cases := []struct {
 		desc         string
-		name         string
 		confirmation string
+		names        []string
 	}{
 		{
-			desc: "Invalid name",
-			name: "",
+			desc:  "Invalid name",
+			names: []string{""},
 		},
 		{
 			desc:         "Does not exists",
-			name:         "non-existent",
+			names:        []string{"non-existent"},
 			confirmation: "y",
+		},
+		{
+			desc:  "Second name does not exist",
+			names: []string{"random", "non-existent"},
 		},
 	}
 
@@ -84,7 +97,7 @@ func TestRmErrors(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			buf := bytes.NewBufferString(tc.confirmation)
 			cmd := NewCmd(db, buf)
-			cmd.SetArgs([]string{tc.name})
+			cmd.SetArgs(tc.names)
 
 			err := cmd.Execute()
 			assert.Error(t, err)

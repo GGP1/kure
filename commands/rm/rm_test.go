@@ -14,70 +14,36 @@ import (
 
 func TestRm(t *testing.T) {
 	db := cmdutil.SetContext(t)
-	name := "test"
-	createEntries(t, db, name)
 
-	buf := bytes.NewBufferString("y")
-	cmd := NewCmd(db, buf)
-	cmd.SetArgs([]string{name})
-
-	err := cmd.Execute()
-	assert.NoError(t, err, "Failed removing the entry")
-
-	// Check if the entry was removed successfully
-	_, err = entry.Get(db, name)
-	assert.Error(t, err)
-}
-
-func TestRmDir(t *testing.T) {
-	db := cmdutil.SetContext(t)
-	// Create the entries inside a folder to remove them
-	names := []string{"test/entry1", "test/entry2"}
-	createEntries(t, db, names...)
-
-	buf := bytes.NewBufferString("y")
-	cmd := NewCmd(db, buf)
-	cmd.SetArgs([]string{"test/"})
-
-	err := cmd.Execute()
-	assert.NoError(t, err, "Failed removing the entry")
-
-	// Check if the entries were removed successfully
+	names := []string{"test", "directory/test", "kure", "atoll"}
 	for _, name := range names {
-		_, err = entry.Get(db, name)
-		assert.Error(t, err)
+		err := entry.Create(db, &pb.Entry{Name: name})
+		assert.NoErrorf(t, err, "Failed creating %q", name)
 	}
-}
-
-func TestRmAbort(t *testing.T) {
-	db := cmdutil.SetContext(t)
-	name := "may the force be with you"
-	createEntries(t, db, name)
-
-	buf := bytes.NewBufferString("n") // Abort operation
-	cmd := NewCmd(db, buf)
-	cmd.SetArgs([]string{name})
-
-	err := cmd.Execute()
-	assert.NoError(t, err)
-}
-
-func TestRmErrors(t *testing.T) {
-	db := cmdutil.SetContext(t)
-	createEntries(t, db, "fail.txt")
 
 	cases := []struct {
 		desc  string
-		name  string
 		input string
+		names []string
 	}{
 		{
-			desc: "Invalid name",
-			name: "",
+			desc:  "Do not proceed",
+			names: []string{"test"},
+			input: "n",
 		},
 		{
-			desc:  "Not exists",
-			name:  "non-existent",
+			desc:  "Remove one entry",
+			names: []string{"test"},
+			input: "y",
+		},
+		{
+			desc:  "Remove multiple entries",
+			names: []string{"kure", "atoll"},
+			input: "y",
+		},
+		{
+			desc:  "Remove directory",
+			names: []string{"directory/"},
 			input: "y",
 		},
 	}
@@ -86,7 +52,51 @@ func TestRmErrors(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
 			cmd := NewCmd(db, buf)
-			cmd.SetArgs([]string{tc.name})
+			cmd.SetArgs(tc.names)
+
+			err := cmd.Execute()
+			assert.NoError(t, err)
+
+			if tc.input == "y" {
+				for _, name := range tc.names {
+					_, err := entry.Get(db, name)
+					assert.Error(t, err)
+				}
+			}
+		})
+	}
+}
+
+func TestRmErrors(t *testing.T) {
+	db := cmdutil.SetContext(t)
+
+	createEntries(t, db, "random")
+
+	cases := []struct {
+		desc         string
+		confirmation string
+		names        []string
+	}{
+		{
+			desc:  "Invalid name",
+			names: []string{""},
+		},
+		{
+			desc:         "Does not exists",
+			names:        []string{"non-existent"},
+			confirmation: "y",
+		},
+		{
+			desc:  "Second name does not exist",
+			names: []string{"random", "non-existent"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			buf := bytes.NewBufferString(tc.confirmation)
+			cmd := NewCmd(db, buf)
+			cmd.SetArgs(tc.names)
 
 			err := cmd.Execute()
 			assert.Error(t, err)

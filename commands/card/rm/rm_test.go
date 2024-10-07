@@ -14,30 +14,35 @@ import (
 func TestRm(t *testing.T) {
 	db := cmdutil.SetContext(t)
 
-	names := []string{"test", "directory/test"}
+	names := []string{"test", "directory/test", "kure", "atoll"}
 	for _, name := range names {
 		err := card.Create(db, &pb.Card{Name: name})
-		assert.NoErrorf(t, err, "Failed creating %q card", name)
+		assert.NoErrorf(t, err, "Failed creating %q", name)
 	}
 
 	cases := []struct {
 		desc  string
-		name  string
 		input string
+		names []string
 	}{
 		{
 			desc:  "Do not proceed",
-			name:  "test",
+			names: []string{"test"},
 			input: "n",
 		},
 		{
-			desc:  "Remove",
-			name:  "test",
+			desc:  "Remove one card",
+			names: []string{"test"},
+			input: "y",
+		},
+		{
+			desc:  "Remove multiple cards",
+			names: []string{"kure", "atoll"},
 			input: "y",
 		},
 		{
 			desc:  "Remove directory",
-			name:  "directory/",
+			names: []string{"directory/"},
 			input: "y",
 		},
 	}
@@ -45,12 +50,18 @@ func TestRm(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			buf := bytes.NewBufferString(tc.input)
-
 			cmd := NewCmd(db, buf)
-			cmd.SetArgs([]string{tc.name})
+			cmd.SetArgs(tc.names)
 
 			err := cmd.Execute()
 			assert.NoError(t, err)
+
+			if tc.input == "y" {
+				for _, name := range tc.names {
+					_, err := card.Get(db, name)
+					assert.Error(t, err)
+				}
+			}
 		})
 	}
 }
@@ -58,28 +69,35 @@ func TestRm(t *testing.T) {
 func TestRmErrors(t *testing.T) {
 	db := cmdutil.SetContext(t)
 
+	name := "random"
+	err := card.Create(db, &pb.Card{Name: name})
+	assert.NoErrorf(t, err, "Failed creating %q", name)
+
 	cases := []struct {
-		desc  string
-		name  string
-		input string
+		desc         string
+		confirmation string
+		names        []string
 	}{
 		{
-			desc: "Invalid name",
-			name: "",
+			desc:  "Invalid name",
+			names: []string{""},
 		},
 		{
-			desc:  "Non existent card",
-			name:  "non-existent",
-			input: "y",
+			desc:         "Does not exists",
+			names:        []string{"non-existent"},
+			confirmation: "y",
+		},
+		{
+			desc:  "Second name does not exist",
+			names: []string{"random", "non-existent"},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			buf := bytes.NewBufferString(tc.input)
-
+			buf := bytes.NewBufferString(tc.confirmation)
 			cmd := NewCmd(db, buf)
-			cmd.SetArgs([]string{tc.name})
+			cmd.SetArgs(tc.names)
 
 			err := cmd.Execute()
 			assert.Error(t, err)
