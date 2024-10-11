@@ -235,12 +235,12 @@ func FmtExpires(expires string) (string, error) {
 
 // MustExist returns an error if a record does not exist or if the name is invalid.
 func MustExist(db *bolt.DB, obj object, allowDir ...bool) cobra.PositionalArgs {
-	return func(cmd *cobra.Command, args []string) error {
+	return func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return ErrInvalidName
 		}
 
-		records, objType, err := listNames(db, obj)
+		names, objType, err := listNames(db, obj)
 		if err != nil {
 			return err
 		}
@@ -254,21 +254,30 @@ func MustExist(db *bolt.DB, obj object, allowDir ...bool) cobra.PositionalArgs {
 			if strings.HasSuffix(name, "/") {
 				// Take directories into consideration only when the user
 				// is trying to perform an action with one
-				if err := exists(records, name, objType); err == nil {
+				if err := exists(names, name, objType); err == nil {
 					return errors.Errorf("directory %q does not exist", strings.TrimSuffix(name, "/"))
 				}
 				return nil
 			}
 
 			exists := false
-			for _, record := range records {
+			for _, record := range names {
 				if name == record {
 					exists = true
 					break
 				}
 			}
+
 			if !exists {
-				return errors.Errorf("%q does not exist", name)
+				suggestions := getNameSuggestions(name, names)
+				if len(suggestions) == 0 {
+					return errors.Errorf("%q does not exist", name)
+				}
+
+				return errors.Errorf("%q does not exist. Did you mean %s?",
+					name,
+					formatSuggestions(suggestions),
+				)
 			}
 		}
 
@@ -464,8 +473,8 @@ func WriteClipboard(cmd *cobra.Command, d time.Duration, field, content string) 
 	return nil
 }
 
-func exists(records []string, name, objType string) error {
-	if len(records) == 0 {
+func exists(names []string, name, objType string) error {
+	if len(names) == 0 {
 		return nil
 	}
 
@@ -475,29 +484,84 @@ func exists(records []string, name, objType string) error {
 	// Remove slash to do the comparison
 	name = strings.TrimSuffix(name, "/")
 
-	for _, record := range records {
-		if name == record {
+	for _, n := range names {
+		if name == n {
 			return found(name)
 		}
 
-		// record = "Padmé/Amidala", name = "Padmé/" should return an error
-		if hasPrefix(record, name) {
+		// n = "Padmé/Amidala", name = "Padmé/" should return an error
+		if hasPrefix(n, name) {
 			return found(name)
 		}
 
-		// name = "Padmé/Amidala", record = "Padmé/" should return an error
-		if hasPrefix(name, record) {
-			return found(record)
+		// name = "Padmé/Amidala", n = "Padmé/" should return an error
+		if hasPrefix(name, n) {
+			return found(n)
 		}
 	}
 
 	return nil
 }
 
-// hasPrefix is a modified version of strings.HasPrefix() that suits this use case, prefix is not modified to save an allocation.
+func formatSuggestions(suggestions []string) string {
+	suggestionsStr := ""
+	for i, suggestion := range suggestions {
+		if len(suggestions) != 1 && i == len(suggestions)-1 {
+			suggestionsStr += " or "
+		} else if i != 0 {
+			suggestionsStr += ", "
+		}
+		suggestionsStr += "\"" + suggestion + "\""
+	}
+
+	return suggestionsStr
+}
+
+// getNameSuggestions returns a list of names that are similar to the one provided.
+func getNameSuggestions(name string, names []string) []string {
+	suggestions := make([]string, 0)
+	for _, n := range names {
+		levenshteinDistance := levenshteinDistance(name, n)
+		if levenshteinDistance <= 2 || strings.HasPrefix(n, name) {
+			suggestions = append(suggestions, n)
+		}
+	}
+	return suggestions
+}
+
+// hasPrefix is a modified version of strings.HasPrefix() that suits our use case, prefix is not modified to save an allocation.
 func hasPrefix(s, prefix string) bool {
 	prefixLen := len(prefix)
 	return len(s) > prefixLen && s[0:prefixLen] == prefix && s[prefixLen] == '/'
+}
+
+// levenshteinDistance compares two strings and returns the levenshtein distance between them.
+func levenshteinDistance(s, t string) int {
+	d := make([][]int, len(s)+1)
+	for i := range d {
+		d[i] = make([]int, len(t)+1)
+		d[i][0] = i
+	}
+	for j := range d[0] {
+		d[0][j] = j
+	}
+	for j := 1; j <= len(t); j++ {
+		for i := 1; i <= len(s); i++ {
+			if s[i-1] == t[j-1] {
+				d[i][j] = d[i-1][j-1]
+			} else {
+				min := d[i-1][j]
+				if d[i][j-1] < min {
+					min = d[i][j-1]
+				}
+				if d[i-1][j-1] < min {
+					min = d[i-1][j-1]
+				}
+				d[i][j] = min + 1
+			}
+		}
+	}
+	return d[len(s)][len(t)]
 }
 
 // listNames lists all the records depending on the object passed.
