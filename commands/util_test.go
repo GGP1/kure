@@ -184,20 +184,29 @@ func TestMustExist(t *testing.T) {
 
 	t.Run("Fail", func(t *testing.T) {
 		cases := []struct {
-			desc string
-			name string
+			desc       string
+			name       string
+			errMessage string
 		}{
 			{
-				desc: "Record does not exist",
-				name: "test",
+				desc:       "Record does not exist",
+				name:       "test",
+				errMessage: "\"test\" does not exist. Did you mean \"test/testing\"?",
 			},
 			{
-				desc: "Empty name",
-				name: "",
+				desc:       "Record does not exist 2",
+				name:       "test/tstng",
+				errMessage: "\"test/tstng\" does not exist. Did you mean \"test/testing\"?",
 			},
 			{
-				desc: "Invalid name",
-				name: "test//testing",
+				desc:       "Empty name",
+				name:       "",
+				errMessage: "invalid name",
+			},
+			{
+				desc:       "Invalid name",
+				name:       "test//testing",
+				errMessage: "invalid name",
 			},
 		}
 
@@ -205,6 +214,8 @@ func TestMustExist(t *testing.T) {
 			t.Run(tc.desc, func(t *testing.T) {
 				err := MustExist(db, Card)(nil, []string{tc.name})
 				assert.Error(t, err)
+
+				assert.Equal(t, tc.errMessage, err.Error())
 			})
 		}
 	})
@@ -535,6 +546,138 @@ func TestWriteClipboard(t *testing.T) {
 
 		assert.Equal(t, clip, got)
 	})
+}
+
+func TestFormatSuggestions(t *testing.T) {
+	cases := []struct {
+		desc           string
+		expectedResult string
+		suggestions    []string
+	}{
+		{
+			desc: "One suggestion",
+			suggestions: []string{
+				"car",
+			},
+			expectedResult: "\"car\"",
+		},
+		{
+			desc: "Two suggestions",
+			suggestions: []string{
+				"car",
+				"cur",
+			},
+			expectedResult: "\"car\" or \"cur\"",
+		},
+		{
+			desc: "Three suggestions",
+			suggestions: []string{
+				"car",
+				"cur",
+				"core",
+			},
+			expectedResult: "\"car\", \"cur\" or \"core\"",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			suggestion := formatSuggestions(tc.suggestions)
+
+			assert.Equal(t, tc.expectedResult, suggestion)
+		})
+	}
+}
+
+func TestGetNameSuggestions(t *testing.T) {
+	cases := []struct {
+		desc                string
+		names               []string
+		name                string
+		expectedSuggestions []string
+	}{
+		{
+			desc: "By distance",
+			names: []string{
+				"cat",
+				"bat",
+				"category",
+				"rat",
+				"car",
+				"pop",
+			},
+			name: "hay",
+			expectedSuggestions: []string{
+				"cat",
+				"bat",
+				"rat",
+				"car",
+			},
+		},
+		{
+			desc: "By prefix",
+			names: []string{
+				"category",
+				"careful",
+				"career",
+			},
+			name: "car",
+			expectedSuggestions: []string{
+				"careful",
+				"career",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			suggestions := getNameSuggestions(tc.name, tc.names)
+
+			assert.Equal(t, tc.expectedSuggestions, suggestions)
+		})
+	}
+}
+
+func TestLevenshteinDistance(t *testing.T) {
+	cases := []struct {
+		nameA            string
+		nameB            string
+		expectedDistance int
+	}{
+		{
+			nameA:            "car",
+			nameB:            "cat",
+			expectedDistance: 1,
+		},
+		{
+			nameA:            "car",
+			nameB:            "hat",
+			expectedDistance: 2,
+		},
+		{
+			nameA:            "car",
+			nameB:            "carry",
+			expectedDistance: 2,
+		},
+		{
+			nameA:            "car",
+			nameB:            "born",
+			expectedDistance: 3,
+		},
+		{
+			nameA:            "car",
+			nameB:            "karting",
+			expectedDistance: 5,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(strconv.Itoa(tc.expectedDistance), func(t *testing.T) {
+			distance := levenshteinDistance(tc.nameA, tc.nameB)
+
+			assert.Equal(t, tc.expectedDistance, distance)
+		})
+	}
 }
 
 func createObjects(t *testing.T, db *bolt.DB, name string) {

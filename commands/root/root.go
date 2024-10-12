@@ -30,6 +30,14 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+var statelessCommands = map[string]struct{}{
+	"clear":     {},
+	"gen":       {},
+	"help":      {},
+	"-v":        {},
+	"--version": {},
+}
+
 type rootOptions struct {
 	version bool
 }
@@ -48,7 +56,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		RunE: runRoot(&opts),
 	}
 
-	cmd.Flags().BoolVarP(&opts.version, "version", "v", false, "version for kure")
+	cmd.Flags().BoolVarP(&opts.version, "version", "v", false, "display kure version")
 	cmd.AddCommand(
 		tfa.NewCmd(db),
 		add.NewCmd(db, os.Stdin),
@@ -100,12 +108,8 @@ func printVersion() {
 	fmt.Printf("[%s] %s %s\n", bi.GoVersion, bi.Main.Version, lastCommitHash)
 }
 
-// StatelessCommand returns true if the specified command does not require opening the database.
-func StatelessCommand(command string) bool {
-	for _, name := range []string{"clear", "gen", "help"} {
-		if name == command {
-			return true
-		}
-	}
-	return false
+// IsStatelessCommand returns true if the specified command does not require opening the database.
+func IsStatelessCommand(command string) bool {
+	_, ok := statelessCommands[command]
+	return ok
 }

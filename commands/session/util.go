@@ -133,6 +133,18 @@ func parseDoubleQuotes(args []string) []string {
 	return args
 }
 
+// removeEmptyItems returns the provided slice without the items containing an empty character or space.
+func removeEmptyItems(slice []string) []string {
+	i := 0
+	for _, arg := range slice {
+		if arg != " " && arg != "" {
+			slice[i] = arg
+			i++
+		}
+	}
+	return slice[:i]
+}
+
 // scanInput takes the user input and parses double quotes and scripts
 // to return a slice with the command arguments.
 func scanInput(reader *bufio.Reader, timeout *timeout, scripts map[string]string) ([][]string, error) {

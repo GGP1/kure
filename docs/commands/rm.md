@@ -1,10 +1,10 @@
 ## Use
 
-`kure rm <name>`
+`kure rm <names>`
 
 ## Description
 
-Remove an entry or a directory.
+Remove entries or directories.
 
 ## Flags
 
@@ -20,4 +20,9 @@ kure rm Sample
 Remove a directory:
 ```
 kure rm SampleDir/
+```
+
+Remove multiple entries:
+```
+kure rm Sample Sample2 Sample3
 ```

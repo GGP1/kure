@@ -59,7 +59,7 @@ func TestRunnable(t *testing.T) {
 	}
 }
 
-func TestStatelessCommand(t *testing.T) {
+func TestIsStatelessCommand(t *testing.T) {
 	cases := []struct {
 		commandName string
 		expected    bool
@@ -88,11 +88,23 @@ func TestStatelessCommand(t *testing.T) {
 			commandName: "it",
 			expected:    false,
 		},
+		{
+			commandName: "--version",
+			expected:    true,
+		},
+		{
+			commandName: "-v",
+			expected:    true,
+		},
+		{
+			commandName: "--help",
+			expected:    false,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.commandName, func(t *testing.T) {
-			got := root.StatelessCommand(tc.commandName)
+			got := root.IsStatelessCommand(tc.commandName)
 			assert.Equal(t, tc.expected, got)
 		})
 	}

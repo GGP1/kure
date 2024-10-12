@@ -113,9 +113,11 @@ func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeo
 
 func execute(root *cobra.Command, commands [][]string, timeout *timeout) error {
 	for _, args := range commands {
-		if len(args) == 0 {
+		args = removeEmptyItems(args)
+		if len(args) == 0 || args[0] == "" {
 			continue
 		}
+
 		if args[0] == "kure" {
 			args = args[1:]
 		}

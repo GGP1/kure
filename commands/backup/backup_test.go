@@ -87,6 +87,11 @@ func TestBackupErrors(t *testing.T) {
 			desc: "Mkdir error",
 			path: "backup.go/",
 		},
+		{
+			desc: "Mutually exclusive flags",
+			http: "true",
+			path: "backup.db",
+		},
 	}
 
 	cmd := NewCmd(db)

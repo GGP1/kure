@@ -27,11 +27,11 @@ Generate a random password.
 
 > Default is [1, 2, 3, 4, 5].
 
-1. Lowercases (a, b, c...)
-2. Uppercases (A, B, C...)
+1. Lowercase characters (a, b, c...)
+2. Uppercase characters (A, B, C...)
 3. Digits (0, 1, 2...)
 4. Space
-5. Special (!, $, %...)
+5. Special characters (!, $, %...)
 
 ### Examples
 

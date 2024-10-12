@@ -3,7 +3,7 @@ package ls
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
+	"regexp"
 	"strings"
 
 	cmdutil "github.com/GGP1/kure/commands"
@@ -79,7 +79,7 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 
 			var matches []string
 			for _, card := range cards {
-				matched, err := filepath.Match(name, card)
+				matched, err := regexp.MatchString(name, card)
 				if err != nil {
 					return err
 				}

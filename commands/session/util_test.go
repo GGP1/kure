@@ -20,6 +20,30 @@ func TestCleanup(t *testing.T) {
 	assert.False(t, changed)
 }
 
+func TestConcatenatedScripts(t *testing.T) {
+	var buf bytes.Buffer
+	reader := bufio.NewReader(&buf)
+	buf.WriteString("show test && login testing && clear -H")
+
+	scripts := map[string]string{
+		"show":  "ls -s $1",
+		"login": "copy -u $1 && copy $1 && 2fa -c $1",
+	}
+	timeout := &timeout{duration: 0}
+	expected := [][]string{
+		{"ls", "-s", "test"},
+		{"copy", "-u", "testing"},
+		{"copy", "testing"},
+		{"2fa", "-c", "testing"},
+		{"clear", "-H"},
+	}
+
+	got, err := scanInput(reader, timeout, scripts)
+	assert.NoError(t, err)
+
+	assert.Equal(t, expected, got)
+}
+
 func TestFillScript(t *testing.T) {
 	cases := []struct {
 		desc     string
@@ -137,26 +161,39 @@ func TestScanInput(t *testing.T) {
 	assert.Equal(t, expected, got)
 }
 
-func TestConcatenatedScripts(t *testing.T) {
-	var buf bytes.Buffer
-	reader := bufio.NewReader(&buf)
-	buf.WriteString("show test && login testing && clear -H")
-
-	scripts := map[string]string{
-		"show":  "ls -s $1",
-		"login": "copy -u $1 && copy $1 && 2fa -c $1",
+func TestRemoveEmptyItems(t *testing.T) {
+	cases := []struct {
+		desc     string
+		args     []string
+		expected []string
+	}{
+		{
+			desc:     "Remove leading empty items",
+			args:     []string{"", "", " ", " ", "ls"},
+			expected: []string{"ls"},
+		},
+		{
+			desc:     "Remove all empty items",
+			args:     []string{"", "kure", " ", "copy", "", "tom", "", "", "-t", "6s", ""},
+			expected: []string{"kure", "copy", "tom", "-t", "6s"},
+		},
+		{
+			desc:     "Remove all empty items in a script",
+			args:     []string{"timeout", "", " ", "&&", "clear", "", " "},
+			expected: []string{"timeout", "&&", "clear"},
+		},
+		{
+			desc:     "Do not remove arguments surronded by spaces",
+			args:     []string{"kure", " file ", " ", "ls"},
+			expected: []string{"kure", " file ", "ls"},
+		},
 	}
-	timeout := &timeout{duration: 0}
-	expected := [][]string{
-		{"ls", "-s", "test"},
-		{"copy", "-u", "testing"},
-		{"copy", "testing"},
-		{"2fa", "-c", "testing"},
-		{"clear", "-H"},
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			actual := removeEmptyItems(tc.args)
+
+			assert.Equal(t, tc.expected, actual)
+		})
 	}
-
-	got, err := scanInput(reader, timeout, scripts)
-	assert.NoError(t, err)
-
-	assert.Equal(t, expected, got)
 }

@@ -2,7 +2,7 @@ package ls
 
 import (
 	"fmt"
-	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -87,7 +87,7 @@ func runLs(db *bolt.DB, opts *lsOptions) cmdutil.RunEFunc {
 
 			var matches []string
 			for _, entry := range entries {
-				matched, err := filepath.Match(name, entry)
+				matched, err := regexp.MatchString(name, entry)
 				if err != nil {
 					return err
 				}
