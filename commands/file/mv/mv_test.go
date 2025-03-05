@@ -34,7 +34,7 @@ func TestMvDir(t *testing.T) {
 	db := cmdutil.SetContext(t)
 
 	oldDir := "directory/"
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		createFile(t, db, oldDir+strconv.Itoa(i))
 	}
 
