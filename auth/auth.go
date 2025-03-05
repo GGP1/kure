@@ -108,9 +108,7 @@ func Register(db *bolt.DB, r io.Reader) error {
 	setAuthToConfig(password, params)
 
 	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		return errors.Wrap(err, "generating key")
-	}
+	_, _ = rand.Read(key)
 	setKeyToConfig(key)
 
 	return authDB.Register(db, key, params)

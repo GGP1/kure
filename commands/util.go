@@ -183,9 +183,7 @@ func Erase(filename string) error {
 	}
 
 	buf := make([]byte, f.Size())
-	if _, err := rand.Read(buf); err != nil {
-		return errors.Wrap(err, "generating random bytes")
-	}
+	_, _ = rand.Read(buf)
 
 	// WriteFile truncates the file and overwrites it
 	if err := os.WriteFile(filename, buf, 0o600); err != nil {

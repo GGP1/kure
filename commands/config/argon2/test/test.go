@@ -81,9 +81,7 @@ func runTest(opts *testOptions) cmdutil.RunEFunc {
 		}
 
 		salt := make([]byte, 32)
-		if _, err = rand.Read(salt); err != nil {
-			return errors.New("failed generating salt")
-		}
+		_, _ = rand.Read(salt)
 
 		start := time.Now()
 
