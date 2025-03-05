@@ -32,7 +32,7 @@ func TestAddCleanup(t *testing.T) {
 
 		var wg sync.WaitGroup
 		wg.Add(count)
-		for i := 0; i < count; i++ {
+		for range count {
 			go func() {
 				Signal.AddCleanup(f)
 				wg.Done()

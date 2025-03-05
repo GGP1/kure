@@ -4,7 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"io"
 
 	"github.com/GGP1/kure/config"
 
@@ -43,12 +42,9 @@ func Encrypt(data []byte) ([]byte, error) {
 		return nil, errEncrypt
 	}
 
-	// make 12 byte long nonce
+	// Generate 12 byte long nonce
 	nonce := make([]byte, gcm.NonceSize())
-
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, errEncrypt
-	}
+	_, _ = rand.Read(nonce)
 
 	dst := make([]byte, gcm.NonceSize())
 	copy(dst, nonce)
@@ -113,9 +109,7 @@ func deriveKey(salt []byte) (*memguard.LockedBuffer, []byte, error) {
 	// When decrypting the salt is taken from the encrypted data and when encrypting it's randomly generated
 	if salt == nil {
 		salt = make([]byte, saltSize)
-		if _, err := rand.Read(salt); err != nil {
-			return nil, nil, errors.New("generating salt")
-		}
+		rand.Read(salt)
 	}
 
 	// Decrypt enclave and save its content in a locked buffer

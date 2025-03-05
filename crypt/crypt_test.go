@@ -91,8 +91,7 @@ func TestDeriveKey(t *testing.T) {
 	reduceArgon2Params(t)
 
 	salt := make([]byte, 32)
-	_, err := rand.Read(salt)
-	assert.NoError(t, err, "Failed generating salt")
+	_, _ = rand.Read(salt)
 
 	key := memguard.NewEnclave([]byte("test"))
 	config.Set("auth.password", key)
