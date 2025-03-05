@@ -85,7 +85,7 @@ func BenchmarkTree(b *testing.B) {
 		"go/src/github.com/<username>/<project>",
 	}
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		newTree(paths)
 	}
 }

@@ -75,8 +75,7 @@ func BenchmarkRead(b *testing.B) {
 	err = l.Write(encEntry)
 	assert.NoError(b, err)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		l.Read()
 	}
 }
@@ -90,8 +89,7 @@ func BenchmarkWrite(b *testing.B) {
 
 	encEntry := createEncodedEntry(b)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		l.Write(encEntry)
 	}
 }
