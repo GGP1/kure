@@ -16,7 +16,7 @@ List cards.
 
 ### Examples
 
-List a card showin sensitive information:
+List a card showing sensitive information:
 ```
 kure card ls Sample -s
 ```

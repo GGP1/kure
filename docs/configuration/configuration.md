@@ -55,7 +55,7 @@ The command of the editor you would like to use. If no editor is set in the conf
 
 > Must be absolute.
 
-The path to the key file may be specified or not, in case it's not, the user will be asked for it everytime he wants to access the database, in the other case the user has to input the password only.
+The path to the key file may be specified or not, in case it's not, the user will be asked for it every time he wants to access the database, in the other case the user has to input the password only.
 
 ---
 

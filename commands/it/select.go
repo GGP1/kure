@@ -27,7 +27,7 @@ func selectCommands(parent *cobra.Command) ([]string, error) {
 		list[i] = c.Name()
 	}
 
-	// Only when it isn't root, preprend "self",
+	// Only when it isn't root, prepend "self",
 	// which is used for executing the current command
 	if parent.HasParent() {
 		list = append([]string{"self"}, list...)

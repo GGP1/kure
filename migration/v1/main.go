@@ -82,7 +82,7 @@ func xorNames(db *bolt.DB, r io.Reader) error {
 	}
 
 	if err := tx.Commit(); err != nil {
-		return errors.Wrap(err, "commiting transaction")
+		return errors.Wrap(err, "committing transaction")
 	}
 
 	return nil

@@ -38,7 +38,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 		Short: "Add a two-factor authentication code",
 		Long: `Add a two-factor authentication code.
 
-• Using a setup key: services tipically show hyperlinked text like "Enter manually" or "Enter this text code", copy the hexadecimal code given and submit it when requested.
+• Using a setup key: services typically show hyperlinked text like "Enter manually" or "Enter this text code", copy the hexadecimal code given and submit it when requested.
 
 • Using a URL: extract the URL encoded in the QR code given and submit it when requested. Format: otpauth://totp/{service}:{account}?secret={secret}.`,
 		Example: example,

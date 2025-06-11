@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cast"
 )
 
-// Init intializes the configuration.
+// Init initializes the configuration.
 func Init() error {
 	configPath, err := getConfigPath()
 	if err != nil {
