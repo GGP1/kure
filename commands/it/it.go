@@ -138,7 +138,7 @@ func requestCommands(db *bolt.DB, root *cobra.Command, receivedCmds []string) ([
 	}
 
 	args := append(commands, flags...)
-	// Preprend the received commands if there is any
+	// Prepend the received commands if there is any
 	// We would have [received commands] [commands] [flags]
 	if len(receivedCmds) > 0 {
 		args = append(receivedCmds, args...)

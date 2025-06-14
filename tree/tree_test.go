@@ -81,7 +81,7 @@ func BenchmarkTree(b *testing.B) {
 		"root",
 		"multi/planetary/life",
 		"go/src/github.com/GGP1/kure",
-		"super/long/path/contaning/folders/subfolders/and/files",
+		"super/long/path/containing/folders/subfolders/and/files",
 		"go/src/github.com/<username>/<project>",
 	}
 

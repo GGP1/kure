@@ -183,7 +183,7 @@ func TestRemoveEmptyItems(t *testing.T) {
 			expected: []string{"timeout", "&&", "clear"},
 		},
 		{
-			desc:     "Do not remove arguments surronded by spaces",
+			desc:     "Do not remove arguments surrounded by spaces",
 			args:     []string{"kure", " file ", " ", "ls"},
 			expected: []string{"kure", " file ", "ls"},
 		},

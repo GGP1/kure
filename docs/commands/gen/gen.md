@@ -15,7 +15,7 @@ Generate a random password.
 |  Name     | Shorthand |     Type      |    Default    |                   Description                     |
 |-----------|-----------|---------------|---------------|---------------------------------------------------|
 | copy      | c         | bool          | false         | Create an entry with a custom password            |
-| length    | l         | uint64        | 0             | Pasword length                                    |
+| length    | l         | uint64        | 0             | Password length                                    |
 | levels    | L         | []int         | [1,2,3,4,5]   | Password levels                                   |
 | include   | i         | string        | ""            | Characters to include in the password             |
 | exclude   | e         | string        | ""            | Characters to exclude from the password           |
