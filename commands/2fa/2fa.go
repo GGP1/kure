@@ -20,6 +20,7 @@ import (
 	"github.com/GGP1/kure/pb"
 	"github.com/GGP1/kure/terminal"
 	"github.com/GGP1/kure/tree"
+	"github.com/pkg/errors"
 
 	"github.com/spf13/cobra"
 	bolt "go.etcd.io/bbolt"
@@ -87,7 +88,7 @@ func run2FA(db *bolt.DB, opts *tfaOptions) cmdutil.RunEFunc {
 
 		t, err := totp.Get(db, name)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "2fa")
 		}
 
 		if opts.info {
