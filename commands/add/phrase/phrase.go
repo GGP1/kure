@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"math"
 	"strings"
 
 	cmdutil "github.com/GGP1/kure/commands"
@@ -62,7 +61,7 @@ func runPhrase(db *bolt.DB, r io.Reader, opts *phraseOptions) cmdutil.RunEFunc {
 		name := strings.Join(args, " ")
 		name = cmdutil.NormalizeName(name)
 
-		if opts.length < 1 || opts.length > math.MaxUint64 {
+		if opts.length < 1 {
 			return cmdutil.ErrInvalidLength
 		}
 

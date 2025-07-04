@@ -89,7 +89,7 @@ Average time taken to crack is based on a brute force attack scenario where the 
 
 func runPhrase(opts *phraseOptions) cmdutil.RunEFunc {
 	return func(cmd *cobra.Command, args []string) error {
-		if opts.length < 1 || opts.length > math.MaxUint64 {
+		if opts.length < 1 {
 			return cmdutil.ErrInvalidLength
 		}
 

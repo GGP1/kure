@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"math"
 	"strings"
 
 	cmdutil "github.com/GGP1/kure/commands"
@@ -69,7 +68,7 @@ func runAdd(db *bolt.DB, r io.Reader, opts *addOptions) cmdutil.RunEFunc {
 		name = cmdutil.NormalizeName(name)
 
 		if !opts.custom {
-			if opts.length < 1 || opts.length > math.MaxUint64 {
+			if opts.length < 1 {
 				return cmdutil.ErrInvalidLength
 			}
 			if len(opts.levels) == 0 {
