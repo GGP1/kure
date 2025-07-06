@@ -7,6 +7,7 @@ import (
 	"github.com/GGP1/kure/auth"
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/crypt"
+	dbutil "github.com/GGP1/kure/db"
 	"github.com/GGP1/kure/db/bucket"
 	"github.com/GGP1/kure/sig"
 
@@ -76,15 +77,23 @@ func readLogs(db *bolt.DB, logs []*log) error {
 			return err
 		}
 
-		for i := 0; i < len(data)-1; i += 2 {
-			key := data[i]
-			value := data[i+1]
+		for i := 0; i < len(data)-1; i += 3 {
+			oldKey := data[i]
+			newKey := data[i+1]
+			value := data[i+2]
+
+			if err := b.Delete(oldKey); err != nil {
+				return errors.Wrap(err, "deletig old record")
+			}
+
 			encValue, err := crypt.Encrypt(value)
 			if err != nil {
 				return errors.Wrap(err, "encrypt record value")
 			}
-			if err := b.Put(key, encValue); err != nil {
-				return errors.Wrap(err, "saving record")
+
+			xorKey := dbutil.XorName(newKey)
+			if err := b.Put(xorKey, encValue); err != nil {
+				return errors.Wrap(err, "saving new record")
 			}
 		}
 	}
@@ -109,9 +118,19 @@ func writeLogs(db *bolt.DB, logs []*log) error {
 			}
 
 			if err := l.Write(k); err != nil {
-				return err
+				return errors.Wrap(err, "writing old key")
 			}
-			return l.Write(decValue)
+
+			xorKey := dbutil.XorName(k)
+			if err := l.Write(xorKey); err != nil {
+				return errors.Wrap(err, "writing new key")
+			}
+
+			if err := l.Write(decValue); err != nil {
+				return errors.Wrap(err, "writing value")
+			}
+
+			return nil
 		})
 		if err != nil {
 			return err

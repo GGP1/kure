@@ -1,6 +1,9 @@
 VERSION = $(shell git tag --points-at HEAD)
 COMMIT = $(shell git rev-parse --short HEAD)
 
+build:
+	@go build -o kure_dev -ldflags="-s -w" .
+
 install:
 	@go install -ldflags="-s -w" .
 

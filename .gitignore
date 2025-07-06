@@ -12,8 +12,10 @@
 # GoReleaser
 dist
 
-# TODO file
-TODO.txt
-
 # IntelliJ Project
 .idea
+
+# Development files
+kure_dev
+kure.yaml
+kure.db
