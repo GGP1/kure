@@ -163,13 +163,16 @@ func TestGetUint32(t *testing.T) {
 }
 
 func TestSetDefaults(t *testing.T) {
-	defaults := map[string]string{
+	defaults := map[string]interface{}{
 		"clipboard.timeout": "0s",
 		"database.path":     "test",
 		"editor":            "vim",
 		"keyfile.path":      "",
 		"session.prefix":    "kure:~ $",
-		"session.timeout":   "0s",
+		"session.scripts": map[string]string{
+			"login": "copy -u $1 && copy $1 && 2fa -c -t 6s $1",
+		},
+		"session.timeout": "0s",
 	}
 
 	SetDefaults("test")

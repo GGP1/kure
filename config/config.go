@@ -135,8 +135,10 @@ func SetDefaults(dbPath string) {
 		"editor":            "vim",
 		"keyfile.path":      "",
 		"session.prefix":    "kure:~ $",
-		"session.scripts":   map[string]string{},
-		"session.timeout":   "0s",
+		"session.scripts": map[string]string{
+			"login": "copy -u $1 && copy $1 && 2fa -c -t 6s $1",
+		},
+		"session.timeout": "0s",
 	}
 
 	for k, v := range defaults {
