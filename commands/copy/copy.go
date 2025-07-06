@@ -70,12 +70,12 @@ func runCopy(db *bolt.DB, opts *copyOptions) cmdutil.RunEFunc {
 		}
 
 		field := "Password"
-		copy := e.Password
+		value := e.Password
 		if opts.username {
 			field = "Username"
-			copy = e.Username
+			value = e.Username
 		}
 
-		return cmdutil.WriteClipboard(cmd, opts.timeout, field, copy)
+		return cmdutil.WriteClipboard(cmd, opts.timeout, field, value)
 	}
 }

@@ -435,14 +435,14 @@ func WatchFile(filename string, done chan struct{}, errCh chan error) {
 	done <- struct{}{}
 }
 
-// WriteClipboard writes the content to the clipboard and deletes it after
+// WriteClipboard writes the value to the clipboard and deletes it after
 // "t" if "t" is higher than 0 or if there is a default timeout set in the configuration.
 // Otherwise it does nothing.
-func WriteClipboard(cmd *cobra.Command, d time.Duration, field, content string) error {
-	if err := clipboard.WriteAll(content); err != nil {
+func WriteClipboard(cmd *cobra.Command, d time.Duration, field, value string) error {
+	if err := clipboard.WriteAll(value); err != nil {
 		return errors.Wrap(err, "writing to clipboard")
 	}
-	memguard.WipeBytes([]byte(content))
+	memguard.WipeBytes([]byte(value))
 
 	// Use the config value if it's specified and the timeout flag wasn't used
 	configKey := "clipboard.timeout"
