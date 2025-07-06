@@ -514,7 +514,7 @@ func TestWriteClipboard(t *testing.T) {
 	cmd := &cobra.Command{}
 
 	t.Run("Default timeout", func(t *testing.T) {
-		config.Set("clipboard.timeout", 10*time.Millisecond)
+		config.Set("clipboard.timeout", time.Nanosecond)
 		defer config.Reset()
 
 		err := WriteClipboard(cmd, 0, "", "test")
@@ -527,7 +527,7 @@ func TestWriteClipboard(t *testing.T) {
 	})
 
 	t.Run("t > 0", func(t *testing.T) {
-		err := WriteClipboard(cmd, 10*time.Millisecond, "", "test")
+		err := WriteClipboard(cmd, time.Nanosecond, "", "test")
 		assert.NoError(t, err)
 
 		got, err := clipboard.ReadAll()
