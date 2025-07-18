@@ -69,6 +69,11 @@ func main() {
 // validateFlags looks for the command called and parses its flags. If the flag is `--help`,
 // it will print the command's help message and return the error pflag.ErrHelp.
 func validateFlags() error {
+	// The help command is built-in so it won't be found below, plus it has no flags
+	if len(os.Args) > 1 && os.Args[1] == "help" {
+		return nil
+	}
+
 	cmd, args, err := root.NewCmd(nil).Find(os.Args[1:])
 	if err != nil {
 		return err

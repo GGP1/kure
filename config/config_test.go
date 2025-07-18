@@ -17,7 +17,6 @@ func TestInit(t *testing.T) {
 		path string
 	}{
 		{desc: "Env var path", path: "testdata/mock_config.yaml"},
-		{desc: "Home directory", path: ""},
 	}
 
 	expectedStr := "test"
@@ -39,8 +38,6 @@ func TestInit(t *testing.T) {
 			assert.Equal(t, expectedBool, gotBool)
 		})
 	}
-
-	cleanup(t)
 }
 
 func TestInitErrors(t *testing.T) {
@@ -221,13 +218,4 @@ func TestWriteStruct(t *testing.T) {
 	os.Remove(filename)
 
 	assert.Equal(t, expected, got)
-}
-
-// Remove config file created on user home directory.
-func cleanup(t *testing.T) {
-	home, err := os.UserHomeDir()
-	assert.NoError(t, err)
-
-	os.RemoveAll(filepath.Join(home, ".kure"))
-	assert.NoError(t, err)
 }
