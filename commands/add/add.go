@@ -57,7 +57,7 @@ func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
 	f.IntSliceVarP(&opts.levels, "levels", "L", []int{1, 2, 3, 4, 5}, "password levels")
 	f.StringVarP(&opts.include, "include", "i", "", "characters to include in the password")
 	f.StringVarP(&opts.exclude, "exclude", "e", "", "characters to exclude from the password")
-	f.BoolVarP(&opts.repeat, "repeat", "r", false, "allow character repetition")
+	f.BoolVarP(&opts.repeat, "repeat", "r", true, "allow character repetition")
 
 	return cmd
 }
