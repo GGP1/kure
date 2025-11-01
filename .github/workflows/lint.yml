@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Run Linter
-        uses: docker://morphy/revive-action:v2
+        uses: morphy2k/revive-action@v2
