@@ -1,3 +1,4 @@
+version: 2
 project_name: kure
 before:
   hooks:
@@ -28,14 +29,16 @@ builds:
 archives:
   -
     name_template: '{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    format: tar.gz
+    formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Tag }}_checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
@@ -46,23 +49,24 @@ changelog:
       - 'Merge pull request'
       - 'Merge branch'
 
-brews:
+homebrew_casks:
   - 
-    tap:
+    repository:
       owner: GGP1
       name: homebrew-tap
-    folder: Formula
+    directory: Casks
     homepage: https://github.com/GGP1/kure
     description: Cross-platform CLI password manager with sessions
     license: Apache 2.0
 
-scoop:
-  bucket:
-    owner: GGP1
-    name: scoop-bucket
-  homepage:  https://github.com/GGP1/kure
-  description: Cross-platform CLI password manager with sessions
-  license: Apache 2.0
+scoops:
+  -
+    repository:
+      owner: GGP1
+      name: scoop-bucket
+    homepage:  https://github.com/GGP1/kure
+    description: Cross-platform CLI password manager with sessions
+    license: Apache 2.0
 
 nfpms:
 - 
