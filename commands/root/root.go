@@ -75,7 +75,7 @@ func NewCmd(db *bolt.DB) *cobra.Command {
 		restore.NewCmd(db),
 		rotate.NewCmd(db),
 		rm.NewCmd(db, os.Stdin),
-		session.NewCmd(db, os.Stdin),
+		session.NewCmd(os.Stdin),
 		stats.NewCmd(db),
 	)
 
