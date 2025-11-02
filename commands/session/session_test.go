@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"testing"
 
-	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestExecute(t *testing.T) {
-	db := cmdutil.SetContext(t)
 	scripts := map[string]string{
 		"login": "copy -u $1 && copy $1",
 	}
@@ -39,7 +37,7 @@ func TestExecute(t *testing.T) {
 		},
 	}
 
-	cmd := NewCmd(db, &bytes.Buffer{})
+	cmd := NewCmd(&bytes.Buffer{})
 	cmd.RunE = nil
 	root := cmd.Root()
 

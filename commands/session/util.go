@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"math"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/GGP1/kure/sig"
 	"github.com/GGP1/kure/terminal"
+	"github.com/chzyer/readline"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -147,15 +147,18 @@ func removeEmptyItems(slice []string) []string {
 
 // scanInput takes the user input and parses double quotes and scripts
 // to return a slice with the command arguments.
-func scanInput(reader *bufio.Reader, timeout *timeout, scripts map[string]string) ([][]string, error) {
+func scanInput(rl *readline.Instance, timeout *timeout, scripts map[string]string) ([][]string, error) {
 	var done chan struct{}
 	if timeout.duration >= (5 * time.Minute) {
 		done = make(chan struct{})
 		go idleTimer(done, timeout)
 	}
 
-	text, _, err := reader.ReadLine()
+	text, err := rl.Readline()
 	if err != nil {
+		if err == readline.ErrInterrupt {
+			return nil, nil
+		}
 		if err == io.EOF {
 			sig.Signal.Kill()
 		}

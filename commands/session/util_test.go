@@ -1,11 +1,12 @@
 package session
 
 import (
-	"bufio"
 	"bytes"
+	"io"
 	"strconv"
 	"testing"
 
+	"github.com/chzyer/readline"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +23,6 @@ func TestCleanup(t *testing.T) {
 
 func TestConcatenatedScripts(t *testing.T) {
 	var buf bytes.Buffer
-	reader := bufio.NewReader(&buf)
 	buf.WriteString("show test && login testing && clear -H")
 
 	scripts := map[string]string{
@@ -38,7 +38,12 @@ func TestConcatenatedScripts(t *testing.T) {
 		{"clear", "-H"},
 	}
 
-	got, err := scanInput(reader, timeout, scripts)
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt: "",
+		Stdin:  io.NopCloser(&buf),
+	})
+
+	got, err := scanInput(rl, timeout, scripts)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, got)
@@ -147,7 +152,6 @@ func TestParseDoubleQuotes(t *testing.T) {
 
 func TestScanInput(t *testing.T) {
 	var buf bytes.Buffer
-	reader := bufio.NewReader(&buf)
 	buf.WriteString("tom && \"jerry\"")
 	timeout := &timeout{duration: 0}
 	expected := [][]string{
@@ -155,7 +159,12 @@ func TestScanInput(t *testing.T) {
 		{"jerry"},
 	}
 
-	got, err := scanInput(reader, timeout, map[string]string{})
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt: "",
+		Stdin:  io.NopCloser(&buf),
+	})
+
+	got, err := scanInput(rl, timeout, map[string]string{})
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, got)

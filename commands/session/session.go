@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -10,9 +9,11 @@ import (
 
 	cmdutil "github.com/GGP1/kure/commands"
 	"github.com/GGP1/kure/config"
+	"github.com/GGP1/kure/sig"
+	"github.com/pkg/errors"
 
+	"github.com/chzyer/readline"
 	"github.com/spf13/cobra"
-	bolt "go.etcd.io/bbolt"
 )
 
 const example = `
@@ -28,7 +29,7 @@ type sessionOptions struct {
 }
 
 // NewCmd returns a new command.
-func NewCmd(db *bolt.DB, r io.Reader) *cobra.Command {
+func NewCmd(r io.Reader) *cobra.Command {
 	opts := sessionOptions{}
 	cmd := &cobra.Command{
 		Use:   "session",
@@ -59,7 +60,7 @@ Session commands:
 }
 
 func runSession(r io.Reader, opts *sessionOptions) cmdutil.RunEFunc {
-	return func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
 		// Use config values if they are set and the flag wasn't used
 		if p := "session.prefix"; config.IsSet(p) && !cmd.Flags().Changed("prefix") {
 			opts.prefix = config.GetString(p)
@@ -74,7 +75,17 @@ func runSession(r io.Reader, opts *sessionOptions) cmdutil.RunEFunc {
 			timer:    time.NewTimer(opts.timeout),
 		}
 
-		go startSession(cmd, r, opts.prefix, timeout)
+		rl, err := readline.NewEx(&readline.Config{
+			Prompt: opts.prefix + " ",
+			Stdin:  io.NopCloser(r),
+		})
+		if err != nil {
+			return errors.Wrap(err, "creating terminal")
+		}
+		defer rl.Close()
+		sig.Signal.AddCleanup(func() error { return rl.Close() })
+
+		go startSession(cmd, rl, timeout)
 
 		if timeout.duration == 0 {
 			if !timeout.timer.Stop() {
@@ -87,8 +98,7 @@ func runSession(r io.Reader, opts *sessionOptions) cmdutil.RunEFunc {
 	}
 }
 
-func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeout) {
-	reader := bufio.NewReader(r)
+func startSession(cmd *cobra.Command, rl *readline.Instance, timeout *timeout) {
 	root := cmd.Root()
 	// The configuration is populated on start and changes inside the session won't have effect until restart.
 	scripts := config.GetStringMapString("session.scripts")
@@ -98,8 +108,7 @@ func startSession(cmd *cobra.Command, r io.Reader, prefix string, timeout *timeo
 		// for us by the system while idle
 		runtime.GC()
 
-		fmt.Printf("%s ", prefix)
-		commands, err := scanInput(reader, timeout, scripts)
+		commands, err := scanInput(rl, timeout, scripts)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error:", err)
 			continue
