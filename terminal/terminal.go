@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/GGP1/kure/sig"
-	"github.com/awnumar/memguard"
 
+	"github.com/awnumar/memguard"
 	"github.com/pkg/errors"
 	"github.com/skip2/go-qrcode"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const (
@@ -113,17 +113,17 @@ func Scanlns(r *bufio.Reader, field string) string {
 // ScanPassword returns the input password encrypted inside an Enclave.
 func ScanPassword(message string, verify bool) (*memguard.Enclave, error) {
 	fd := int(syscall.Stdin)
-	oldState, err := terminal.GetState(fd)
+	oldState, err := term.GetState(fd)
 	if err != nil {
 		return nil, errors.Wrap(err, "terminal state")
 	}
 
 	// Restore the terminal to its previous state
-	sig.Signal.AddCleanup(func() error { return terminal.Restore(fd, oldState) })
-	defer terminal.Restore(fd, oldState)
+	sig.Signal.AddCleanup(func() error { return term.Restore(fd, oldState) })
+	defer term.Restore(fd, oldState)
 
 	fmt.Fprint(os.Stderr, message+": ")
-	password, err := terminal.ReadPassword(fd)
+	password, err := term.ReadPassword(fd)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading password")
 	}
@@ -138,7 +138,7 @@ func ScanPassword(message string, verify bool) (*memguard.Enclave, error) {
 
 	if verify {
 		fmt.Fprint(os.Stderr, "Retype to verify: ")
-		password2, err := terminal.ReadPassword(fd)
+		password2, err := term.ReadPassword(fd)
 		if err != nil {
 			return nil, errors.Wrap(err, "reading password")
 		}

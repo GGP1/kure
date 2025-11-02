@@ -28,7 +28,7 @@ func Encrypt(data []byte) ([]byte, error) {
 
 	key, salt, err := deriveKey(nil)
 	if err != nil {
-		return nil, err
+		return nil, errEncrypt
 	}
 
 	block, err := aes.NewCipher(key.Bytes())
@@ -67,7 +67,7 @@ func Decrypt(data []byte) ([]byte, error) {
 
 	key, _, err := deriveKey(salt)
 	if err != nil {
-		return nil, err
+		return nil, errDecrypt
 	}
 
 	block, err := aes.NewCipher(key.Bytes())

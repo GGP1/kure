@@ -11,9 +11,9 @@ import (
 	"github.com/GGP1/kure/commands/root"
 	"github.com/GGP1/kure/config"
 	"github.com/GGP1/kure/sig"
-	"github.com/spf13/pflag"
 
 	"github.com/awnumar/memguard"
+	"github.com/spf13/pflag"
 	bolt "go.etcd.io/bbolt"
 )
 
