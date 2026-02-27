@@ -46,7 +46,7 @@ jobs:
           tags: ${{ steps.docker_meta.outputs.tags }}
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         if: success() && startsWith(github.ref, 'refs/tags/')
         with:
           version: latest
