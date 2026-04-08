@@ -50,20 +50,21 @@ func fillScript(args []string, script string) string {
 }
 
 // idleTimer executes a timer after x time has passed without receiving an input from the user.
-func idleTimer(done chan struct{}, timeout *timeout) {
+func idleTimer(rl *readline.Instance, done chan struct{}, timeout *timeout) {
 	// round(log(x^3))
 	d := math.Round(math.Log10(math.Pow(timeout.duration.Minutes(), 3)))
 	timer := time.NewTimer(time.Duration(d) * time.Minute)
-	defer timer.Stop()
 
 	select {
 	case <-done:
+		timer.Stop()
+		close(done)
 		return
 
 	case <-timer.C:
-		fmt.Print("\n")
+		rl.Write([]byte("\n"))
 		terminal.Ticker(done, true, func() {
-			fmt.Print(timeout)
+			rl.Write([]byte(timeout.String()))
 		})
 	}
 }
@@ -151,7 +152,7 @@ func scanInput(rl *readline.Instance, timeout *timeout, scripts map[string]strin
 	var done chan struct{}
 	if timeout.duration >= (5 * time.Minute) {
 		done = make(chan struct{})
-		go idleTimer(done, timeout)
+		go idleTimer(rl, done, timeout)
 	}
 
 	text, err := rl.Readline()
